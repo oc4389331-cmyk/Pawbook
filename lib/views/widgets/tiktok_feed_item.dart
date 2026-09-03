@@ -6,6 +6,7 @@ import '../../models/post_model.dart';
 import '../../models/pet_model.dart';
 import '../../models/comment_model.dart';
 import '../../services/supabase_service.dart';
+import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
 import 'sponsorship_modal.dart';
 
@@ -152,13 +153,27 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                         IconButton(
                           icon: const Icon(Icons.send_rounded, color: AppTheme.primaryTerracotta),
                           onPressed: () async {
-                            if (commentController.text.trim().isNotEmpty) {
-                              final text = commentController.text.trim();
+                            final rawText = commentController.text.trim();
+                            if (rawText.isNotEmpty) {
+                              if (ProfanityFilterService.hasProfanity(rawText)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.primaryTerracotta,
+                                    content: Text(
+                                      langController.t('profanityWarning'),
+                                      style: GoogleFonts.fredoka(color: Colors.white),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final cleanText = ProfanityFilterService.sanitize(rawText);
                               commentController.clear();
                               await _supabaseService.addComment(
                                 widget.currentUserId,
                                 widget.post.id,
-                                text,
+                                cleanText,
                               );
                               setModalState(() {});
                             }
