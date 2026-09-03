@@ -137,6 +137,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   final _customSpeciesController = TextEditingController();
   final _bioController = TextEditingController();
   final _customAvatarUrlController = TextEditingController();
+  final _tutorEmailController = TextEditingController();
 
   String _selectedSpecies = 'Perro 🐶';
   String _selectedBreed = 'Mestizo / Criollo';
@@ -152,6 +153,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     _customSpeciesController.dispose();
     _bioController.dispose();
     _customAvatarUrlController.dispose();
+    _tutorEmailController.dispose();
     super.dispose();
   }
 
@@ -459,7 +461,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                     ),
                     const SizedBox(height: 6),
 
-                    // Custom Photo Upload Button (Triggers Gallery / Camera / Cloudflare R2 Upload)
+                    // Custom Photo Upload Button
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.emeraldGreen,
@@ -632,6 +634,76 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                 decoration: _inputDecoration('¡Cuenta algo divertido de tu mascota!', Icons.description_rounded),
               ),
+
+              // Account Linking Section (ONLY for Guests creating a pet)
+              if (!authController.isAuthenticated) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceWarm,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppTheme.primaryTerracotta.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryTerracotta),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Correo para Iniciar Sesión (Tutor):',
+                              style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Ingresa tu correo para administrar tu cuenta y volver a entrar a tu mascota desde cualquier celular.',
+                        style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _tutorEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                        decoration: _inputDecoration('tu.correo@gmail.com', Icons.email_outlined),
+                        validator: (v) {
+                          if (!authController.isAuthenticated && (v == null || v.trim().isEmpty || !v.contains('@'))) {
+                            return 'Por favor ingresa tu correo para crear tu cuenta de acceso';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: TextButton.icon(
+                          icon: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(color: Color(0xFF4285F4), shape: BoxShape.circle),
+                            child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          ),
+                          label: Text(
+                            'O asociar rápidamente con Google',
+                            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13),
+                          ),
+                          onPressed: () async {
+                            final ok = await authController.loginWithGoogle();
+                            if (ok && mounted) {
+                              setState(() {
+                                _tutorEmailController.text = authController.currentProfile?.email ?? '';
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 28),
 
               // Submit Button
@@ -639,49 +711,56 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.check_circle_rounded, color: Colors.white),
+                  icon: authController.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.check_circle_rounded, color: Colors.white),
                   label: Text(
-                    'Crear Perfil de Creador',
+                    authController.isLoading ? 'Registrando Perfil y Wallet...' : 'Crear Perfil y Asociar Cuenta',
                     style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryTerracotta,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   ),
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      final speciesFinal = _selectedSpecies == 'Otro 🐾'
-                          ? _customSpeciesController.text.trim()
-                          : _selectedSpecies.split(' ').first;
+                  onPressed: authController.isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            final speciesFinal = _selectedSpecies == 'Otro 🐾'
+                                ? _customSpeciesController.text.trim()
+                                : _selectedSpecies.split(' ').first;
 
-                      final newPet = PetModel(
-                        id: 'pet_${const Uuid().v4().substring(0, 8)}',
-                        ownerId: authController.currentProfile?.id ?? 'usr_demo',
-                        name: _nameController.text.trim(),
-                        species: speciesFinal,
-                        breed: _selectedBreed,
-                        bio: _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : 'Creador oficial en Pawtbook 🐾',
-                        avatarUrl: _selectedAvatar,
-                        nftMintAddress: null,
-                        createdAt: DateTime.now(),
-                      );
+                            final newPet = PetModel(
+                              id: 'pet_${const Uuid().v4().substring(0, 8)}',
+                              ownerId: authController.currentProfile?.id ?? 'usr_pending',
+                              name: _nameController.text.trim(),
+                              species: speciesFinal,
+                              breed: _selectedBreed,
+                              bio: _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : 'Creador oficial en Pawtbook 🐾',
+                              avatarUrl: _selectedAvatar,
+                              nftMintAddress: null,
+                              createdAt: DateTime.now(),
+                            );
 
-                      await authController.registerPet(newPet);
+                            await authController.registerPet(
+                              newPet,
+                              ownerEmail: _tutorEmailController.text.trim(),
+                            );
 
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: AppTheme.emeraldGreen,
-                            content: Text(
-                              '🎉 ¡${newPet.name} ($speciesFinal) registrado con éxito!',
-                              style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        );
-                        Navigator.of(context).pop();
-                      }
-                    }
-                  },
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: AppTheme.emeraldGreen,
+                                  content: Text(
+                                    '🎉 ¡${newPet.name} registrado! Tu cuenta de Tutor y Wallet de Solana han sido vinculadas.',
+                                    style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              );
+                              Navigator.of(context).pop();
+                            }
+                          }
+                        },
                 ),
               ),
             ],

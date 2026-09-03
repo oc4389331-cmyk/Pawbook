@@ -143,6 +143,7 @@ class AuthController extends ChangeNotifier {
           id: 'usr_' + walletAddress.substring(0, subLen),
           walletAddress: walletAddress,
           username: username,
+          email: email,
           pawtScore: 100, // Initial welcome bonus score
           createdAt: DateTime.now(),
         ),
@@ -160,16 +161,39 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> registerPet(PetModel pet) async {
-    if (_currentProfile == null) return;
+  Future<void> registerPet(PetModel pet, {String? ownerEmail}) async {
     _setLoading(true);
 
-    final createdPet = await _supabaseService.createPet(pet);
-    _userPets.add(createdPet);
-    _activePet = createdPet;
+    try {
+      // 1. If guest, automatically create Tutor profile & Embedded Solana Wallet
+      if (_currentProfile == null) {
+        final email = (ownerEmail != null && ownerEmail.trim().isNotEmpty)
+            ? ownerEmail.trim()
+            : 'tutor.${pet.name.toLowerCase()}@gmail.com';
+        final hash = email.hashCode.abs().toRadixString(16);
+        final walletAddress = 'PawGgl${hash}SolanaWallet';
 
-    _setLoading(false);
-    notifyListeners();
+        await _processAuthenticatedUser(
+          walletAddress: walletAddress,
+          email: email,
+          jwtToken: 'dyn_jwt_pet_${pet.name.toLowerCase()}_$hash',
+        );
+      }
+
+      // 2. Link pet to owner ID and register in Supabase
+      final petWithOwner = pet.copyWith(ownerId: _currentProfile!.id);
+      final createdPet = await _supabaseService.createPet(petWithOwner);
+
+      _userPets.add(createdPet);
+      _activePet = createdPet;
+
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+    }
   }
 
   void setActivePet(PetModel pet) {
