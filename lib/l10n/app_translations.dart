@@ -38,6 +38,10 @@ class AppTranslations {
       'limitedEdition': 'Limited Edition',
       'summerCollection': 'Summer Collection',
       'continueWithGoogle': 'Continue with Google',
+      'buyWithPoints': 'Points',
+      'buyWithCashOrCrypto': 'Buy',
+      'selectMarketplacePayment': 'Select Payment Method',
+      'payWithGooglePayPaypal': 'Card / Google Pay / PayPal',
     },
     'es': {
       'appName': 'Pawtbook 🐾',
@@ -77,6 +81,10 @@ class AppTranslations {
       'limitedEdition': 'Edición Limitada',
       'summerCollection': 'Colección de Verano',
       'continueWithGoogle': 'Continuar con Google',
+      'buyWithPoints': 'Puntos',
+      'buyWithCashOrCrypto': 'Comprar',
+      'selectMarketplacePayment': 'Selecciona Método de Pago',
+      'payWithGooglePayPaypal': 'Tarjeta / Google Pay / PayPal',
     },
     'zh': {
       'appName': 'Pawtbook 🐾',
@@ -116,6 +124,10 @@ class AppTranslations {
       'limitedEdition': '限量版',
       'summerCollection': '夏季系列',
       'continueWithGoogle': '使用 Google 账号登录',
+      'buyWithPoints': '积分兑换',
+      'buyWithCashOrCrypto': '购买',
+      'selectMarketplacePayment': '选择支付方式',
+      'payWithGooglePayPaypal': '银行卡 / Google Pay / PayPal',
     },
     'ja': {
       'appName': 'Pawtbook 🐾',
@@ -155,6 +167,10 @@ class AppTranslations {
       'limitedEdition': '限定版',
       'summerCollection': 'サマーコレクション',
       'continueWithGoogle': 'Googleでサインイン',
+      'buyWithPoints': 'ポイント',
+      'buyWithCashOrCrypto': '購入',
+      'selectMarketplacePayment': 'お支払い方法を選択',
+      'payWithGooglePayPaypal': 'カード / Google Pay / PayPal',
     },
   };
 
