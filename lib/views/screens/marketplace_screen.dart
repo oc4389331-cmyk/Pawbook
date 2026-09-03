@@ -2,54 +2,56 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 
 class MarketplaceScreen extends StatelessWidget {
   const MarketplaceScreen({super.key});
 
-  final List<Map<String, dynamic>> _bandanas = const [
-    {
-      'id': 'bdn_solana',
-      'name': 'Solana Cyber Bandana ⚡',
-      'pricePoints': 250,
-      'priceUsd': 12.99,
-      'imageUrl': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600',
-      'tag': 'Solana Exclusive',
-      'color': AppTheme.solanaPurple,
-    },
-    {
-      'id': 'bdn_golden',
-      'name': 'Pawtbook Gold Edition 👑',
-      'pricePoints': 500,
-      'priceUsd': 24.99,
-      'imageUrl': 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
-      'tag': 'Best Seller',
-      'color': AppTheme.primaryTerracotta,
-    },
-    {
-      'id': 'bdn_neon',
-      'name': 'Neon Paw Glow Bandana 🌟',
-      'pricePoints': 180,
-      'priceUsd': 9.99,
-      'imageUrl': 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600',
-      'tag': 'Limited Edition',
-      'color': AppTheme.accentOrange,
-    },
-    {
-      'id': 'bdn_ocean',
-      'name': 'Ocean Beach Walker 🌊',
-      'pricePoints': 200,
-      'priceUsd': 10.99,
-      'imageUrl': 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600',
-      'tag': 'Summer Collection',
-      'color': AppTheme.emeraldGreen,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final userScore = authController.currentProfile?.pawtScore ?? 100;
+
+    final List<Map<String, dynamic>> bandanas = [
+      {
+        'id': 'bdn_solana',
+        'name': 'Solana Cyber Bandana ⚡',
+        'pricePoints': 250,
+        'priceUsd': 12.99,
+        'imageUrl': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600',
+        'tag': langController.t('solanaExclusive'),
+        'color': AppTheme.solanaPurple,
+      },
+      {
+        'id': 'bdn_golden',
+        'name': 'Pawtbook Gold Edition 👑',
+        'pricePoints': 500,
+        'priceUsd': 24.99,
+        'imageUrl': 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
+        'tag': langController.t('bestSeller'),
+        'color': AppTheme.primaryTerracotta,
+      },
+      {
+        'id': 'bdn_neon',
+        'name': 'Neon Paw Glow Bandana 🌟',
+        'pricePoints': 180,
+        'priceUsd': 9.99,
+        'imageUrl': 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600',
+        'tag': langController.t('limitedEdition'),
+        'color': AppTheme.accentOrange,
+      },
+      {
+        'id': 'bdn_ocean',
+        'name': 'Ocean Beach Walker 🌊',
+        'pricePoints': 200,
+        'priceUsd': 10.99,
+        'imageUrl': 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600',
+        'tag': langController.t('summerCollection'),
+        'color': AppTheme.emeraldGreen,
+      },
+    ];
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -57,7 +59,7 @@ class MarketplaceScreen extends StatelessWidget {
         backgroundColor: AppTheme.bgWarmCream,
         elevation: 0,
         title: Text(
-          '🛍️ Marketplace',
+          '🛍️ ${langController.t('marketplace')}',
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
@@ -115,16 +117,19 @@ class MarketplaceScreen extends StatelessWidget {
                       color: Colors.black.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text('OFFICIAL PAWLY MERCH', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                    child: Text(
+                      langController.t('officialMerch'),
+                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Exclusive Pet Bandanas 🐾',
+                    langController.t('exclusiveBandanas'),
                     style: GoogleFonts.fredoka(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Redeem with PawtScore or buy with Card / Solana Pay',
+                    langController.t('redeemSubtitle'),
                     style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
@@ -132,7 +137,7 @@ class MarketplaceScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Featured Collection',
+              langController.t('featuredCollection'),
               style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -145,9 +150,9 @@ class MarketplaceScreen extends StatelessWidget {
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
               ),
-              itemCount: _bandanas.length,
+              itemCount: bandanas.length,
               itemBuilder: (ctx, idx) {
-                final item = _bandanas[idx];
+                final item = bandanas[idx];
                 final canAfford = userScore >= (item['pricePoints'] as int);
 
                 return Container(
@@ -242,7 +247,7 @@ class MarketplaceScreen extends StatelessWidget {
                                   padding: EdgeInsets.zero,
                                 ),
                                 child: Text(
-                                  canAfford ? 'Redeem Bandana' : 'Get Points',
+                                  canAfford ? langController.t('redeemBandana') : langController.t('getPoints'),
                                   style: GoogleFonts.fredoka(
                                     color: canAfford ? Colors.white : AppTheme.textMutedWarm,
                                     fontSize: 12,

@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
+import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
@@ -40,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final feedController = Provider.of<FeedController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final currentUserId = authController.currentProfile?.id ?? 'usr_guest';
 
     return Scaffold(
@@ -48,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: [
           // Tab 0: TikTok Style Vertical Feed
-          _buildTikTokFeedTab(feedController, currentUserId, authController),
+          _buildTikTokFeedTab(feedController, currentUserId, authController, langController),
 
           // Tab 1: Marketplace (Exclusive Bandanas)
           const MarketplaceScreen(),
@@ -56,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Tab 2: Pet Profile (or Human Tutor profile)
           authController.hasPet
               ? PetProfileScreen(pet: authController.activePet!)
-              : _buildHumanProfileTab(authController),
+              : _buildHumanProfileTab(authController, langController),
 
           // Tab 3: Rewards Store
           const RewardsStoreScreen(),
@@ -70,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
               elevation: 8,
               icon: const Icon(Icons.videocam_rounded, color: Colors.white),
               label: Text(
-                '+ Video',
+                langController.t('addVideo'),
                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
               ),
               onPressed: () {
@@ -96,18 +99,18 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           onTap: (idx) => setState(() => _currentIndex = idx),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.movie_creation_outlined), activeIcon: Icon(Icons.movie_creation_rounded), label: 'Feed'),
-            BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), activeIcon: Icon(Icons.storefront_rounded), label: 'Marketplace'),
-            BottomNavigationBarItem(icon: Icon(Icons.pets_outlined), activeIcon: Icon(Icons.pets_rounded), label: 'Perfil'),
-            BottomNavigationBarItem(icon: Icon(Icons.card_giftcard_outlined), activeIcon: Icon(Icons.card_giftcard_rounded), label: 'Premios'),
+          items: [
+            BottomNavigationBarItem(icon: const Icon(Icons.movie_creation_outlined), activeIcon: const Icon(Icons.movie_creation_rounded), label: langController.t('feed')),
+            BottomNavigationBarItem(icon: const Icon(Icons.storefront_outlined), activeIcon: const Icon(Icons.storefront_rounded), label: langController.t('marketplace')),
+            BottomNavigationBarItem(icon: const Icon(Icons.pets_outlined), activeIcon: const Icon(Icons.pets_rounded), label: langController.t('profile')),
+            BottomNavigationBarItem(icon: const Icon(Icons.card_giftcard_outlined), activeIcon: const Icon(Icons.card_giftcard_rounded), label: langController.t('rewards')),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTikTokFeedTab(FeedController feedController, String currentUserId, AuthController authController) {
+  Widget _buildTikTokFeedTab(FeedController feedController, String currentUserId, AuthController authController, LanguageController langController) {
     if (feedController.isLoading) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.primaryTerracotta));
     }
@@ -119,11 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.pets_rounded, size: 64, color: AppTheme.textMutedWarm),
             const SizedBox(height: 12),
-            Text('No hay publicaciones activas en el feed.', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
+            Text(langController.t('noActivePosts'), style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => feedController.fetchActivePosts(),
-              child: Text('Actualizar Feed', style: GoogleFonts.fredoka()),
+              child: Text(langController.t('refreshFeed'), style: GoogleFonts.fredoka()),
             ),
           ],
         ),
@@ -175,13 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 28),
-                      tooltip: 'Marketplace Bandanas',
-                      onPressed: () => setState(() => _currentIndex = 1),
-                    ),
+                    const LanguageSelector(isDark: true),
+                    const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(20),
@@ -208,14 +208,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHumanProfileTab(AuthController authController) {
+  Widget _buildHumanProfileTab(AuthController authController, LanguageController langController) {
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
       appBar: AppBar(
         backgroundColor: AppTheme.bgWarmCream,
         elevation: 0,
         title: Text(
-          'Perfil Humano (Tutor)',
+          langController.t('humanProfile'),
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
         ),
       ),
@@ -260,19 +260,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
                     const SizedBox(height: 12),
                     Text(
-                      '¿Tienes una mascota? 🐾',
+                      langController.t('doYouHaveAPet'),
                       style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Registra a tu mascota para convertirte en Creador y publicar sus mejores clips en Pawtbook.',
+                      langController.t('registerPetPrompt'),
                       style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.add_rounded, color: Colors.white),
-                      label: Text('Registrar Mascota Creadora', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                      label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryTerracotta,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

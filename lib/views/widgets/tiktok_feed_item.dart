@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/post_model.dart';
 import '../../models/pet_model.dart';
 import '../../models/comment_model.dart';
 import '../../services/supabase_service.dart';
+import '../../theme/app_theme.dart';
 import 'sponsorship_modal.dart';
 
 class TikTokFeedItem extends StatefulWidget {
@@ -33,7 +37,6 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
     _isLiked = widget.post.isLikedByCurrentUser;
     _likesCount = widget.post.likesCount;
     _viewsCount = widget.post.viewsCount;
-    // Record view
     _supabaseService.recordPostView(widget.post.id);
   }
 
@@ -47,15 +50,15 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
     if (widget.onLikeToggled != null) widget.onLikeToggled!();
   }
 
-  void _showCommentsBottomSheet() {
+  void _showCommentsBottomSheet(LanguageController langController) {
     final commentController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF18181B),
+      backgroundColor: AppTheme.bgWarmCream,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -69,32 +72,32 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                 children: [
                   const SizedBox(height: 12),
                   Container(
-                    width: 36,
-                    height: 4,
+                    width: 40,
+                    height: 5,
                     decoration: BoxDecoration(
-                      color: Colors.grey[700],
-                      borderRadius: BorderRadius.circular(2),
+                      color: AppTheme.borderWarm,
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Comments',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    langController.t('comments'),
+                    style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
-                  const Divider(color: Colors.white12),
+                  const Divider(color: AppTheme.borderWarm),
                   Expanded(
                     child: FutureBuilder<List<CommentModel>>(
                       future: _supabaseService.getCommentsForPost(widget.post.id),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
+                          return const Center(child: CircularProgressIndicator(color: AppTheme.primaryTerracotta));
                         }
                         final comments = snapshot.data!;
                         if (comments.isEmpty) {
                           return Center(
                             child: Text(
-                              'No comments yet. Be the first! 🐾',
-                              style: TextStyle(color: Colors.grey[400]),
+                              langController.t('noComments'),
+                              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
                             ),
                           );
                         }
@@ -104,19 +107,19 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                             final cmt = comments[idx];
                             return ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: const Color(0xFF6366F1),
+                                backgroundColor: AppTheme.surfaceWarm,
                                 child: Text(
                                   (cmt.username ?? 'U')[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold),
                                 ),
                               ),
                               title: Text(
                                 cmt.username ?? 'Paw User',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               subtitle: Text(
                                 cmt.content,
-                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 14),
                               ),
                             );
                           },
@@ -131,15 +134,15 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                         Expanded(
                           child: TextField(
                             controller: commentController,
-                            style: const TextStyle(color: Colors.white),
+                            style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                             decoration: InputDecoration(
-                              hintText: 'Add a comment...',
-                              hintStyle: TextStyle(color: Colors.grey[500]),
+                              hintText: langController.t('addComment'),
+                              hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
                               filled: true,
-                              fillColor: const Color(0xFF27272A),
+                              fillColor: AppTheme.surfaceWarm,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(color: AppTheme.borderWarm),
                               ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                             ),
@@ -147,7 +150,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.send, color: Color(0xFF6366F1)),
+                          icon: const Icon(Icons.send_rounded, color: AppTheme.primaryTerracotta),
                           onPressed: () async {
                             if (commentController.text.trim().isNotEmpty) {
                               final text = commentController.text.trim();
@@ -175,6 +178,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
 
   @override
   Widget build(BuildContext context) {
+    final langController = Provider.of<LanguageController>(context);
     final petName = widget.post.petName ?? 'Mascota';
     final petAvatar = widget.post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200';
 
@@ -190,7 +194,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
           errorBuilder: (_, __, ___) => Container(
             color: const Color(0xFF09090B),
             child: const Center(
-              child: Icon(Icons.pets, size: 80, color: Color(0xFF6366F1)),
+              child: Icon(Icons.pets_rounded, size: 80, color: AppTheme.primaryTerracotta),
             ),
           ),
         ),
@@ -220,7 +224,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                 color: Colors.black.withOpacity(0.4),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.play_arrow, size: 48, color: Colors.white),
+              child: const Icon(Icons.play_arrow_rounded, size: 48, color: Colors.white),
             ),
           ),
 
@@ -237,7 +241,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                   Container(
                     padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF14F195),
+                      color: AppTheme.emeraldGreen,
                       shape: BoxShape.circle,
                     ),
                     child: CircleAvatar(
@@ -250,7 +254,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF6366F1),
+                        color: AppTheme.primaryTerracotta,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.add, color: Colors.white, size: 14),
@@ -273,7 +277,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                     const SizedBox(height: 4),
                     Text(
                       '$_likesCount',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
@@ -282,14 +286,14 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
 
               // Comment Button
               GestureDetector(
-                onTap: _showCommentsBottomSheet,
+                onTap: () => _showCommentsBottomSheet(langController),
                 child: Column(
                   children: [
                     const Icon(Icons.comment_rounded, color: Colors.white, size: 34),
                     const SizedBox(height: 4),
                     Text(
                       '${widget.post.commentsCount}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
@@ -303,7 +307,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                   const SizedBox(height: 4),
                   Text(
                     '$_viewsCount',
-                    style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 11),
+                    style: GoogleFonts.fredoka(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 11),
                   ),
                 ],
               ),
@@ -322,26 +326,26 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF14F195)],
+                      colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6366F1).withOpacity(0.5),
+                        color: AppTheme.primaryTerracotta.withOpacity(0.5),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.volunteer_activism, color: Colors.white, size: 26),
+                  child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Sponsor',
-                style: TextStyle(color: Color(0xFF14F195), fontWeight: FontWeight.bold, fontSize: 10),
+              Text(
+                langController.t('sponsor'),
+                style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
               ),
             ],
           ),
@@ -359,24 +363,24 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                 children: [
                   Text(
                     '@$petName',
-                    style: const TextStyle(
+                    style: GoogleFonts.fredoka(
                       color: Colors.white,
-                      fontSize: 17,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(width: 8),
                   if (widget.post.nftMintAddress != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF9945FF).withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF9945FF)),
+                        color: AppTheme.solanaPurple.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.solanaPurple),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Solana NFT 🐾',
-                        style: TextStyle(color: Color(0xFF14F195), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.fredoka(color: AppTheme.solanaGreen, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                 ],
@@ -384,7 +388,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
               const SizedBox(height: 8),
               Text(
                 widget.post.caption,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -395,7 +399,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                   children: widget.post.tags.map((t) {
                     return Text(
                       '#$t',
-                      style: const TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold, fontSize: 12),
+                      style: GoogleFonts.fredoka(color: AppTheme.accentOrange, fontWeight: FontWeight.bold, fontSize: 12),
                     );
                   }).toList(),
                 ),

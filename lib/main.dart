@@ -5,6 +5,7 @@ import 'config/app_config.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/pet_controller.dart';
+import 'controllers/language_controller.dart';
 import 'services/supabase_service.dart';
 import 'services/r2_storage_service.dart';
 import 'services/render_backend_service.dart';
@@ -51,6 +52,9 @@ void main() async {
           create: (_) => PetController(
             supabaseService: supabaseService,
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => LanguageController(),
         ),
       ],
       child: const PawtbookApp(),

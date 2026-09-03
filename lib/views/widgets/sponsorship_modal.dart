@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
@@ -30,13 +32,13 @@ class SponsorshipModal extends StatefulWidget {
 
 class _SponsorshipModalState extends State<SponsorshipModal> {
   int _selectedAmount = 100;
-  String _paymentMethod = 'stripe'; // 'stripe' or 'solana_pay'
+  String _paymentMethod = 'stripe';
   bool _isProcessing = false;
 
   final RenderBackendService _renderService = RenderBackendService();
   final SupabaseService _supabaseService = SupabaseService();
 
-  Future<void> _processSponsorship() async {
+  Future<void> _processSponsorship(LanguageController langController) async {
     setState(() => _isProcessing = true);
 
     if (_paymentMethod == 'stripe') {
@@ -92,6 +94,8 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
 
   @override
   Widget build(BuildContext context) {
+    final langController = Provider.of<LanguageController>(context);
+
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.bgWarmCream,
@@ -151,7 +155,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Select Sponsorship Amount:',
+            langController.t('selectAmount'),
             style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -190,7 +194,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Payment Method:',
+            langController.t('paymentMethod'),
             style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -219,7 +223,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         const Icon(Icons.credit_card_rounded, color: AppTheme.primaryTerracotta, size: 22),
                         const SizedBox(width: 8),
                         Text(
-                          'Credit Card\n(Stripe)',
+                          langController.t('creditCard'),
                           style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -251,7 +255,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 22),
                         const SizedBox(width: 8),
                         Text(
-                          'Crypto\n(Solana Pay)',
+                          langController.t('solanaPay'),
                           style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -266,7 +270,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : _processSponsorship,
+              onPressed: _isProcessing ? null : () => _processSponsorship(langController),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _paymentMethod == 'solana_pay'
                     ? AppTheme.emeraldGreen
@@ -279,8 +283,8 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : Text(
                       _paymentMethod == 'solana_pay'
-                          ? 'Pay with Solana Pay'
-                          : 'Pay with Card (Stripe)',
+                          ? langController.t('payWithCrypto')
+                          : langController.t('payWithCard'),
                       style: GoogleFonts.fredoka(
                         color: Colors.white,
                         fontSize: 16,
