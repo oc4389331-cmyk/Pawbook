@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
 import '../../models/pet_model.dart';
+import '../../services/r2_storage_service.dart';
 import '../../theme/app_theme.dart';
 
 class CreatePetScreen extends StatefulWidget {
@@ -138,6 +142,10 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   String _selectedBreed = 'Mestizo / Criollo';
   String _selectedAvatar = CreatePetScreen.avatarPresets[0];
 
+  bool _isUploadingToR2 = false;
+  final ImagePicker _picker = ImagePicker();
+  final R2StorageService _r2Service = R2StorageService();
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -157,7 +165,164 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     }
   }
 
-  void _showCustomPhotoDialog() {
+  Future<void> _pickAndUploadPhotoToR2(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _isUploadingToR2 = true);
+
+      final bytes = await pickedFile.readAsBytes();
+      final filename = 'pet_avatar_${const Uuid().v4().substring(0, 8)}.jpg';
+
+      // Data URI format for instant preview + Cloudflare R2 URL
+      final base64Image = base64Encode(bytes);
+      final dataUrl = 'data:image/jpeg;base64,$base64Image';
+      final r2PublicUrl = '${AppConfig.r2MediaDomain}/avatars/$filename';
+
+      // Upload to Cloudflare R2 bucket
+      await _r2Service.uploadMediaWithPresignedUrl(
+        presignedPutUrl: r2PublicUrl,
+        publicUrl: r2PublicUrl,
+        bytes: bytes,
+        contentType: 'image/jpeg',
+      );
+
+      setState(() {
+        _selectedAvatar = dataUrl;
+        _isUploadingToR2 = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.emeraldGreen,
+            content: Text(
+              '☁️ ¡Imagen cargada y guardada exitosamente en Cloudflare R2!',
+              style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploadingToR2 = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text(
+              'Error al subir imagen a Cloudflare R2: $e',
+              style: GoogleFonts.fredoka(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCustomPhotoOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Seleccionar Foto para Mascota ☁️',
+                style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Se guardará directamente en Cloudflare R2',
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+
+              // Option 1: Pick from Device Gallery / File Manager
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surfaceWarm,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryTerracotta),
+                ),
+                title: Text('Galería / Archivos del Dispositivo', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text('Subir foto desde tu dispositivo a Cloudflare R2', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadPhotoToR2(ImageSource.gallery);
+                },
+              ),
+              const Divider(),
+
+              // Option 2: Take Photo with Camera
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surfaceWarm,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: AppTheme.accentOrange),
+                ),
+                title: Text('Tomar Foto con Cámara', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text('Capturar directamente una foto nueva', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadPhotoToR2(ImageSource.camera);
+                },
+              ),
+              const Divider(),
+
+              // Option 3: Direct URL Link
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surfaceWarm,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.link_rounded, color: AppTheme.emeraldGreen),
+                ),
+                title: Text('Ingresar URL / Enlace de Foto', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text('Usar un enlace directo de imagen web', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showUrlInputDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUrlInputDialog() {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -165,21 +330,21 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
           backgroundColor: AppTheme.bgWarmCream,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Text(
-            'Subir Foto de la Mascota 📸',
+            'Ingresar URL de Foto 📸',
             style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Ingresa la URL o enlace directo de la foto de tu mascota:',
+                'Ingresa la URL pública de la imagen de tu mascota:',
                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _customAvatarUrlController,
                 decoration: InputDecoration(
-                  hintText: 'https://miservidor.com/mi_mascota.jpg',
+                  hintText: 'https://miservidor.com/mascota.jpg',
                   hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
                   filled: true,
                   fillColor: AppTheme.surfaceWarm,
@@ -206,11 +371,28 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 }
                 Navigator.pop(ctx);
               },
-              child: Text('Usar Foto', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text('Usar URL', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildAvatarPreview() {
+    ImageProvider imageProvider;
+
+    if (_selectedAvatar.startsWith('data:image')) {
+      final base64Str = _selectedAvatar.split(',').last;
+      imageProvider = MemoryImage(base64Decode(base64Str));
+    } else {
+      imageProvider = NetworkImage(_selectedAvatar);
+    }
+
+    return CircleAvatar(
+      radius: 56,
+      backgroundColor: AppTheme.surfaceWarm,
+      backgroundImage: imageProvider,
     );
   }
 
@@ -243,22 +425,31 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                     Stack(
                       alignment: Alignment.bottomRight,
                       children: [
-                        CircleAvatar(
-                          radius: 56,
-                          backgroundColor: AppTheme.surfaceWarm,
-                          backgroundImage: NetworkImage(_selectedAvatar),
-                        ),
-                        GestureDetector(
-                          onTap: _showCustomPhotoDialog,
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primaryTerracotta,
-                              shape: BoxShape.circle,
+                        _buildAvatarPreview(),
+                        if (_isUploadingToR2)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black45,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(color: Colors.white),
+                              ),
                             ),
-                            child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 20),
+                          )
+                        else
+                          GestureDetector(
+                            onTap: _showCustomPhotoOptionsModal,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primaryTerracotta,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 20),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -268,21 +459,24 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                     ),
                     const SizedBox(height: 6),
 
-                    // Custom Photo Upload Button
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primaryTerracotta,
-                        side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
+                    // Custom Photo Upload Button (Triggers Gallery / Camera / Cloudflare R2 Upload)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.emeraldGreen,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
-                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      icon: _isUploadingToR2
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.cloud_upload_rounded, size: 20),
                       label: Text(
-                        'Subir Foto Propia / Galería 📸',
-                        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold),
+                        _isUploadingToR2 ? 'Subiendo a Cloudflare R2...' : 'Subir Foto (Galería / Cámara) ☁️',
+                        style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
-                      onPressed: _showCustomPhotoDialog,
+                      onPressed: _isUploadingToR2 ? null : _showCustomPhotoOptionsModal,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Presets Carousel
                     Text(
