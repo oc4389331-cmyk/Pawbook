@@ -31,6 +31,173 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showGoogleAuthConsentModal(BuildContext context, AuthController authController) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Google Branding Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4285F4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Iniciar sesión con Google',
+                        style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF202124)),
+                      ),
+                      Text(
+                        'Pawtbook solicita acceso a tu cuenta',
+                        style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+
+              // Selected Account Box
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFDADCE0)),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Color(0xFF1A73E8),
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Usuario Google Verificado', style: GoogleFonts.roboto(fontWeight: FontWeight.bold, color: const Color(0xFF202124), fontSize: 14)),
+                          Text('user.google@gmail.com', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853), size: 22),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Permissions Requested List
+              Text(
+                'Pawtbook obtendrá los siguientes datos:',
+                style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+              ),
+              const SizedBox(height: 10),
+
+              _buildPermissionRow(Icons.email_rounded, 'Ver tu dirección de correo electrónico principal'),
+              _buildPermissionRow(Icons.account_circle_rounded, 'Ver tu nombre y foto de perfil personal pública'),
+              _buildPermissionRow(Icons.account_balance_wallet_rounded, 'Vincular y generar tu Wallet de Solana en Mainnet'),
+
+              const SizedBox(height: 22),
+
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Cancelar', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A73E8),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        final ok = await authController.loginWithGoogle();
+                        if (ok && mounted) _onLoginSuccess();
+                      },
+                      child: Text('Permitir y Acceder', style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'Puedes revocar estos permisos en cualquier momento desde tu cuenta de Google.',
+                  style: GoogleFonts.roboto(fontSize: 11, color: const Color(0xFF70757A)),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPermissionRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF1A73E8)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF3C4043))),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
@@ -154,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Google Sign-In Button
+                      // Google Sign-In Button (Triggers Permission Consent Modal)
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -171,10 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           onPressed: authController.isLoading
                               ? null
-                              : () async {
-                                  final ok = await authController.loginWithGoogle();
-                                  if (ok && mounted) _onLoginSuccess();
-                                },
+                              : () => _showGoogleAuthConsentModal(context, authController),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
