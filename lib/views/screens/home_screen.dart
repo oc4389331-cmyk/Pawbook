@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
+  bool _hasShownRegisterWall = false;
 
   @override
   void initState() {
@@ -37,6 +38,130 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _showTikTokRegistrationWall(BuildContext context, AuthController authController) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.bgWarmCream,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderWarm,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Hero Paw Circle Icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceWarm,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.cardWarm, width: 2),
+                ),
+                child: const Icon(
+                  Icons.pets_rounded,
+                  size: 48,
+                  color: AppTheme.primaryTerracotta,
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              Text(
+                '¡Únete a la comunidad Pawtbook! 🐾',
+                style: GoogleFonts.fredoka(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryTerracotta,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Has disfrutado de los primeros videos. Para continuar la experiencia, dar likes, comentar, patrocinar y ganar PawtScore, crea tu cuenta gratis.',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: AppTheme.textMutedWarm,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Option 1: Human Account (Sponsor)
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTerracotta,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white),
+                  label: Text(
+                    '👤 Crear / Entrar Cuenta de Humano',
+                    style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Option 2: Pet Creator Account
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentOrange,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  icon: const Icon(Icons.pets_rounded, color: Colors.white),
+                  label: Text(
+                    '🐾 Registrar Perfil de Mascota (Creador)',
+                    style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CreatePetScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Option 3: Continue Watching as Guest
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'Seguir viendo videos por ahora 🐾',
+                  style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -58,9 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const MarketplaceScreen(),
 
           // Tab 2: Pet Profile (or Human Tutor profile)
-          authController.hasPet
-              ? PetProfileScreen(pet: authController.activePet!)
-              : _buildHumanProfileTab(authController, langController),
+          authController.isAuthenticated
+              ? (authController.hasPet
+                  ? PetProfileScreen(pet: authController.activePet!)
+                  : _buildHumanProfileTab(authController, langController))
+              : _buildGuestProfilePromptTab(authController, langController),
 
           // Tab 3: Rewards Store
           const RewardsStoreScreen(),
@@ -99,7 +226,13 @@ class _HomeScreenState extends State<HomeScreen> {
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          onTap: (idx) => setState(() => _currentIndex = idx),
+          onTap: (idx) {
+            if (idx == 2 && !authController.isAuthenticated) {
+              _showTikTokRegistrationWall(context, authController);
+            } else {
+              setState(() => _currentIndex = idx);
+            }
+          },
           items: [
             BottomNavigationBarItem(icon: const Icon(Icons.movie_creation_outlined), activeIcon: const Icon(Icons.movie_creation_rounded), label: langController.t('feed')),
             BottomNavigationBarItem(icon: const Icon(Icons.storefront_outlined), activeIcon: const Icon(Icons.storefront_rounded), label: langController.t('marketplace')),
@@ -141,13 +274,24 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: _pageController,
           scrollDirection: Axis.vertical,
           itemCount: feedController.posts.length,
+          onPageChanged: (index) {
+            // Trigger Registration Wall after watching 3 videos for guests!
+            if (!authController.isAuthenticated && index >= 3 && !_hasShownRegisterWall) {
+              setState(() => _hasShownRegisterWall = true);
+              _showTikTokRegistrationWall(context, authController);
+            }
+          },
           itemBuilder: (context, index) {
             final post = feedController.posts[index];
             return TikTokFeedItem(
               post: post,
               currentUserId: currentUserId,
               onLikeToggled: () {
-                setState(() {});
+                if (!authController.isAuthenticated) {
+                  _showTikTokRegistrationWall(context, authController);
+                } else {
+                  setState(() {});
+                }
               },
             );
           },
@@ -181,22 +325,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const LanguageSelector(isDark: true),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white30),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${authController.currentProfile?.pawtScore ?? 100} pts',
-                            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-                          ),
-                        ],
+                    GestureDetector(
+                      onTap: () {
+                        if (!authController.isAuthenticated) {
+                          _showTikTokRegistrationWall(context, authController);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white30),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${authController.currentProfile?.pawtScore ?? 100} pts',
+                              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -206,6 +357,78 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGuestProfilePromptTab(AuthController authController, LanguageController langController) {
+    return Scaffold(
+      backgroundColor: AppTheme.bgWarmCream,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: AppTheme.surfaceWarm,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.pets_rounded, size: 64, color: AppTheme.primaryTerracotta),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '¡Crea tu perfil en Pawtbook! 🐾',
+                style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Únete como humano patrocinador o registra a tu mascota para subir videos y ganar PawtScore.',
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTerracotta,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white),
+                  label: Text('👤 Iniciar Sesión / Registrar Humano', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentOrange,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  icon: const Icon(Icons.pets_rounded, color: Colors.white),
+                  label: Text('🐾 Registrar Mascota Creadora', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CreatePetScreen()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

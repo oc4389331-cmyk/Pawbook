@@ -11,7 +11,7 @@ import 'services/r2_storage_service.dart';
 import 'services/render_backend_service.dart';
 import 'services/dynamic_auth_service.dart';
 import 'theme/app_theme.dart';
-import 'views/screens/login_screen.dart';
+import 'views/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,7 +71,7 @@ class PawtbookApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const LoginScreen(),
+      home: const HomeScreen(), // TikTok Guest-First Entry
     );
   }
 }
