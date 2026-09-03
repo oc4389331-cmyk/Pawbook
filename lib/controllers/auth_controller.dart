@@ -87,6 +87,32 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithGoogle() async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final res = await _dynamicAuthService.authenticateWithGoogle();
+      if (!res.isSuccess || res.walletAddress == null) {
+        _errorMessage = res.errorMessage ?? 'Google authentication failed';
+        _setLoading(false);
+        return false;
+      }
+
+      await _processAuthenticatedUser(
+        walletAddress: res.walletAddress!,
+        email: res.email,
+        jwtToken: res.jwtToken ?? '',
+      );
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<void> _processAuthenticatedUser({
     required String walletAddress,
     String? email,

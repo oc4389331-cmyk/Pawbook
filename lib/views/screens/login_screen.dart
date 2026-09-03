@@ -150,6 +150,60 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                         ),
                       ),
+                      const SizedBox(height: 14),
+
+                      // Google Sign-In Button (Official White Soft Card)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppTheme.textPrimaryDark,
+                            elevation: 3,
+                            shadowColor: Colors.black.withOpacity(0.08),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
+                            ),
+                          ),
+                          onPressed: authController.isLoading
+                              ? null
+                              : () async {
+                                  final ok = await authController.loginWithGoogle();
+                                  if (ok && mounted) _onLoginSuccess();
+                                },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF4285F4),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                langController.t('continueWithGoogle'),
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimaryDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 18),
 
                       // Email Input (Warm Pawly Soft Container)

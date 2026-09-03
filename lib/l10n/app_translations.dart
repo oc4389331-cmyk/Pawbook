@@ -37,6 +37,7 @@ class AppTranslations {
       'bestSeller': 'Best Seller',
       'limitedEdition': 'Limited Edition',
       'summerCollection': 'Summer Collection',
+      'continueWithGoogle': 'Continue with Google',
     },
     'es': {
       'appName': 'Pawtbook 🐾',
@@ -75,6 +76,7 @@ class AppTranslations {
       'bestSeller': 'Más Vendido',
       'limitedEdition': 'Edición Limitada',
       'summerCollection': 'Colección de Verano',
+      'continueWithGoogle': 'Continuar con Google',
     },
     'zh': {
       'appName': 'Pawtbook 🐾',
@@ -113,6 +115,7 @@ class AppTranslations {
       'bestSeller': '畅销热卖',
       'limitedEdition': '限量版',
       'summerCollection': '夏季系列',
+      'continueWithGoogle': '使用 Google 账号登录',
     },
     'ja': {
       'appName': 'Pawtbook 🐾',
@@ -151,6 +154,7 @@ class AppTranslations {
       'bestSeller': 'ベストセラー',
       'limitedEdition': '限定版',
       'summerCollection': 'サマーコレクション',
+      'continueWithGoogle': 'Googleでサインイン',
     },
   };
 
