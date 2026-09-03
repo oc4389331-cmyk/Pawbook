@@ -89,13 +89,13 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> loginWithGoogle() async {
+  Future<bool> loginWithGoogle({String? googleEmail}) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
       // Authenticate via Dynamic.xyz Google OAuth (Solana Mainnet Env ID)
-      final res = await _dynamicAuthService.authenticateWithGoogle();
+      final res = await _dynamicAuthService.authenticateWithGoogle(email: googleEmail);
 
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? 'Error al autenticar con Google';
@@ -103,7 +103,7 @@ class AuthController extends ChangeNotifier {
         return false;
       }
 
-      final email = res.email ?? 'user.google@gmail.com';
+      final email = res.email ?? googleEmail ?? 'mi.cuenta.google@gmail.com';
       final walletAddress = res.walletAddress!;
 
       await _processAuthenticatedUser(

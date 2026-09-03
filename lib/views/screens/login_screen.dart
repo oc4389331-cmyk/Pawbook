@@ -32,6 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showGoogleAuthConsentModal(BuildContext context, AuthController authController) {
+    final googleEmailController = TextEditingController(
+      text: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : '',
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -94,32 +98,26 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               const Divider(),
 
-              // Selected Account Box
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFDADCE0)),
-                ),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      backgroundColor: Color(0xFF1A73E8),
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Usuario Google Verificado', style: GoogleFonts.roboto(fontWeight: FontWeight.bold, color: const Color(0xFF202124), fontSize: 14)),
-                          Text('user.google@gmail.com', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853), size: 22),
-                  ],
+              // Interactive Google Account Selection
+              Text(
+                'Ingresa o confirma tu correo de Google:',
+                style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: googleEmailController,
+                keyboardType: TextInputType.emailAddress,
+                style: GoogleFonts.roboto(color: const Color(0xFF202124), fontSize: 14, fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: 'tu.correo@gmail.com',
+                  prefixIcon: const Icon(Icons.account_circle_rounded, color: Color(0xFF1A73E8)),
+                  suffixIcon: const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8F9FA),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 2)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -159,8 +157,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       ),
                       onPressed: () async {
+                        final chosenEmail = googleEmailController.text.trim();
                         Navigator.pop(ctx);
-                        final ok = await authController.loginWithGoogle();
+                        final ok = await authController.loginWithGoogle(
+                          googleEmail: chosenEmail.isNotEmpty ? chosenEmail : null,
+                        );
                         if (ok && mounted) _onLoginSuccess();
                       },
                       child: Text('Permitir y Acceder', style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold)),

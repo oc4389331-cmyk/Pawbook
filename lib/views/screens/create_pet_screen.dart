@@ -706,10 +706,13 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                             style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13),
                           ),
                           onPressed: () async {
-                            final ok = await authController.loginWithGoogle();
+                            final emailToUse = _tutorEmailController.text.trim();
+                            final ok = await authController.loginWithGoogle(
+                              googleEmail: emailToUse.isNotEmpty ? emailToUse : null,
+                            );
                             if (ok && mounted) {
                               setState(() {
-                                _tutorEmailController.text = authController.currentProfile?.email ?? '';
+                                _tutorEmailController.text = authController.currentProfile?.email ?? emailToUse;
                               });
                             }
                           },
