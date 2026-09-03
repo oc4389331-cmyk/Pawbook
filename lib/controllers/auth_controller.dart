@@ -161,7 +161,31 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> registerPet(PetModel pet, {String? ownerEmail}) async {
+  Future<bool> loginWithEmailAndPassword(String email, String password) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final cleanEmail = email.trim();
+      final hash = cleanEmail.hashCode.abs().toRadixString(16);
+      final walletAddress = 'PawEmb${hash}SolanaWallet';
+
+      await _processAuthenticatedUser(
+        walletAddress: walletAddress,
+        email: cleanEmail,
+        jwtToken: 'dyn_jwt_pwd_$hash',
+      );
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<void> registerPet(PetModel pet, {String? ownerEmail, String? ownerPassword}) async {
     _setLoading(true);
 
     try {

@@ -16,10 +16,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -28,8 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Google Sign-In Button (Triggers authentic Google Account Picker Modal)
+                      // Google Sign-In Button
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -208,9 +208,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // Email Input (Warm Pawly Soft Container)
+                      // Email Input
                       TextField(
                         controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           hintText: langController.t('emailHint'),
                           hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
@@ -233,9 +234,37 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                       ),
+                      const SizedBox(height: 12),
+
+                      // Password Input
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          hintText: 'Tu Contraseña',
+                          hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primaryTerracotta),
+                          filled: true,
+                          fillColor: AppTheme.surfaceWarm,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: AppTheme.borderWarm),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: AppTheme.borderWarm),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2),
+                          ),
+                        ),
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                      ),
                       const SizedBox(height: 14),
 
-                      // Email Login Outlined Button
+                      // Email & Password Login Button
                       SizedBox(
                         width: double.infinity,
                         height: 52,
@@ -247,15 +276,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                           label: Text(
-                            langController.t('enterEmail'),
+                            'Ingresar con Email y Contraseña',
                             style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                           onPressed: authController.isLoading
                               ? null
                               : () async {
                                   final email = _emailController.text.trim();
+                                  final password = _passwordController.text.trim();
                                   if (email.isEmpty) return;
-                                  final ok = await authController.loginWithEmail(email);
+                                  final ok = password.isNotEmpty
+                                      ? await authController.loginWithEmailAndPassword(email, password)
+                                      : await authController.loginWithEmail(email);
                                   if (ok && mounted) _onLoginSuccess();
                                 },
                         ),

@@ -138,6 +138,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   final _bioController = TextEditingController();
   final _customAvatarUrlController = TextEditingController();
   final _tutorEmailController = TextEditingController();
+  final _tutorPasswordController = TextEditingController();
 
   String _selectedSpecies = 'Perro 🐶';
   String _selectedBreed = 'Mestizo / Criollo';
@@ -154,6 +155,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     _bioController.dispose();
     _customAvatarUrlController.dispose();
     _tutorEmailController.dispose();
+    _tutorPasswordController.dispose();
     super.dispose();
   }
 
@@ -678,6 +680,19 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _tutorPasswordController,
+                        obscureText: true,
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                        decoration: _inputDecoration('Contraseña (mínimo 6 caracteres)', Icons.lock_outline_rounded),
+                        validator: (v) {
+                          if (!authController.isAuthenticated && (v == null || v.trim().length < 6)) {
+                            return 'Por favor ingresa una contraseña de al menos 6 caracteres';
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 10),
                       Center(
                         child: TextButton.icon(
@@ -745,6 +760,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                             await authController.registerPet(
                               newPet,
                               ownerEmail: _tutorEmailController.text.trim(),
+                              ownerPassword: _tutorPasswordController.text.trim(),
                             );
 
                             if (mounted) {
