@@ -54,4 +54,30 @@ class PetModel {
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  PetModel copyWith({
+    String? id,
+    String? ownerId,
+    String? name,
+    String? species,
+    String? breed,
+    String? bio,
+    String? avatarUrl,
+    String? nftMintAddress,
+    int? totalSponsoredScore,
+    DateTime? createdAt,
+  }) {
+    return PetModel(
+      id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      breed: breed ?? this.breed,
+      bio: bio ?? this.bio,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      nftMintAddress: nftMintAddress ?? this.nftMintAddress,
+      totalSponsoredScore: totalSponsoredScore ?? this.totalSponsoredScore,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

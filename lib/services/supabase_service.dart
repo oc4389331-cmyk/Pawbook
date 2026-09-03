@@ -1,7 +1,10 @@
+import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_model.dart';
 import '../models/pet_model.dart';
 import '../models/post_model.dart';
+import '../models/comment_model.dart';
+import '../models/sponsorship_model.dart';
 import '../models/reward_order_model.dart';
 
 class SupabaseService {
@@ -12,6 +15,9 @@ class SupabaseService {
   final Map<String, ProfileModel> _mockProfiles = {};
   final Map<String, PetModel> _mockPets = {};
   final List<PostModel> _mockPosts = [];
+  final List<CommentModel> _mockComments = [];
+  final List<SponsorshipModel> _mockSponsorships = [];
+  final Set<String> _mockLikedPostUserKeys = {}; // "userId_postId"
   final List<RewardOrderModel> _mockOrders = [];
 
   SupabaseService({bool useMockFallback = true}) : _useMockFallback = useMockFallback {
@@ -58,10 +64,13 @@ class SupabaseService {
       PostModel(
         id: 'post_demo_1',
         petId: 'pet_demo_1',
-        mediaUrl: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800',
-        mediaType: 'image',
-        caption: 'First day at the park! #Pawtbook #SolanaPets',
-        likesCount: 24,
+        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-playful-puppy-in-the-grass-42240-large.mp4',
+        mediaType: 'video',
+        caption: 'First day at the park! 🐾 #Pawtbook #SolanaPets',
+        likesCount: 142,
+        viewsCount: 1890,
+        commentsCount: 12,
+        tags: ['dog', 'golden', 'park'],
         status: PostStatus.active,
         createdAt: DateTime.now().subtract(const Duration(hours: 2)),
         petName: 'Luna',
@@ -71,15 +80,29 @@ class SupabaseService {
       PostModel(
         id: 'post_demo_2',
         petId: 'pet_demo_2',
-        mediaUrl: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800',
-        mediaType: 'image',
-        caption: 'Chilling on a Sunday afternoon 🐱☕',
-        likesCount: 18,
+        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-cat-looking-at-the-camera-42526-large.mp4',
+        mediaType: 'video',
+        caption: 'Chilling on a Sunday afternoon 🐱☕ #Pawtbook',
+        likesCount: 98,
+        viewsCount: 1240,
+        commentsCount: 8,
+        tags: ['cat', 'siamese', 'chill'],
         status: PostStatus.active,
         createdAt: DateTime.now().subtract(const Duration(hours: 5)),
         petName: 'Milo',
         petAvatarUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400',
         nftMintAddress: 'SolMilo888...Mint',
+      ),
+    ]);
+
+    _mockComments.addAll([
+      CommentModel(
+        id: 'cmt_1',
+        postId: 'post_demo_1',
+        userId: 'usr_demo_456',
+        content: 'So cute!! Loving the energy 🐶❤️',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        username: 'paw_milo_owner',
       ),
     ]);
   }
@@ -150,8 +173,8 @@ class SupabaseService {
     return pet;
   }
 
-  // --- Posts Operations (Strict Safety: Active Status Only & RLS check) ---
-  Future<List<PostModel>> getActivePosts() async {
+  // --- Posts & Recommendation Algorithm Operations ---
+  Future<List<PostModel>> getActivePosts({String? currentUserId}) async {
     if (_client != null) {
       try {
         final res = await _client!
@@ -159,12 +182,27 @@ class SupabaseService {
             .select('*, pets(*)')
             .eq('status', 'active')
             .order('created_at', ascending: false);
-        return (res as List).map((e) => PostModel.fromJson(e)).toList();
+
+        final posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          final likedRes = await _client!
+              .from('post_likes')
+              .select('post_id')
+              .eq('user_id', currentUserId);
+          final likedIds = (likedRes as List).map((e) => e['post_id'] as String).toSet();
+
+          return posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
+        }
+        return posts;
       } catch (e) {
         if (!_useMockFallback) rethrow;
       }
     }
-    return _mockPosts.where((p) => p.status == PostStatus.active && p.reportCount < 3).toList()
+
+    return _mockPosts.where((p) => p.status == PostStatus.active && p.reportCount < 3).map((p) {
+      final key = '${currentUserId}_${p.id}';
+      return p.copyWith(isLikedByCurrentUser: _mockLikedPostUserKeys.contains(key));
+    }).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
@@ -193,6 +231,154 @@ class SupabaseService {
     return fullPost;
   }
 
+  /// Toggles Like for a user on a post
+  Future<bool> toggleLikePost(String userId, String postId) async {
+    if (_client != null) {
+      try {
+        final existing = await _client!
+            .from('post_likes')
+            .select()
+            .eq('user_id', userId)
+            .eq('post_id', postId)
+            .maybeSingle();
+
+        if (existing != null) {
+          await _client!.from('post_likes').delete().eq('user_id', userId).eq('post_id', postId);
+          await _client!.rpc('decrement_likes', params: {'post_id': postId});
+          return false; // Now un-liked
+        } else {
+          await _client!.from('post_likes').insert({
+            'id': 'like_${DateTime.now().millisecondsSinceEpoch}',
+            'user_id': userId,
+            'post_id': postId,
+          });
+          await _client!.rpc('increment_likes', params: {'post_id': postId});
+          return true; // Now liked
+        }
+      } catch (_) {}
+    }
+
+    // Mock Fallback
+    final key = '${userId}_$postId';
+    final idx = _mockPosts.indexWhere((p) => p.id == postId);
+    if (_mockLikedPostUserKeys.contains(key)) {
+      _mockLikedPostUserKeys.remove(key);
+      if (idx != -1) {
+        _mockPosts[idx] = _mockPosts[idx].copyWith(
+          likesCount: max(0, _mockPosts[idx].likesCount - 1),
+          isLikedByCurrentUser: false,
+        );
+      }
+      return false;
+    } else {
+      _mockLikedPostUserKeys.add(key);
+      if (idx != -1) {
+        _mockPosts[idx] = _mockPosts[idx].copyWith(
+          likesCount: _mockPosts[idx].likesCount + 1,
+          isLikedByCurrentUser: true,
+        );
+      }
+      return true;
+    }
+  }
+
+  /// Increments views count for recommendation algorithm
+  Future<void> recordPostView(String postId) async {
+    final idx = _mockPosts.indexWhere((p) => p.id == postId);
+    if (idx != -1) {
+      _mockPosts[idx] = _mockPosts[idx].copyWith(viewsCount: _mockPosts[idx].viewsCount + 1);
+    }
+
+    if (_client != null) {
+      try {
+        await _client!.rpc('increment_views', params: {'post_id': postId});
+      } catch (_) {}
+    }
+  }
+
+  // --- Comments Operations ---
+  Future<List<CommentModel>> getCommentsForPost(String postId) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('comments')
+            .select('*, profiles(username)')
+            .eq('post_id', postId)
+            .order('created_at', ascending: false);
+        return (res as List).map((e) => CommentModel.fromJson(e)).toList();
+      } catch (_) {}
+    }
+
+    return _mockComments.where((c) => c.postId == postId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  Future<CommentModel> addComment(String userId, String postId, String content) async {
+    final comment = CommentModel(
+      id: 'cmt_${DateTime.now().millisecondsSinceEpoch}',
+      postId: postId,
+      userId: userId,
+      content: content,
+      createdAt: DateTime.now(),
+      username: 'paw_user',
+    );
+
+    if (_client != null) {
+      try {
+        final res = await _client!.from('comments').insert(comment.toJson()).select().single();
+        return CommentModel.fromJson(res);
+      } catch (_) {}
+    }
+
+    _mockComments.insert(0, comment);
+    final idx = _mockPosts.indexWhere((p) => p.id == postId);
+    if (idx != -1) {
+      _mockPosts[idx] = _mockPosts[idx].copyWith(
+        commentsCount: _mockPosts[idx].commentsCount + 1,
+      );
+    }
+
+    return comment;
+  }
+
+  // --- Sponsorship Operations (Dual Payment: Stripe / Solana Pay) ---
+  Future<void> sponsorPet({
+    required String sponsorId,
+    required String petId,
+    required int amount,
+    String paymentMethod = 'stripe',
+    String? txHash,
+  }) async {
+    final sponsorship = SponsorshipModel(
+      id: 'spn_${DateTime.now().millisecondsSinceEpoch}',
+      sponsorId: sponsorId,
+      petId: petId,
+      amount: amount,
+      paymentMethod: paymentMethod,
+      txHash: txHash,
+      createdAt: DateTime.now(),
+    );
+
+    _mockSponsorships.add(sponsorship);
+
+    if (_mockPets.containsKey(petId)) {
+      final pet = _mockPets[petId]!;
+      _mockPets[petId] = pet.copyWith(
+        totalSponsoredScore: pet.totalSponsoredScore + amount,
+      );
+    }
+
+    if (_client != null) {
+      try {
+        await _client!.from('sponsorships').insert(sponsorship.toJson());
+        await _client!.rpc('increment_pet_sponsorship', params: {
+          'pet_id': petId,
+          'amount': amount,
+        });
+      } catch (_) {}
+    }
+  }
+
   Future<void> updatePostStatus(String postId, PostStatus newStatus) async {
     final idx = _mockPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
@@ -205,24 +391,6 @@ class SupabaseService {
     if (idx != -1) {
       final current = _mockPosts[idx];
       _mockPosts[idx] = current.copyWith(reportCount: current.reportCount + 1);
-    }
-  }
-
-  Future<void> sponsorPet(String petId, int pawtScoreAmount) async {
-    if (_mockPets.containsKey(petId)) {
-      final pet = _mockPets[petId]!;
-      _mockPets[petId] = PetModel(
-        id: pet.id,
-        ownerId: pet.ownerId,
-        name: pet.name,
-        species: pet.species,
-        breed: pet.breed,
-        bio: pet.bio,
-        avatarUrl: pet.avatarUrl,
-        nftMintAddress: pet.nftMintAddress,
-        totalSponsoredScore: pet.totalSponsoredScore + pawtScoreAmount,
-        createdAt: pet.createdAt,
-      );
     }
   }
 

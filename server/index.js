@@ -313,6 +313,43 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
   }
 });
 
+// --------------------------------------------------------------------------
+// 7. SOLANA PAY SPONSORSHIP ENDPOINT
+// --------------------------------------------------------------------------
+app.post('/api/sponsorship/solana-pay', async (req, res) => {
+  const { sponsorId, petId, amountSol, pawtScoreAmount } = req.body;
+
+  if (!petId || !amountSol) {
+    return res.status(400).json({ success: false, error: 'Missing petId or amountSol' });
+  }
+
+  const recipientWallet = 'PawSol777VaultSolanaPayAddressPawtbook';
+  const solanaPayUrl = `solana:${recipientWallet}?amount=${amountSol}&label=Pawtbook%20Sponsorship&memo=Sponsor_Pet_${petId}`;
+
+  if (supabaseAdmin && sponsorId) {
+    try {
+      await supabaseAdmin.from('sponsorships').insert({
+        id: 'spn_' + Date.now(),
+        sponsor_id: sponsorId,
+        pet_id: petId,
+        amount: pawtScoreAmount || 100,
+        payment_method: 'solana_pay',
+        tx_hash: 'sol_pay_pending_' + Date.now(),
+      });
+    } catch (e) {
+      console.error('Error inserting Solana Pay sponsorship record:', e);
+    }
+  }
+
+  return res.json({
+    success: true,
+    recipientWallet,
+    solanaPayUrl,
+    qrCodeData: solanaPayUrl,
+    message: 'Solana Pay transaction metadata generated successfully'
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Pawtbook Backend API running on port ${PORT}`);
   console.log(`⚡ Stripe Webhook route available at /api/webhooks/stripe`);

@@ -117,8 +117,12 @@ class FeedController extends ChangeNotifier {
     }
   }
 
-  Future<void> sponsorPet(String petId, int pawtScoreAmount) async {
-    await _supabaseService.sponsorPet(petId, pawtScoreAmount);
+  Future<void> sponsorPet(String petId, int pawtScoreAmount, {String sponsorId = 'usr_guest'}) async {
+    await _supabaseService.sponsorPet(
+      sponsorId: sponsorId,
+      petId: petId,
+      amount: pawtScoreAmount,
+    );
     notifyListeners();
   }
 
