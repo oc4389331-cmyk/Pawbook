@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
+import '../../theme/app_theme.dart';
 import '../widgets/tiktok_feed_item.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
@@ -41,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentUserId = authController.currentProfile?.id ?? 'usr_guest';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF09090B),
+      backgroundColor: AppTheme.bgWarmCream,
       body: IndexedStack(
         index: _currentIndex,
         children: [
@@ -64,12 +66,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // Floating Action Button (+ Video) ONLY visible for Pet Creators
       floatingActionButton: authController.hasPet
           ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFF6366F1),
+              backgroundColor: AppTheme.primaryTerracotta,
               elevation: 8,
-              icon: const Icon(Icons.videocam, color: Color(0xFF14F195)),
-              label: const Text(
+              icon: const Icon(Icons.videocam_rounded, color: Colors.white),
+              label: Text(
                 '+ Video',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
               ),
               onPressed: () {
                 Navigator.of(context).push(
@@ -79,26 +81,35 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF18181B),
-        selectedItemColor: const Color(0xFF14F195),
-        unselectedItemColor: Colors.grey[500],
-        type: BottomNavigationBarType.fixed,
-        onTap: (idx) => setState(() => _currentIndex = idx),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.movie_creation_outlined), activeIcon: Icon(Icons.movie_creation), label: 'Feed'),
-          BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), activeIcon: Icon(Icons.storefront), label: 'Marketplace'),
-          BottomNavigationBarItem(icon: Icon(Icons.pets_outlined), activeIcon: Icon(Icons.pets), label: 'Perfil'),
-          BottomNavigationBarItem(icon: Icon(Icons.card_giftcard_outlined), activeIcon: Icon(Icons.card_giftcard), label: 'Premios'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.surfaceWarm,
+          border: Border(top: BorderSide(color: AppTheme.borderWarm, width: 1)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          backgroundColor: AppTheme.surfaceWarm,
+          selectedItemColor: AppTheme.primaryTerracotta,
+          unselectedItemColor: AppTheme.textMutedWarm,
+          selectedLabelStyle: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
+          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          onTap: (idx) => setState(() => _currentIndex = idx),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.movie_creation_outlined), activeIcon: Icon(Icons.movie_creation_rounded), label: 'Feed'),
+            BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), activeIcon: Icon(Icons.storefront_rounded), label: 'Marketplace'),
+            BottomNavigationBarItem(icon: Icon(Icons.pets_outlined), activeIcon: Icon(Icons.pets_rounded), label: 'Perfil'),
+            BottomNavigationBarItem(icon: Icon(Icons.card_giftcard_outlined), activeIcon: Icon(Icons.card_giftcard_rounded), label: 'Premios'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTikTokFeedTab(FeedController feedController, String currentUserId, AuthController authController) {
     if (feedController.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primaryTerracotta));
     }
 
     if (feedController.posts.isEmpty) {
@@ -106,13 +117,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.pets, size: 64, color: Colors.grey),
+            const Icon(Icons.pets_rounded, size: 64, color: AppTheme.textMutedWarm),
             const SizedBox(height: 12),
-            const Text('No hay publicaciones activas en el feed.', style: TextStyle(color: Colors.grey)),
+            Text('No hay publicaciones activas en el feed.', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => feedController.fetchActivePosts(),
-              child: const Text('Actualizar Feed'),
+              child: Text('Actualizar Feed', style: GoogleFonts.fredoka()),
             ),
           ],
         ),
@@ -138,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
 
-        // Top Overlay Header
+        // Top Overlay Header (Pawly Warm Style)
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -147,15 +158,17 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.pets, color: Color(0xFF14F195), size: 24),
+                    const Icon(Icons.pets_rounded, color: AppTheme.accentOrange, size: 28),
                     const SizedBox(width: 8),
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFF14F195), Color(0xFF9945FF)],
-                      ).createShader(bounds),
-                      child: const Text(
-                        'Pawtbook',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    Text(
+                      'Pawtbook',
+                      style: GoogleFonts.fredoka(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          const Shadow(color: Colors.black45, blurRadius: 8),
+                        ],
                       ),
                     ),
                   ],
@@ -163,24 +176,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 26),
+                      icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 28),
                       tooltip: 'Marketplace Bandanas',
                       onPressed: () => setState(() => _currentIndex = 1),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF6366F1)),
+                        color: Colors.black.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white30),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.stars, color: Color(0xFFF59E0B), size: 16),
+                          const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
                           const SizedBox(width: 4),
                           Text(
                             '${authController.currentProfile?.pawtScore ?? 100} pts',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                           ),
                         ],
                       ),
@@ -197,11 +210,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHumanProfileTab(AuthController authController) {
     return Scaffold(
-      backgroundColor: const Color(0xFF09090B),
+      backgroundColor: AppTheme.bgWarmCream,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF09090B),
+        backgroundColor: AppTheme.bgWarmCream,
         elevation: 0,
-        title: const Text('Perfil Humano (Patrocinador)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text(
+          'Perfil Humano (Tutor)',
+          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
+        ),
       ),
       body: Center(
         child: Padding(
@@ -210,50 +226,57 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircleAvatar(
-                radius: 40,
-                backgroundColor: Color(0xFF6366F1),
-                child: Icon(Icons.person, size: 48, color: Colors.white),
+                radius: 44,
+                backgroundColor: AppTheme.surfaceWarm,
+                child: Icon(Icons.person_rounded, size: 48, color: AppTheme.primaryTerracotta),
               ),
               const SizedBox(height: 16),
               Text(
                 authController.currentProfile?.username ?? '@tutor_human',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
               ),
               const SizedBox(height: 6),
               Text(
                 'Wallet: ${authController.currentProfile?.walletAddress ?? "Not connected"}',
-                style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF18181B),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[800]!),
+                  color: AppTheme.surfaceWarm,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppTheme.borderWarm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryTerracotta.withOpacity(0.06),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.pets, size: 48, color: Color(0xFF14F195)),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '¿Tienes una mascota?',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 6),
+                    const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
+                    const SizedBox(height: 12),
                     Text(
-                      'Registra a tu mascota para convertirte en Creador y subir videos cortos a Pawtbook.',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      '¿Tienes una mascota? 🐾',
+                      style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Registra a tu mascota para convertirte en Creador y publicar sus mejores clips en Pawtbook.',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      label: const Text('Registrar Mascota Creadora', style: TextStyle(fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.add_rounded, color: Colors.white),
+                      label: Text('Registrar Mascota Creadora', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        backgroundColor: AppTheme.primaryTerracotta,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                       ),
                       onPressed: () {
                         Navigator.of(context).push(

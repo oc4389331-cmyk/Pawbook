@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
 
 class MarketplaceScreen extends StatelessWidget {
   const MarketplaceScreen({super.key});
@@ -13,7 +15,7 @@ class MarketplaceScreen extends StatelessWidget {
       'priceUsd': 12.99,
       'imageUrl': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600',
       'tag': 'Solana Exclusive',
-      'color': Color(0xFF9945FF),
+      'color': AppTheme.solanaPurple,
     },
     {
       'id': 'bdn_golden',
@@ -22,7 +24,7 @@ class MarketplaceScreen extends StatelessWidget {
       'priceUsd': 24.99,
       'imageUrl': 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
       'tag': 'Best Seller',
-      'color': Color(0xFFEAB308),
+      'color': AppTheme.primaryTerracotta,
     },
     {
       'id': 'bdn_neon',
@@ -31,7 +33,7 @@ class MarketplaceScreen extends StatelessWidget {
       'priceUsd': 9.99,
       'imageUrl': 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600',
       'tag': 'Limited Edition',
-      'color': Color(0xFFEC4899),
+      'color': AppTheme.accentOrange,
     },
     {
       'id': 'bdn_ocean',
@@ -39,8 +41,8 @@ class MarketplaceScreen extends StatelessWidget {
       'pricePoints': 200,
       'priceUsd': 10.99,
       'imageUrl': 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600',
-      'tag': 'Summer 2026',
-      'color': Color(0xFF06B6D4),
+      'tag': 'Summer Collection',
+      'color': AppTheme.emeraldGreen,
     },
   ];
 
@@ -50,31 +52,30 @@ class MarketplaceScreen extends StatelessWidget {
     final userScore = authController.currentProfile?.pawtScore ?? 100;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF09090B),
+      backgroundColor: AppTheme.bgWarmCream,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF09090B),
+        backgroundColor: AppTheme.bgWarmCream,
         elevation: 0,
-        title: const Row(
-          children: [
-            Text('🛍️ Pawtbook Marketplace', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-          ],
+        title: Text(
+          '🛍️ Marketplace',
+          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF6366F1).withOpacity(0.2),
+              color: AppTheme.surfaceWarm,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF6366F1)),
+              border: Border.all(color: AppTheme.borderWarm),
             ),
             child: Row(
               children: [
-                const Icon(Icons.stars, color: Color(0xFFF59E0B), size: 18),
+                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
                 const SizedBox(width: 6),
                 Text(
                   '$userScore pts',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ],
             ),
@@ -86,17 +87,24 @@ class MarketplaceScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Banner
+            // Banner (Pawly Warm Gradient)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF9945FF), Color(0xFF14F195)],
+                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryTerracotta.withOpacity(0.2),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,28 +112,28 @@ class MarketplaceScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text('OFFICIAL MERCH', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                    child: Text('OFFICIAL PAWLY MERCH', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Exclusive Pet Bandanas 🐾',
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.fredoka(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Redeem with PawtScore or buy with Card / Solana Pay',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                    style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Featured Bandanas Collection',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'Featured Collection',
+              style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             GridView.builder(
@@ -133,7 +141,7 @@ class MarketplaceScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.72,
+                childAspectRatio: 0.70,
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
               ),
@@ -144,9 +152,9 @@ class MarketplaceScreen extends StatelessWidget {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF18181B),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey[800]!),
+                    color: AppTheme.surfaceWarm,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: AppTheme.borderWarm, width: 1.2),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
@@ -166,12 +174,12 @@ class MarketplaceScreen extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: (item['color'] as Color).withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: (item['color'] as Color),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
                                   item['tag'],
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -185,59 +193,59 @@ class MarketplaceScreen extends StatelessWidget {
                           children: [
                             Text(
                               item['name'],
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold, fontSize: 13),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.stars, color: Color(0xFFF59E0B), size: 14),
+                                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 14),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${item['pricePoints']} pts',
-                                  style: const TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12),
+                                  style: GoogleFonts.fredoka(color: AppTheme.accentOrange, fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                                 const Spacer(),
                                 Text(
                                   '\$${item['priceUsd']}',
-                                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                  style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
-                              height: 34,
+                              height: 36,
                               child: ElevatedButton(
                                 onPressed: () {
                                   if (canAfford) {
                                     authController.deductPawtScore(item['pricePoints'] as int);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        backgroundColor: const Color(0xFF10B981),
-                                        content: Text('🎉 Redeemed ${item['name']} successfully!'),
+                                        backgroundColor: AppTheme.emeraldGreen,
+                                        content: Text('🎉 Redeemed ${item['name']} successfully!', style: GoogleFonts.fredoka()),
                                       ),
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        backgroundColor: Color(0xFFEF4444),
-                                        content: Text('Insufficient PawtScore points. Sponsor pets to earn more!'),
+                                      SnackBar(
+                                        backgroundColor: AppTheme.primaryTerracotta,
+                                        content: Text('Insufficient PawtScore points. Sponsor pets to earn more!', style: GoogleFonts.fredoka()),
                                       ),
                                     );
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: canAfford ? const Color(0xFF6366F1) : const Color(0xFF27272A),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  backgroundColor: canAfford ? AppTheme.primaryTerracotta : AppTheme.cardWarm,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   padding: EdgeInsets.zero,
                                 ),
                                 child: Text(
                                   canAfford ? 'Redeem Bandana' : 'Get Points',
-                                  style: TextStyle(
-                                    color: canAfford ? Colors.white : Colors.grey[400],
-                                    fontSize: 11,
+                                  style: GoogleFonts.fredoka(
+                                    color: canAfford ? Colors.white : AppTheme.textMutedWarm,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

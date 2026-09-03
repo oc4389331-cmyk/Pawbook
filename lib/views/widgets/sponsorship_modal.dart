@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/pet_model.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
+import '../../theme/app_theme.dart';
 
 class SponsorshipModal extends StatefulWidget {
   final PetModel pet;
@@ -38,8 +40,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     setState(() => _isProcessing = true);
 
     if (_paymentMethod == 'stripe') {
-      // 1. Stripe Checkout Session
-      final usdValue = _selectedAmount / 20.0; // 100 pts = $5.00
+      final usdValue = _selectedAmount / 20.0;
       final result = await _renderService.createStripeCheckoutSession(
         userId: widget.userId,
         petId: widget.pet.id,
@@ -59,14 +60,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF6366F1),
-            content: Text('🎉 Sponsorship of $_selectedAmount PawtScore initiated via Stripe!'),
+            backgroundColor: AppTheme.primaryTerracotta,
+            content: Text('🎉 Sponsorship of $_selectedAmount PawtScore initiated via Stripe!', style: GoogleFonts.fredoka()),
           ),
         );
       }
     } else {
-      // 2. Solana Pay Crypto Transfer
-      final solAmount = _selectedAmount * 0.0005; // 100 pts ~ 0.05 SOL
+      final solAmount = _selectedAmount * 0.0005;
       await _supabaseService.sponsorPet(
         sponsorId: widget.userId,
         petId: widget.pet.id,
@@ -79,10 +79,10 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF14F195),
+            backgroundColor: AppTheme.emeraldGreen,
             content: Text(
               '⚡ Solana Pay Transfer: $solAmount SOL sent to ${widget.pet.name}!',
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         );
@@ -94,14 +94,14 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF18181B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        color: AppTheme.bgWarmCream,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         top: 24,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -109,11 +109,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 44,
+              height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey[700],
-                borderRadius: BorderRadius.circular(2),
+                color: AppTheme.borderWarm,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
@@ -121,7 +121,8 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           Row(
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: 26,
+                backgroundColor: AppTheme.surfaceWarm,
                 backgroundImage: NetworkImage(widget.pet.avatarUrl),
               ),
               const SizedBox(width: 14),
@@ -131,15 +132,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   children: [
                     Text(
                       'Sponsor ${widget.pet.name} 🐾',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.primaryTerracotta,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       widget.pet.bio.isNotEmpty ? widget.pet.bio : 'Support this pet creator!',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -149,9 +150,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             ],
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Select Sponsorship Amount:',
-            style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+            style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
@@ -163,21 +164,22 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   onTap: () => setState(() => _selectedAmount = amt),
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF6366F1) : const Color(0xFF27272A),
-                      borderRadius: BorderRadius.circular(14),
+                      color: isSelected ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF818CF8) : Colors.transparent,
+                        color: isSelected ? AppTheme.primaryTerracotta : AppTheme.borderWarm,
                         width: 1.5,
                       ),
                     ),
                     child: Center(
                       child: Text(
                         '${amt}pt',
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey[300],
+                        style: GoogleFonts.fredoka(
+                          color: isSelected ? Colors.white : AppTheme.textPrimaryDark,
                           fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -187,9 +189,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             }).toList(),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Payment Method:',
-            style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+            style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
@@ -201,24 +203,24 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     decoration: BoxDecoration(
                       color: _paymentMethod == 'stripe'
-                          ? const Color(0xFF6366F1).withOpacity(0.2)
-                          : const Color(0xFF27272A),
-                      borderRadius: BorderRadius.circular(16),
+                          ? AppTheme.primaryTerracotta.withOpacity(0.12)
+                          : AppTheme.surfaceWarm,
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _paymentMethod == 'stripe'
-                            ? const Color(0xFF6366F1)
-                            : Colors.transparent,
-                        width: 1.5,
+                            ? AppTheme.primaryTerracotta
+                            : AppTheme.borderWarm,
+                        width: 2,
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.credit_card, color: Color(0xFF6366F1), size: 20),
-                        SizedBox(width: 8),
+                        const Icon(Icons.credit_card_rounded, color: AppTheme.primaryTerracotta, size: 22),
+                        const SizedBox(width: 8),
                         Text(
                           'Credit Card\n(Stripe)',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -233,24 +235,24 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     decoration: BoxDecoration(
                       color: _paymentMethod == 'solana_pay'
-                          ? const Color(0xFF14F195).withOpacity(0.2)
-                          : const Color(0xFF27272A),
-                      borderRadius: BorderRadius.circular(16),
+                          ? AppTheme.emeraldGreen.withOpacity(0.12)
+                          : AppTheme.surfaceWarm,
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _paymentMethod == 'solana_pay'
-                            ? const Color(0xFF14F195)
-                            : Colors.transparent,
-                        width: 1.5,
+                            ? AppTheme.emeraldGreen
+                            : AppTheme.borderWarm,
+                        width: 2,
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.account_balance_wallet, color: Color(0xFF14F195), size: 20),
-                        SizedBox(width: 8),
+                        const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 22),
+                        const SizedBox(width: 8),
                         Text(
                           'Crypto\n(Solana Pay)',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -262,15 +264,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           const SizedBox(height: 28),
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 54,
             child: ElevatedButton(
               onPressed: _isProcessing ? null : _processSponsorship,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _paymentMethod == 'solana_pay'
-                    ? const Color(0xFF14F195)
-                    : const Color(0xFF6366F1),
+                    ? AppTheme.emeraldGreen
+                    : AppTheme.primaryTerracotta,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
               child: _isProcessing
@@ -279,8 +281,8 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       _paymentMethod == 'solana_pay'
                           ? 'Pay with Solana Pay'
                           : 'Pay with Card (Stripe)',
-                      style: TextStyle(
-                        color: _paymentMethod == 'solana_pay' ? Colors.black : Colors.white,
+                      style: GoogleFonts.fredoka(
+                        color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),

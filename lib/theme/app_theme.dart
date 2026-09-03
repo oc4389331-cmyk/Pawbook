@@ -2,69 +2,101 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // Pawly Inspired Warm Color Palette
+  static const Color bgWarmCream = Color(0xFFFDF6EE);
+  static const Color surfaceWarm = Color(0xFFFFF0E5);
+  static const Color cardWarm = Color(0xFFFCE8DB);
+  static const Color primaryTerracotta = Color(0xFF7C1D1D);
+  static const Color primaryTerracottaDark = Color(0xFF591717);
+  static const Color accentOrange = Color(0xFFEA580C);
+  static const Color emeraldGreen = Color(0xFF059669);
   static const Color solanaPurple = Color(0xFF9945FF);
   static const Color solanaGreen = Color(0xFF14F195);
-  static const Color petAccent = Color(0xFFFF7A00);
-  static const Color bgDark = Color(0xFF0B0E14);
-  static const Color surfaceDark = Color(0xFF161922);
-  static const Color cardDark = Color(0xFF1F2430);
-  static const Color borderDark = Color(0xFF2E3444);
-  static const Color textMuted = Color(0xFF94A3B8);
 
-  static ThemeData get darkTheme {
-    return ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: bgDark,
-      primaryColor: solanaPurple,
-      colorScheme: const ColorScheme.dark(
-        primary: solanaPurple,
-        secondary: solanaGreen,
-        tertiary: petAccent,
-        surface: surfaceDark,
+  static const Color textPrimaryDark = Color(0xFF3B1414);
+  static const Color textMutedWarm = Color(0xFF7A5C5C);
+  static const Color borderWarm = Color(0xFFEED5C5);
+
+  // Legacy aliases for backward compatibility
+  static const Color bgDark = bgWarmCream;
+  static const Color surfaceDark = surfaceWarm;
+  static const Color cardDark = cardWarm;
+  static const Color borderDark = borderWarm;
+  static const Color textMuted = textMutedWarm;
+
+  static ThemeData get warmTheme {
+    return ThemeData.light().copyWith(
+      scaffoldBackgroundColor: bgWarmCream,
+      primaryColor: primaryTerracotta,
+      colorScheme: const ColorScheme.light(
+        primary: primaryTerracotta,
+        secondary: accentOrange,
+        tertiary: emeraldGreen,
+        surface: surfaceWarm,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: surfaceDark.withValues(alpha: 0.8),
+        backgroundColor: bgWarmCream,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: GoogleFonts.spaceGrotesk(
-          fontSize: 20,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: textPrimaryDark),
+        titleTextStyle: GoogleFonts.fredoka(
+          fontSize: 22,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: textPrimaryDark,
         ),
       ),
       cardTheme: CardTheme(
-        color: cardDark,
-        elevation: 4,
+        color: surfaceWarm,
+        elevation: 2,
+        shadowColor: primaryTerracotta.withOpacity(0.08),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderDark, width: 1),
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: borderWarm, width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: solanaPurple,
+          backgroundColor: primaryTerracotta,
           foregroundColor: Colors.white,
+          elevation: 3,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(24),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.fredoka(
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
-        titleLarge: GoogleFonts.spaceGrotesk(
-          fontSize: 22,
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme).copyWith(
+        headlineMedium: GoogleFonts.fredoka(
+          fontSize: 26,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: primaryTerracotta,
         ),
-        titleMedium: GoogleFonts.spaceGrotesk(
-          fontSize: 18,
+        titleLarge: GoogleFonts.fredoka(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: textPrimaryDark,
+        ),
+        titleMedium: GoogleFonts.fredoka(
+          fontSize: 17,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: textPrimaryDark,
+        ),
+        bodyLarge: GoogleFonts.outfit(
+          fontSize: 15,
+          color: textPrimaryDark,
+        ),
+        bodyMedium: GoogleFonts.outfit(
+          fontSize: 13,
+          color: textMutedWarm,
         ),
       ),
     );
   }
+
+  // Alias darkTheme to warmTheme so existing references stay fully functional
+  static ThemeData get darkTheme => warmTheme;
 }

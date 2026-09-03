@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
@@ -31,157 +32,165 @@ class _LoginScreenState extends State<LoginScreen> {
     final authController = Provider.of<AuthController>(context);
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.bgDark,
-              AppTheme.solanaPurple.withValues(alpha: 0.15),
-              AppTheme.bgDark,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Hero Icon & Title
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceDark,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.solanaPurple, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.solanaPurple.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.pets, size: 64, color: AppTheme.solanaGreen),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Pawtbook',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'SocialFi para Mascotas en Solana 🐾',
-                    style: TextStyle(fontSize: 16, color: AppTheme.textMuted),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Architecture Badges Pill
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildChip('Solana SIWS', AppTheme.solanaPurple),
-                      _buildChip('Dynamic.xyz Auth', Colors.deepPurpleAccent),
-                      _buildChip('Cloudflare R2', Colors.orange),
-                      _buildChip('Supabase RLS', AppTheme.solanaGreen),
+      backgroundColor: AppTheme.bgWarmCream,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Hero Logo Card (Pawly Warm Style)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceWarm,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryTerracotta.withOpacity(0.12),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
                     ],
+                    border: Border.all(color: AppTheme.cardWarm, width: 3),
                   ),
-                  const SizedBox(height: 40),
+                  child: const Icon(
+                    Icons.pets_rounded,
+                    size: 64,
+                    color: AppTheme.primaryTerracotta,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Pawtbook 🐾',
+                  style: GoogleFonts.fredoka(
+                    fontSize: 38,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryTerracotta,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Care & SocialFi for All Your Pets in One Place',
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    color: AppTheme.textMutedWarm,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
 
-                  if (authController.errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.redAccent),
-                      ),
-                      child: Text(
-                        authController.errorMessage!,
-                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                // Architecture Badges Pill
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildChip('Solana SIWS', AppTheme.primaryTerracotta),
+                    _buildChip('Dynamic.xyz Auth', AppTheme.accentOrange),
+                    _buildChip('Cloudflare R2', AppTheme.emeraldGreen),
+                    _buildChip('Stripe & Solana Pay', AppTheme.solanaPurple),
                   ],
+                ),
+                const SizedBox(height: 36),
 
-                  // Solana Wallet Button (Phantom / Solflare via Mobile Wallet Adapter / Dynamic.xyz)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.solanaPurple,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      icon: const Icon(Icons.account_balance_wallet, color: Colors.white),
-                      label: authController.isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Conectar Wallet (Solana)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      onPressed: authController.isLoading
-                          ? null
-                          : () async {
-                              final ok = await authController.loginWithSolanaWallet(walletType: 'Phantom');
-                              if (ok && mounted) _onLoginSuccess();
-                            },
+                if (authController.errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.redAccent),
+                    ),
+                    child: Text(
+                      authController.errorMessage!,
+                      style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 13),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Email Login with Embedded Solana Wallet
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      hintText: 'tu@email.com',
-                      hintStyle: const TextStyle(color: AppTheme.textMuted),
-                      prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted),
-                      filled: true,
-                      fillColor: AppTheme.surfaceDark,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppTheme.borderDark),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppTheme.borderDark),
-                      ),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.solanaGreen,
-                        side: const BorderSide(color: AppTheme.solanaGreen, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      icon: const Icon(Icons.login, size: 18),
-                      label: const Text('Ingresar con Email (Embedded Wallet)'),
-                      onPressed: authController.isLoading
-                          ? null
-                          : () async {
-                              final email = _emailController.text.trim();
-                              if (email.isEmpty) return;
-                              final ok = await authController.loginWithEmail(email);
-                              if (ok && mounted) _onLoginSuccess();
-                            },
-                    ),
-                  ),
+                  const SizedBox(height: 20),
                 ],
-              ),
+
+                // Connect Solana Wallet Button (Terracotta Warm Style)
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryTerracotta,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    ),
+                    icon: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white),
+                    label: authController.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            'Conectar Wallet (Solana)',
+                            style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                    onPressed: authController.isLoading
+                        ? null
+                        : () async {
+                            final ok = await authController.loginWithSolanaWallet(walletType: 'Phantom');
+                            if (ok && mounted) _onLoginSuccess();
+                          },
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Email Input (Warm Pawly Soft Container)
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    hintText: 'tu@email.com',
+                    hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryTerracotta),
+                    filled: true,
+                    fillColor: AppTheme.surfaceWarm,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppTheme.borderWarm),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppTheme.borderWarm),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2),
+                    ),
+                  ),
+                  style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                ),
+                const SizedBox(height: 14),
+
+                // Email Login Outlined Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.accentOrange,
+                      side: const BorderSide(color: AppTheme.accentOrange, width: 1.8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                    label: Text(
+                      'Ingresar con Email (Embedded Wallet)',
+                      style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: authController.isLoading
+                        ? null
+                        : () async {
+                            final email = _emailController.text.trim();
+                            if (email.isEmpty) return;
+                            final ok = await authController.loginWithEmail(email);
+                            if (ok && mounted) _onLoginSuccess();
+                          },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -191,15 +200,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 1),
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.5), width: 1),
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold, color: color),
       ),
     );
   }
