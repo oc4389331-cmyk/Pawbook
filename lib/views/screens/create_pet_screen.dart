@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../controllers/auth_controller.dart';
-import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../theme/app_theme.dart';
 
@@ -107,6 +106,12 @@ class CreatePetScreen extends StatefulWidget {
       'Juliana',
       'Otro'
     ],
+    'Otro 🐾': [
+      'Especie / Raza Única',
+      'Exótico',
+      'Personalizado',
+      'Otro'
+    ],
   };
 
   static const List<String> avatarPresets = [
@@ -125,8 +130,9 @@ class CreatePetScreen extends StatefulWidget {
 class _CreatePetScreenState extends State<CreatePetScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _customSpeciesController = TextEditingController();
   final _bioController = TextEditingController();
-  final _avatarUrlController = TextEditingController(text: CreatePetScreen.avatarPresets[0]);
+  final _customAvatarUrlController = TextEditingController();
 
   String _selectedSpecies = 'Perro 🐶';
   String _selectedBreed = 'Mestizo / Criollo';
@@ -135,8 +141,9 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _customSpeciesController.dispose();
     _bioController.dispose();
-    _avatarUrlController.dispose();
+    _customAvatarUrlController.dispose();
     super.dispose();
   }
 
@@ -144,17 +151,73 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     if (newSpecies != null && newSpecies != _selectedSpecies) {
       setState(() {
         _selectedSpecies = newSpecies;
-        final breeds = CreatePetScreen.speciesBreedsMap[newSpecies] ?? ['Mestizo'];
+        final breeds = CreatePetScreen.speciesBreedsMap[newSpecies] ?? ['Especie / Raza Única'];
         _selectedBreed = breeds.first;
       });
     }
   }
 
+  void _showCustomPhotoDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppTheme.bgWarmCream,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            'Subir Foto de la Mascota 📸',
+            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ingresa la URL o enlace directo de la foto de tu mascota:',
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customAvatarUrlController,
+                decoration: InputDecoration(
+                  hintText: 'https://miservidor.com/mi_mascota.jpg',
+                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                  filled: true,
+                  fillColor: AppTheme.surfaceWarm,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTerracotta,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () {
+                final url = _customAvatarUrlController.text.trim();
+                if (url.isNotEmpty) {
+                  setState(() => _selectedAvatar = url);
+                }
+                Navigator.pop(ctx);
+              },
+              child: Text('Usar Foto', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
-    final langController = Provider.of<LanguageController>(context);
-    final availableBreeds = CreatePetScreen.speciesBreedsMap[_selectedSpecies] ?? ['Mestizo'];
+    final availableBreeds = CreatePetScreen.speciesBreedsMap[_selectedSpecies] ?? ['Especie / Raza Única'];
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -181,28 +244,54 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                       alignment: Alignment.bottomRight,
                       children: [
                         CircleAvatar(
-                          radius: 54,
+                          radius: 56,
                           backgroundColor: AppTheme.surfaceWarm,
                           backgroundImage: NetworkImage(_selectedAvatar),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: AppTheme.primaryTerracotta,
-                            shape: BoxShape.circle,
+                        GestureDetector(
+                          onTap: _showCustomPhotoDialog,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryTerracotta,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 20),
                           ),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Elige una foto para tu mascota:',
-                      style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
+                      'Foto de tu Mascota',
+                      style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
+
+                    // Custom Photo Upload Button
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryTerracotta,
+                        side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      ),
+                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      label: Text(
+                        'Subir Foto Propia / Galería 📸',
+                        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: _showCustomPhotoDialog,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Presets Carousel
+                    Text(
+                      'O selecciona un avatar rápido:',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
                     SizedBox(
-                      height: 54,
+                      height: 52,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: CreatePetScreen.avatarPresets.length,
@@ -210,10 +299,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           final url = CreatePetScreen.avatarPresets[idx];
                           final isSelected = _selectedAvatar == url;
                           return GestureDetector(
-                            onTap: () => setState(() {
-                              _selectedAvatar = url;
-                              _avatarUrlController.text = url;
-                            }),
+                            onTap: () => setState(() => _selectedAvatar = url),
                             child: Container(
                               margin: const EdgeInsets.only(right: 10),
                               padding: const EdgeInsets.all(2),
@@ -285,6 +371,24 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
               ),
               const SizedBox(height: 18),
 
+              // Custom Species Field (Visible ONLY if "Otro 🐾" is selected)
+              if (_selectedSpecies == 'Otro 🐾') ...[
+                Text(
+                  'Especifica el tipo de animal:',
+                  style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _customSpeciesController,
+                  style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                  decoration: _inputDecoration('Ej. Hurón, Alpaca, Erizo, Pato...', Icons.category_rounded),
+                  validator: (v) => (_selectedSpecies == 'Otro 🐾' && (v == null || v.trim().isEmpty))
+                      ? 'Por favor especifica el tipo de animal'
+                      : null,
+                ),
+                const SizedBox(height: 18),
+              ],
+
               // Breed Dropdown Selector (Filtered by Species)
               Text(
                 'Raza del Animal:',
@@ -352,15 +456,19 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                   ),
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
+                      final speciesFinal = _selectedSpecies == 'Otro 🐾'
+                          ? _customSpeciesController.text.trim()
+                          : _selectedSpecies.split(' ').first;
+
                       final newPet = PetModel(
                         id: 'pet_${const Uuid().v4().substring(0, 8)}',
                         ownerId: authController.currentProfile?.id ?? 'usr_demo',
                         name: _nameController.text.trim(),
-                        species: _selectedSpecies.split(' ').first,
+                        species: speciesFinal,
                         breed: _selectedBreed,
                         bio: _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : 'Creador oficial en Pawtbook 🐾',
                         avatarUrl: _selectedAvatar,
-                        nftMintAddress: null, // Verifiable later on profile
+                        nftMintAddress: null,
                         createdAt: DateTime.now(),
                       );
 
@@ -371,7 +479,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           SnackBar(
                             backgroundColor: AppTheme.emeraldGreen,
                             content: Text(
-                              '🎉 ¡${newPet.name} registrado con éxito como Mascota Creadora!',
+                              '🎉 ¡${newPet.name} ($speciesFinal) registrado con éxito!',
                               style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                           ),
