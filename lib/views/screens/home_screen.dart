@@ -9,6 +9,7 @@ import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
+import 'login_screen.dart';
 import 'marketplace_screen.dart';
 import 'pet_profile_screen.dart';
 import 'rewards_store_screen.dart';
@@ -218,6 +219,18 @@ class _HomeScreenState extends State<HomeScreen> {
           langController.t('humanProfile'),
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            tooltip: langController.t('logOut'),
+            onPressed: () {
+              authController.logout();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         child: Padding(
@@ -286,6 +299,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 28),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: Text(
+                  langController.t('logOut'),
+                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  authController.logout();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
               ),
             ],
           ),

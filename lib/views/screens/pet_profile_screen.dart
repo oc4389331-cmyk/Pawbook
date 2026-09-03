@@ -6,8 +6,8 @@ import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../theme/app_theme.dart';
-import '../widgets/pet_badge.dart';
 import '../widgets/sponsorship_modal.dart';
+import 'login_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
   final PetModel pet;
@@ -70,6 +70,18 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           widget.pet.name,
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            tooltip: langController.t('logOut'),
+            onPressed: () {
+              authController.logout();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -206,6 +218,31 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           context,
                           pet: widget.pet,
                           userId: authController.currentProfile?.id ?? 'usr_demo',
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Logout Red Action Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: Text(
+                        langController.t('logOut'),
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        authController.logout();
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
                         );
                       },
                     ),

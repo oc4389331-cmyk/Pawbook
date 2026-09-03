@@ -43,6 +43,7 @@ class AppTranslations {
       'selectMarketplacePayment': 'Select Payment Method',
       'payWithGooglePayPaypal': 'Card / Google Pay / PayPal',
       'profanityWarning': 'Inappropriate language detected. Please keep comments friendly for pets! 🐾',
+      'logOut': 'Log Out',
     },
     'es': {
       'appName': 'Pawtbook 🐾',
@@ -87,6 +88,7 @@ class AppTranslations {
       'selectMarketplacePayment': 'Selecciona Método de Pago',
       'payWithGooglePayPaypal': 'Tarjeta / Google Pay / PayPal',
       'profanityWarning': 'Lenguaje inapropiado detectado. Por favor mantén comentarios respetuosos para las mascotas 🐾',
+      'logOut': 'Cerrar Sesión',
     },
     'zh': {
       'appName': 'Pawtbook 🐾',
@@ -131,6 +133,7 @@ class AppTranslations {
       'selectMarketplacePayment': '选择支付方式',
       'payWithGooglePayPaypal': '银行卡 / Google Pay / PayPal',
       'profanityWarning': '检测到不当言语。请为宠物营造友善尊重的社区环境 🐾',
+      'logOut': '退出登录',
     },
     'ja': {
       'appName': 'Pawtbook 🐾',
@@ -175,6 +178,7 @@ class AppTranslations {
       'selectMarketplacePayment': 'お支払い方法を選択',
       'payWithGooglePayPaypal': 'カード / Google Pay / PayPal',
       'profanityWarning': '不適切な言葉が検出されました。ペットのためのリスペクトある環境を維持しましょう 🐾',
+      'logOut': 'ログアウト',
     },
   };
 
