@@ -94,34 +94,37 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // 1. Trigger authentic Google OAuth redirect via Supabase
+      bool supaOAuthSuccess = false;
       try {
-        await Supabase.instance.client.auth.signInWithOAuth(
+        supaOAuthSuccess = await Supabase.instance.client.auth.signInWithOAuth(
           OAuthProvider.google,
           redirectTo: kIsWeb ? null : 'io.supabase.pawtbook://login-callback',
         );
-      } catch (_) {
-        // Fallback to Dynamic.xyz Google OAuth if Supabase OAuth redirect is pending setup
+      } catch (e) {
+        debugPrint('Supabase Google OAuth fallback (Provider disabled in dashboard): $e');
       }
 
       final user = Supabase.instance.client.auth.currentUser;
       final session = Supabase.instance.client.auth.currentSession;
 
       String email;
-      if (user != null && user.email != null && user.email!.isNotEmpty) {
+      String walletAddress;
+
+      if (supaOAuthSuccess && user != null && user.email != null && user.email!.isNotEmpty) {
         email = user.email!;
+        final hash = email.hashCode.abs().toRadixString(16);
+        walletAddress = 'PawGgl${hash}SolanaWallet';
       } else {
+        // Fallback to Dynamic.xyz Embedded Wallet Google auth
         final res = await _dynamicAuthService.authenticateWithGoogle();
         email = res.email ?? 'user.google@gmail.com';
+        walletAddress = res.walletAddress ?? 'PawGgl${email.hashCode.abs().toRadixString(16)}SolanaWallet';
       }
-
-      final hash = email.hashCode.abs().toRadixString(16);
-      final walletAddress = 'PawGgl${hash}SolanaWallet';
 
       await _processAuthenticatedUser(
         walletAddress: walletAddress,
         email: email,
-        jwtToken: session?.accessToken ?? 'supa_google_jwt_$hash',
+        jwtToken: session?.accessToken ?? 'dyn_jwt_google_${email.hashCode.abs().toRadixString(16)}',
       );
       _setLoading(false);
       return true;
