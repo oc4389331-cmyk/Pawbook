@@ -94,38 +94,24 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      bool supaOAuthSuccess = false;
-      try {
-        supaOAuthSuccess = await Supabase.instance.client.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: kIsWeb ? null : 'io.supabase.pawtbook://login-callback',
-        );
-      } catch (e) {
-        debugPrint('Supabase Google OAuth fallback (Provider disabled in dashboard): $e');
+      // Authenticate via Dynamic.xyz Google OAuth (Solana Mainnet Env ID)
+      final res = await _dynamicAuthService.authenticateWithGoogle();
+
+      if (!res.isSuccess || res.walletAddress == null) {
+        _errorMessage = res.errorMessage ?? 'Error al autenticar con Google';
+        _setLoading(false);
+        return false;
       }
 
-      final user = Supabase.instance.client.auth.currentUser;
-      final session = Supabase.instance.client.auth.currentSession;
-
-      String email;
-      String walletAddress;
-
-      if (supaOAuthSuccess && user != null && user.email != null && user.email!.isNotEmpty) {
-        email = user.email!;
-        final hash = email.hashCode.abs().toRadixString(16);
-        walletAddress = 'PawGgl${hash}SolanaWallet';
-      } else {
-        // Fallback to Dynamic.xyz Embedded Wallet Google auth
-        final res = await _dynamicAuthService.authenticateWithGoogle();
-        email = res.email ?? 'user.google@gmail.com';
-        walletAddress = res.walletAddress ?? 'PawGgl${email.hashCode.abs().toRadixString(16)}SolanaWallet';
-      }
+      final email = res.email ?? 'user.google@gmail.com';
+      final walletAddress = res.walletAddress!;
 
       await _processAuthenticatedUser(
         walletAddress: walletAddress,
         email: email,
-        jwtToken: session?.accessToken ?? 'dyn_jwt_google_${email.hashCode.abs().toRadixString(16)}',
+        jwtToken: res.jwtToken ?? 'dyn_jwt_google_${email.hashCode.abs().toRadixString(16)}',
       );
+
       _setLoading(false);
       return true;
     } catch (e) {
