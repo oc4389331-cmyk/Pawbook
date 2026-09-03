@@ -1,13 +1,13 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const Stripe = require('stripe');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
@@ -20,6 +20,18 @@ const R2_CUSTOM_DOMAIN = process.env.R2_CUSTOM_DOMAIN || 'https://media.pawbookl
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_m7a70Z7bRCbjOtqqDYK12DhNPQnlR42D';
+
+// Initialize Stripe Client
+let stripe = null;
+if (STRIPE_SECRET_KEY && !STRIPE_SECRET_KEY.includes('your_stripe_secret_key')) {
+  stripe = new Stripe(STRIPE_SECRET_KEY);
+  console.log('✅ Stripe Payment SDK initialized successfully');
+} else {
+  console.log('⚠️ Running Stripe in webhook/mock mode (Missing STRIPE_SECRET_KEY in .env)');
+}
 
 // Initialize Cloudflare R2 (S3 Compatible API)
 let r2Client = null;
@@ -46,16 +58,91 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   console.log('⚠️ Running Supabase in mock mode (Missing SUPABASE_SERVICE_ROLE_KEY in .env)');
 }
 
-// Health check endpoint
+// --------------------------------------------------------------------------
+// 1. STRIPE WEBHOOK ROUTE (Must use raw body parser for signature verification)
+// --------------------------------------------------------------------------
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    if (stripe && STRIPE_WEBHOOK_SECRET) {
+      event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+    } else {
+      // Dev/fallback mode if raw signature check is bypassed
+      const rawPayload = typeof req.body === 'string' || Buffer.isBuffer(req.body)
+        ? req.body.toString('utf8')
+        : JSON.stringify(req.body);
+      event = JSON.parse(rawPayload);
+    }
+  } catch (err) {
+    console.error(`⚠️ Stripe Webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log(`⚡ Stripe Event Received: ${event.type}`);
+
+  // Handle events specified in user's Stripe Webhook dashboard:
+  // checkout.session.completed, payment_intent.succeeded
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log(`✅ Payment checkout session completed for ${session.customer_email || session.id}`);
+      
+      const { userId, petId, pointsAmount } = session.metadata || {};
+      if (supabaseAdmin && userId && pointsAmount) {
+        try {
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('pawt_score')
+            .eq('id', userId)
+            .single();
+
+          const newScore = (profile?.pawt_score || 0) + parseInt(pointsAmount, 10);
+          await supabaseAdmin
+            .from('profiles')
+            .update({ pawt_score: newScore })
+            .eq('id', userId);
+
+          console.log(`🎉 Granted ${pointsAmount} PawtScore to user ${userId}. New total: ${newScore}`);
+        } catch (e) {
+          console.error('Error granting PawtScore points via Stripe webhook:', e);
+        }
+      }
+      break;
+    }
+
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object;
+      console.log(`💰 PaymentIntent succeeded: ${paymentIntent.id} ($${paymentIntent.amount / 100} USD)`);
+      break;
+    }
+
+    default:
+      console.log(`Unhandled Stripe event type: ${event.type}`);
+  }
+
+  return res.json({ received: true });
+});
+
+// JSON Body Parser for all remaining routes
+app.use(express.json());
+
+// --------------------------------------------------------------------------
+// 2. HEALTH CHECK ENDPOINT
+// --------------------------------------------------------------------------
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     service: 'Pawtbook Backend API',
-    version: '1.0.0'
+    version: '1.1.0',
+    stripeWebhookPath: '/api/webhooks/stripe'
   });
 });
 
-// 1. Dynamic.xyz Auth verification endpoint
+// --------------------------------------------------------------------------
+// 3. DYNAMIC.XYZ AUTH VERIFICATION ENDPOINT
+// --------------------------------------------------------------------------
 app.post('/api/auth/verify', async (req, res) => {
   const { token, walletAddress, email } = req.body;
   if (!walletAddress && !email) {
@@ -64,7 +151,6 @@ app.post('/api/auth/verify', async (req, res) => {
 
   const userId = 'usr_' + (walletAddress ? walletAddress.substring(0, 8) : 'email');
 
-  // Optional: Sync user into Supabase profiles via admin client
   if (supabaseAdmin) {
     try {
       const { data, error } = await supabaseAdmin
@@ -93,11 +179,12 @@ app.post('/api/auth/verify', async (req, res) => {
   });
 });
 
-// 2. R2 Presigned Upload URL endpoint (Requires registered Pet Profile)
+// --------------------------------------------------------------------------
+// 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
+// --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {
   const { petId, mediaType, filename } = req.body;
 
-  // Key Business Rule: Only Pet Profiles can upload content
   if (!petId) {
     return res.status(403).json({
       success: false,
@@ -112,7 +199,6 @@ app.post('/api/media/upload-url', async (req, res) => {
 
   let presignedPutUrl = `${R2_CUSTOM_DOMAIN}/upload-signed-vault/${uniqueKey}?signature=mock_r2_sig`;
 
-  // Real Cloudflare R2 Presigned URL Generation via S3 Client
   if (r2Client) {
     try {
       const command = new PutObjectCommand({
@@ -121,7 +207,6 @@ app.post('/api/media/upload-url', async (req, res) => {
         ContentType: contentType,
       });
 
-      // Expires in 15 minutes (900 seconds)
       presignedPutUrl = await getSignedUrl(r2Client, command, { expiresIn: 900 });
     } catch (err) {
       console.error('Error generating Cloudflare R2 Presigned URL:', err);
@@ -139,7 +224,9 @@ app.post('/api/media/upload-url', async (req, res) => {
   });
 });
 
-// 3. Safety & Animal Welfare Moderation Pipeline Trigger
+// --------------------------------------------------------------------------
+// 5. SAFETY & ANIMAL WELFARE MODERATION PIPELINE
+// --------------------------------------------------------------------------
 app.post('/api/media/moderate', async (req, res) => {
   const { postId, mediaUrl, forceDecision } = req.body;
 
@@ -155,7 +242,6 @@ app.post('/api/media/moderate', async (req, res) => {
     moderationReason = 'FAILED_MODERATION: Flagged for policy violation or unsafe content';
   }
 
-  // Update Supabase posts status
   if (supabaseAdmin) {
     try {
       await supabaseAdmin
@@ -175,6 +261,59 @@ app.post('/api/media/moderate', async (req, res) => {
   });
 });
 
+// --------------------------------------------------------------------------
+// 6. STRIPE CHECKOUT SESSION CREATION ENDPOINT
+// --------------------------------------------------------------------------
+app.post('/api/payments/create-checkout-session', async (req, res) => {
+  const { userId, petId, pointsAmount, priceUsd, successUrl, cancelUrl } = req.body;
+
+  if (!stripe) {
+    return res.json({
+      success: true,
+      mode: 'mock',
+      url: successUrl || 'https://pawbook-358b.onrender.com/?payment=success_mock',
+      message: 'Stripe simulated in mock mode (Missing STRIPE_SECRET_KEY)'
+    });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Pawtbook - ${pointsAmount || 100} PawtScore Points`,
+              description: petId ? `Sponsorship for Pet ID: ${petId}` : 'PawtScore Community Pack',
+            },
+            unit_amount: Math.round((priceUsd || 4.99) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      metadata: {
+        userId: userId || 'usr_guest',
+        petId: petId || '',
+        pointsAmount: (pointsAmount || 100).toString(),
+      },
+      success_url: successUrl || `https://pawbook-358b.onrender.com/?payment=success`,
+      cancel_url: cancelUrl || `https://pawbook-358b.onrender.com/?payment=cancel`,
+    });
+
+    return res.json({
+      success: true,
+      url: session.url,
+      sessionId: session.id
+    });
+  } catch (error) {
+    console.error('Error creating Stripe Checkout Session:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Pawtbook Backend API running on port ${PORT}`);
+  console.log(`⚡ Stripe Webhook route available at /api/webhooks/stripe`);
 });

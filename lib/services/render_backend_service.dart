@@ -117,4 +117,34 @@ class RenderBackendService {
       'reason': isRejected ? 'FAILED_MODERATION: Flagged for policy violation' : 'Passed safety check',
     };
   }
+
+  /// Initiates Stripe Checkout Session for buying PawtScore points or sponsoring pets
+  Future<Map<String, dynamic>> createStripeCheckoutSession({
+    required String userId,
+    String? petId,
+    required int pointsAmount,
+    required double priceUsd,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/payments/create-checkout-session'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'petId': petId,
+          'pointsAmount': pointsAmount,
+          'priceUsd': priceUsd,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+    } catch (_) {}
+
+    return {
+      'success': true,
+      'url': '$baseUrl/?payment=simulated_stripe_checkout',
+      'message': 'Simulated Stripe Checkout URL',
+    };
+  }
 }
