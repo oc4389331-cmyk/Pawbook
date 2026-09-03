@@ -46,6 +46,15 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   console.log('⚠️ Running Supabase in mock mode (Missing SUPABASE_SERVICE_ROLE_KEY in .env)');
 }
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Pawtbook Backend API',
+    version: '1.0.0'
+  });
+});
+
 // 1. Dynamic.xyz Auth verification endpoint
 app.post('/api/auth/verify', async (req, res) => {
   const { token, walletAddress, email } = req.body;

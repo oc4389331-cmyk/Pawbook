@@ -15,7 +15,7 @@ class AppConfig {
   // Render.com Express Backend Service API
   static const String backendApiUrl = String.fromEnvironment(
     'BACKEND_API_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'https://pawbook-358b.onrender.com',
   );
 
   // App Identity
