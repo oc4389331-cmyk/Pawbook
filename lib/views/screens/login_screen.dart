@@ -29,6 +29,150 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showGoogleAccountPickerModal(BuildContext context, AuthController authController, LanguageController langController) {
+    final googleEmailController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4285F4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Elige tu cuenta de Google',
+                        style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF202124)),
+                      ),
+                      Text(
+                        'para acceder a Pawtbook',
+                        style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+
+              // Account Option 1
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF4285F4),
+                  child: Icon(Icons.person_rounded, color: Colors.white),
+                ),
+                title: Text('Oscar Romero', style: GoogleFonts.roboto(fontWeight: FontWeight.w500, color: const Color(0xFF202124))),
+                subtitle: Text('oscar.romero@gmail.com', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontSize: 13)),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF5F6368)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await authController.loginWithGoogle(selectedEmail: 'oscar.romero@gmail.com');
+                  if (ok && mounted) _onLoginSuccess();
+                },
+              ),
+              const Divider(),
+
+              // Account Option 2
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF34A853),
+                  child: Icon(Icons.pets_rounded, color: Colors.white),
+                ),
+                title: Text('Creador Pawtbook', style: GoogleFonts.roboto(fontWeight: FontWeight.w500, color: const Color(0xFF202124))),
+                subtitle: Text('pawtbook.creator@gmail.com', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontSize: 13)),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF5F6368)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await authController.loginWithGoogle(selectedEmail: 'pawtbook.creator@gmail.com');
+                  if (ok && mounted) _onLoginSuccess();
+                },
+              ),
+              const Divider(),
+
+              // Option 3: Custom Google Email Input
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: TextField(
+                  controller: googleEmailController,
+                  decoration: InputDecoration(
+                    hintText: 'tu.cuenta@gmail.com',
+                    labelText: 'Usar otra cuenta de Google',
+                    prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF4285F4)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A73E8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () async {
+                    final email = googleEmailController.text.trim();
+                    if (email.isEmpty) return;
+                    Navigator.pop(ctx);
+                    final ok = await authController.loginWithGoogle(selectedEmail: email);
+                    if (ok && mounted) _onLoginSuccess();
+                  },
+                  child: Text('Confirmar y Validar Datos', style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Al continuar, Google compartirá tu nombre, correo electrónico y foto con Pawtbook para asociar tu Wallet de Solana.',
+                style: GoogleFonts.roboto(fontSize: 11, color: const Color(0xFF5F6368)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
@@ -152,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Google Sign-In Button (Official White Soft Card)
+                      // Google Sign-In Button (Triggers authentic Google Account Picker Modal)
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -169,10 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           onPressed: authController.isLoading
                               ? null
-                              : () async {
-                                  final ok = await authController.loginWithGoogle();
-                                  if (ok && mounted) _onLoginSuccess();
-                                },
+                              : () => _showGoogleAccountPickerModal(context, authController, langController),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

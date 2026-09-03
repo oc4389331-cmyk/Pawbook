@@ -113,18 +113,20 @@ class DynamicAuthService {
   }
 
   /// Dynamic.xyz Google OAuth Authentication with Embedded Solana Wallet
-  Future<DynamicAuthResult> authenticateWithGoogle() async {
+  Future<DynamicAuthResult> authenticateWithGoogle({String? email}) async {
+    final targetEmail = email ?? 'user.pawtbook@gmail.com';
+
     if (environmentId.isNotEmpty && !environmentId.contains('dynamic-env-id')) {
       try {
         final url = Uri.parse('https://api.dynamic.xyz/v1/sdk/$environmentId/oauth/google');
         final response = await http.get(url);
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          final email = data['email'] ?? 'user.google@gmail.com';
-          final hash = email.hashCode.abs().toRadixString(16);
+          final gEmail = data['email'] ?? targetEmail;
+          final hash = gEmail.hashCode.abs().toRadixString(16);
           return DynamicAuthResult(
             isSuccess: true,
-            email: email,
+            email: gEmail,
             walletAddress: 'PawGgl${hash}SolanaWallet',
             jwtToken: 'dyn_jwt_google_$hash',
           );
@@ -133,14 +135,13 @@ class DynamicAuthService {
     }
 
     // Dev/Mock Google Sign-In Fallback
-    await Future.delayed(const Duration(milliseconds: 400));
-    const mockEmail = 'user.pawtbook@gmail.com';
-    final hash = mockEmail.hashCode.abs().toRadixString(16);
+    await Future.delayed(const Duration(milliseconds: 300));
+    final hash = targetEmail.hashCode.abs().toRadixString(16);
     final mockWallet = 'PawGgl${hash}SolanaWallet';
 
     return DynamicAuthResult(
       isSuccess: true,
-      email: mockEmail,
+      email: targetEmail,
       walletAddress: mockWallet,
       jwtToken: 'dyn_jwt_google_$hash',
     );

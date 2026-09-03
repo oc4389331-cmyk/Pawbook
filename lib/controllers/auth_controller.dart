@@ -87,12 +87,12 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> loginWithGoogle() async {
+  Future<bool> loginWithGoogle({String? selectedEmail}) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      final res = await _dynamicAuthService.authenticateWithGoogle();
+      final res = await _dynamicAuthService.authenticateWithGoogle(email: selectedEmail);
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? 'Google authentication failed';
         _setLoading(false);
