@@ -58,30 +58,58 @@ class DynamicAuthService {
     return sb.toString();
   }
 
-  /// Dynamic.xyz Solana Wallet Authentication (Phantom / Solflare)
+  /// Dynamic.xyz Solana Wallet Authentication (Phantom / Solflare) with SIWS
   Future<DynamicAuthResult> authenticateWithSolanaWallet({
     String walletType = 'Phantom',
     String? providedAddress,
   }) async {
     String? realSolanaAddress = providedAddress;
 
-    // Try connecting to real Phantom extension on Web
+    // Try connecting to real Phantom extension on Web (with SIWS signature)
     if (kIsWeb && realSolanaAddress == null) {
       try {
         final bridge = js.context['PawtbookSolana'];
         if (bridge != null) {
           final promise = bridge.callMethod('connectPhantom');
           if (promise != null) {
+            final success = promise['success'];
+            final error = promise['error'];
             final addr = promise['address'];
+            final signed = promise['signed'];
+
+            // Handle explicit error from JS bridge (e.g. wallet not installed)
+            if (success == false || success?.toString() == 'false') {
+              return DynamicAuthResult(
+                isSuccess: false,
+                errorMessage: error?.toString() ??
+                    '❌ Phantom wallet no está disponible. Instala la extensión de Phantom para continuar.',
+              );
+            }
+
+            // Require the SIWS signature to have been completed
+            if (signed != true && signed?.toString() != 'true') {
+              return DynamicAuthResult(
+                isSuccess: false,
+                errorMessage: '❌ Debes firmar el mensaje en Phantom para verificar que eres el propietario de la wallet.',
+              );
+            }
+
             if (addr != null && addr.toString().isNotEmpty) {
               realSolanaAddress = addr.toString();
             }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Phantom bridge error: $e');
+      }
     }
 
-    realSolanaAddress ??= _generateRealSolanaAddress('phantom_${DateTime.now().millisecondsSinceEpoch}');
+    if (realSolanaAddress == null) {
+      return DynamicAuthResult(
+        isSuccess: false,
+        errorMessage: '❌ No se pudo conectar a Phantom. Asegúrate de tener la extensión instalada.',
+      );
+    }
 
     return DynamicAuthResult(
       isSuccess: true,

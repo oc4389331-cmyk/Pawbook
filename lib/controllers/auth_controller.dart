@@ -160,9 +160,11 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // 1. Attempt real Supabase Auth Google OAuth flow
-      try {
-        if (Supabase.instance.client != null) {
+      // Attempt real Supabase Auth Google OAuth flow
+      // NOTE: Requires Google provider enabled in Supabase dashboard:
+      // Authentication > Providers > Google > Enable
+      if (Supabase.instance.client != null) {
+        try {
           final launched = await Supabase.instance.client.auth.signInWithOAuth(
             OAuthProvider.google,
             redirectTo: kIsWeb ? Uri.base.origin : null,
@@ -171,39 +173,28 @@ class AuthController extends ChangeNotifier {
             _setLoading(false);
             return true;
           }
+        } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          if (errorStr.contains('validation_failed') ||
+              errorStr.contains('provider') ||
+              errorStr.contains('not enabled') ||
+              errorStr.contains('unsupported')) {
+            _errorMessage =
+                '⚙️ Google OAuth no está habilitado en el servidor. Por favor usa la opción de inicio de sesión por correo electrónico con código de verificación. '
+                '\n\n(Para el administrador: activar el proveedor Google en Supabase Dashboard → Authentication → Providers → Google)';
+            _setLoading(false);
+            notifyListeners();
+            return false;
+          }
+          debugPrint('Supabase Google OAuth error: $e');
         }
-      } catch (e) {
-        debugPrint('Supabase Google OAuth notice: $e');
       }
 
-      // 2. Fallback to Dynamic Auth Service
-      final res = await _dynamicAuthService.authenticateWithGoogle(email: googleEmail);
-
-      if (!res.isSuccess || res.walletAddress == null) {
-        _errorMessage = res.errorMessage ?? 'Error al autenticar con Google';
-        _setLoading(false);
-        notifyListeners();
-        return false;
-      }
-
-      final email = res.email ?? googleEmail;
-      if (email == null || !email.contains('@') || !email.contains('.')) {
-        _errorMessage = '❌ Se requiere un correo de Google válido y autenticado para continuar.';
-        _setLoading(false);
-        notifyListeners();
-        return false;
-      }
-
-      final walletAddress = res.walletAddress!;
-
-      await _processAuthenticatedUser(
-        walletAddress: walletAddress,
-        email: email,
-        jwtToken: res.jwtToken ?? 'dyn_jwt_google_${email.hashCode.abs().toRadixString(16)}',
-      );
-
+      _errorMessage =
+          '⚙️ El inicio de sesión con Google no está configurado. Usa la opción de correo electrónico con código de verificación.';
       _setLoading(false);
-      return true;
+      notifyListeners();
+      return false;
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);

@@ -36,23 +36,35 @@
   <script>
     window.PawtbookSolana = {
       async connectPhantom() {
-        if (window.solana && window.solana.isPhantom) {
-          try {
-            const resp = await window.solana.connect();
-            return { success: true, address: resp.publicKey.toString() };
-          } catch (err) {
-            console.warn('Phantom connect rejected:', err);
-          }
+        const provider = (window.solana && window.solana.isPhantom)
+          ? window.solana
+          : (window.phantom && window.phantom.solana ? window.phantom.solana : null);
+
+        if (!provider) {
+          return { success: false, error: 'Phantom wallet no está instalada. Instala la extensión desde phantom.app y recarga la página.' };
         }
-        if (window.phantom && window.phantom.solana) {
-          try {
-            const resp = await window.phantom.solana.connect();
-            return { success: true, address: resp.publicKey.toString() };
-          } catch (err) {
-            console.warn('Phantom solana connect rejected:', err);
+
+        try {
+          // Step 1: Connect wallet (user approves connection in Phantom popup)
+          const resp = await provider.connect();
+          const address = resp.publicKey.toString();
+
+          // Step 2: SIWS - User must sign a message to prove they own the wallet
+          const nonce = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+          const timestamp = new Date().toISOString();
+          const message = `Pawtbook Authentication\n\nFirmar este mensaje prueba que eres el propietario de esta wallet de Solana.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${timestamp}\n\nEsta solicitud no cuesta SOL.`;
+          const encodedMessage = new TextEncoder().encode(message);
+
+          const signedResult = await provider.signMessage(encodedMessage, 'utf8');
+          if (!signedResult || !signedResult.signature) {
+            return { success: false, error: 'La firma de la wallet fue rechazada. Intenta de nuevo.' };
           }
+
+          return { success: true, address: address, nonce: nonce, signed: true };
+        } catch (err) {
+          console.warn('Phantom auth rejected:', err);
+          return { success: false, error: err.message || 'La autenticación de Phantom fue rechazada.' };
         }
-        return this.generateSolanaKeypair();
       },
 
       generateSolanaKeypair(seedString) {
