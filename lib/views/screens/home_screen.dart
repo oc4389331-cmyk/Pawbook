@@ -293,6 +293,99 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+
+                    // Input: Nombre Completo
+                    TextField(
+                      controller: fullNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre Completo',
+                        hintText: 'Ej. Juan Pérez',
+                        prefixIcon: const Icon(Icons.badge_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: Nombre de Usuario
+                    TextField(
+                      controller: usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre de Usuario',
+                        hintText: 'Ej. @juan_pawt',
+                        prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: Biografía
+                    TextField(
+                      controller: bioController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Biografía / Acerca de ti',
+                        hintText: 'Amante de las mascotas y tutor de Firulais 🐾',
+                        prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Save Changes & Cancel Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryTerracotta,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            icon: const Icon(Icons.save_rounded, color: Colors.white, size: 20),
+                            label: authController.isLoading
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : Text('💾 Guardar Cambios', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+                            onPressed: authController.isLoading
+                                ? null
+                                : () async {
+                                    final ok = await authController.updateCurrentProfile(
+                                      fullName: fullNameController.text.trim(),
+                                      username: usernameController.text.trim(),
+                                      avatarUrl: avatarUrlController.text.trim(),
+                                      bio: bioController.text.trim(),
+                                    );
+                                    if (ok && ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('¡Perfil actualizado y guardado en Supabase exitosamente! ✨'),
+                                          backgroundColor: AppTheme.emeraldGreen,
+                                        ),
+                                      );
+                                    }
+                                  },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
