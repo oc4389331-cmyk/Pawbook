@@ -36,7 +36,29 @@ class AuthController extends ChangeNotifier {
     RenderBackendService? renderBackendService,
   })  : _supabaseService = supabaseService ?? SupabaseService(),
         _dynamicAuthService = dynamicAuthService ?? DynamicAuthService(),
-        _renderBackendService = renderBackendService ?? RenderBackendService();
+        _renderBackendService = renderBackendService ?? RenderBackendService() {
+    _initSupabaseAuthListener();
+  }
+
+  void _initSupabaseAuthListener() {
+    try {
+      if (Supabase.instance.client != null) {
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+          final session = data.session;
+          if (session?.user != null && _currentProfile == null) {
+            final user = session!.user;
+            final email = user.email;
+            final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
+            _processAuthenticatedUser(
+              walletAddress: wallet,
+              email: email,
+              jwtToken: session.accessToken,
+            );
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   Future<bool> loginWithSolanaWallet({String walletType = 'Phantom'}) async {
     _setLoading(true);
@@ -138,19 +160,23 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-      if (googleEmail != null && googleEmail.trim().isNotEmpty) {
-        final cleanEmail = googleEmail.trim();
-        if (!emailRegex.hasMatch(cleanEmail)) {
-          _errorMessage = 'El texto "$cleanEmail" no es un correo electrónico válido. Debe ser una dirección con formato completo (ej. tu.nombre@gmail.com)';
-          _setLoading(false);
-          notifyListeners();
-          return false;
+      // 1. Attempt real Supabase Auth Google OAuth flow
+      try {
+        if (Supabase.instance.client != null) {
+          final launched = await Supabase.instance.client.auth.signInWithOAuth(
+            OAuthProvider.google,
+            redirectTo: kIsWeb ? Uri.base.origin : null,
+          );
+          if (launched) {
+            _setLoading(false);
+            return true;
+          }
         }
+      } catch (e) {
+        debugPrint('Supabase Google OAuth notice: $e');
       }
 
-      // Authenticate via Dynamic.xyz Google OAuth (Solana Mainnet Env ID)
+      // 2. Fallback to Dynamic Auth Service
       final res = await _dynamicAuthService.authenticateWithGoogle(email: googleEmail);
 
       if (!res.isSuccess || res.walletAddress == null) {
@@ -160,7 +186,14 @@ class AuthController extends ChangeNotifier {
         return false;
       }
 
-      final email = res.email ?? googleEmail ?? 'usuario.google@gmail.com';
+      final email = res.email ?? googleEmail;
+      if (email == null || !email.contains('@') || !email.contains('.')) {
+        _errorMessage = '❌ Se requiere un correo de Google válido y autenticado para continuar.';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
       final walletAddress = res.walletAddress!;
 
       await _processAuthenticatedUser(

@@ -3,6 +3,7 @@ import 'dart:js' as js;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 
 class DynamicAuthResult {
@@ -94,7 +95,19 @@ class DynamicAuthService {
   /// Send a 6-digit Email OTP Code
   Future<String?> sendEmailOTP(String email) async {
     final cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.contains('@')) return null;
+    if (!cleanEmail.contains('@') || !cleanEmail.contains('.')) return null;
+
+    // 1. Trigger real Supabase Auth Email OTP delivery to user's real inbox
+    try {
+      if (Supabase.instance.client != null) {
+        await Supabase.instance.client.auth.signInWithOtp(
+          email: cleanEmail,
+          emailRedirectTo: kIsWeb ? Uri.base.origin : null,
+        );
+      }
+    } catch (e) {
+      debugPrint('Supabase Auth OTP send notice: $e');
+    }
 
     final codeInt = (cleanEmail.hashCode.abs() % 899999) + 100000;
     final otpCode = codeInt.toString().padLeft(6, '0');
@@ -118,13 +131,29 @@ class DynamicAuthService {
   Future<DynamicAuthResult> verifyEmailOTP(String email, String userEnteredCode) async {
     final cleanEmail = email.trim().toLowerCase();
     final expectedCode = _pendingOtps[cleanEmail];
-
     final cleanEntered = userEnteredCode.trim();
 
-    if (expectedCode != null && cleanEntered != expectedCode && cleanEntered != '123456' && cleanEntered != '000000') {
+    bool isVerified = false;
+
+    // 1. Attempt Supabase Auth real OTP verification
+    try {
+      if (Supabase.instance.client != null) {
+        final res = await Supabase.instance.client.auth.verifyOTP(
+          email: cleanEmail,
+          token: cleanEntered,
+          type: OtpType.email,
+        );
+        if (res.user != null || res.session != null) {
+          isVerified = true;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Check pending OTP code (strictly requiring exact match, no mock overrides)
+    if (!isVerified && (expectedCode == null || cleanEntered != expectedCode)) {
       return DynamicAuthResult(
         isSuccess: false,
-        errorMessage: '❌ El código de verificación de 6 dígitos ingresado es incorrecto.',
+        errorMessage: '❌ El código de verificación de 6 dígitos ingresado no es válido o ha expirado.',
       );
     }
 

@@ -660,22 +660,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Banner Notification with Sent Code
+                              // Real Email Inbox Notice Banner
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.accentOrange.withOpacity(0.12),
+                                  color: AppTheme.emeraldGreen.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppTheme.accentOrange.withOpacity(0.4)),
+                                  border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4)),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.info_outline_rounded, color: AppTheme.accentOrange, size: 20),
+                                    const Icon(Icons.mark_email_read_rounded, color: AppTheme.emeraldGreen, size: 20),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      'Tu código enviado es: ${_sentOtpCode ?? "123456"}',
-                                      style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.accentOrange),
+                                    Expanded(
+                                      child: Text(
+                                        'Te enviamos un código de 6 dígitos. Revisa tu bandeja de entrada y la carpeta SPAM.',
+                                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ],
                                 ),
