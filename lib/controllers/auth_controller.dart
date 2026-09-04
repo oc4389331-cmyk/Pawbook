@@ -47,17 +47,31 @@ class AuthController extends ChangeNotifier {
           final session = data.session;
           if (session?.user != null && _currentProfile == null) {
             final user = session!.user;
-            final email = user.email;
+            final meta = user.userMetadata ?? {};
+
+            // Extract Google OAuth profile data
+            final email = user.email ?? meta['email']?.toString();
+            final fullName = meta['full_name']?.toString() ??
+                meta['name']?.toString();
+            final avatarUrl = meta['avatar_url']?.toString() ??
+                meta['picture']?.toString();
             final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
+
+            debugPrint('Google OAuth user: email=$email, name=$fullName, avatar=$avatarUrl');
+
             _processAuthenticatedUser(
               walletAddress: wallet,
               email: email,
+              fullName: fullName,
+              avatarUrl: avatarUrl,
               jwtToken: session.accessToken,
             );
           }
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Auth listener error: $e');
+    }
   }
 
   Future<bool> loginWithSolanaWallet({String walletType = 'Phantom'}) async {
@@ -212,6 +226,8 @@ class AuthController extends ChangeNotifier {
   Future<void> _processAuthenticatedUser({
     required String walletAddress,
     String? email,
+    String? fullName,
+    String? avatarUrl,
     required String jwtToken,
   }) async {
     // 1. Verify with Render backend
@@ -224,18 +240,62 @@ class AuthController extends ChangeNotifier {
     // 2. Query or create Supabase profile
     var profile = await _supabaseService.getProfileByWallet(walletAddress);
     if (profile == null) {
+      // Build a readable username from full name or email
+      String username;
+      if (fullName != null && fullName.trim().isNotEmpty) {
+        username = fullName.trim().toLowerCase().replaceAll(' ', '_');
+        if (username.length > 20) username = username.substring(0, 20);
+      } else if (email != null && email.contains('@')) {
+        username = email.split('@').first.toLowerCase();
+      } else {
+        final subLen = min(8, walletAddress.length);
+        username = 'paw_' + walletAddress.substring(0, subLen);
+      }
+
       final subLen = min(8, walletAddress.length);
-      final username = 'paw_' + walletAddress.substring(0, subLen);
       profile = await _supabaseService.createProfile(
         ProfileModel(
           id: 'usr_' + walletAddress.substring(0, subLen),
           walletAddress: walletAddress,
           username: username,
           email: email,
+          fullName: fullName,
+          avatarUrl: avatarUrl,
           pawtScore: 100, // Initial welcome bonus score
           createdAt: DateTime.now(),
         ),
       );
+    } else if (profile != null) {
+      // Update existing profile with Google data if fields are missing
+      bool needsUpdate = false;
+      String? updatedName = profile.fullName;
+      String? updatedAvatar = profile.avatarUrl;
+      String? updatedEmail = profile.email;
+
+      if ((profile.fullName == null || profile.fullName!.isEmpty) &&
+          fullName != null && fullName.isNotEmpty) {
+        updatedName = fullName;
+        needsUpdate = true;
+      }
+      if ((profile.avatarUrl == null || profile.avatarUrl!.isEmpty) &&
+          avatarUrl != null && avatarUrl.isNotEmpty) {
+        updatedAvatar = avatarUrl;
+        needsUpdate = true;
+      }
+      if ((profile.email == null || profile.email!.isEmpty) &&
+          email != null && email.isNotEmpty) {
+        updatedEmail = email;
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        profile = await _supabaseService.updateProfile(
+          profile.copyWith(
+            fullName: updatedName,
+            avatarUrl: updatedAvatar,
+            email: updatedEmail,
+          ),
+        );
+      }
     }
     _currentProfile = profile;
 
