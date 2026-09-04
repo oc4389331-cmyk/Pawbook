@@ -144,6 +144,24 @@ class SupabaseService {
     return profile;
   }
 
+  Future<ProfileModel> updateProfile(ProfileModel profile) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('profiles')
+            .update(profile.toJson())
+            .eq('id', profile.id)
+            .select()
+            .single();
+        return ProfileModel.fromJson(res);
+      } catch (e) {
+        if (!_useMockFallback) rethrow;
+      }
+    }
+    _mockProfiles[profile.id] = profile;
+    return profile;
+  }
+
   // --- Pet Operations ---
   Future<List<PetModel>> getPetsForOwner(String ownerId) async {
     if (_client != null) {

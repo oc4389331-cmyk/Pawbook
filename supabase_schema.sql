@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id TEXT PRIMARY KEY,
     wallet_address TEXT UNIQUE NOT NULL,
     username TEXT NOT NULL,
+    full_name TEXT,
+    avatar_url TEXT,
+    bio TEXT,
     pawt_score INT DEFAULT 0 NOT NULL,
     favorite_species TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
@@ -24,6 +27,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 -- Safely add column if upgrading existing database
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS favorite_species TEXT[] DEFAULT '{}';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 
 -- 3. Pets Table (Creator Profiles)
 CREATE TABLE IF NOT EXISTS public.pets (

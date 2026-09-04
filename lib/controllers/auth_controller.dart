@@ -63,6 +63,50 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<String?> sendEmailOtp(String email) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final code = await _dynamicAuthService.sendEmailOTP(email);
+      _setLoading(false);
+      if (code == null) {
+        _errorMessage = 'Por favor ingresa un correo electrónico válido (ej. usuario@gmail.com)';
+      }
+      return code;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return null;
+    }
+  }
+
+  Future<bool> verifyEmailOtpAndLogin(String email, String otpCode) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final res = await _dynamicAuthService.verifyEmailOTP(email, otpCode);
+      if (!res.isSuccess || res.walletAddress == null) {
+        _errorMessage = res.errorMessage ?? '❌ Código de verificación incorrecto';
+        _setLoading(false);
+        return false;
+      }
+
+      await _processAuthenticatedUser(
+        walletAddress: res.walletAddress!,
+        email: email,
+        jwtToken: res.jwtToken ?? '',
+      );
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<bool> loginWithEmail(String email) async {
     _setLoading(true);
     _errorMessage = null;
@@ -231,6 +275,36 @@ class AuthController extends ChangeNotifier {
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
+    }
+  }
+
+  Future<bool> updateCurrentProfile({
+    String? username,
+    String? fullName,
+    String? avatarUrl,
+    String? bio,
+  }) async {
+    if (_currentProfile == null) return false;
+    _setLoading(true);
+
+    try {
+      final updated = _currentProfile!.copyWith(
+        username: username != null && username.trim().isNotEmpty ? username.trim() : _currentProfile!.username,
+        fullName: fullName != null && fullName.trim().isNotEmpty ? fullName.trim() : _currentProfile!.fullName,
+        avatarUrl: avatarUrl != null && avatarUrl.trim().isNotEmpty ? avatarUrl.trim() : _currentProfile!.avatarUrl,
+        bio: bio != null && bio.trim().isNotEmpty ? bio.trim() : _currentProfile!.bio,
+      );
+
+      final saved = await _supabaseService.updateProfile(updated);
+      _currentProfile = saved;
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
     }
   }
 

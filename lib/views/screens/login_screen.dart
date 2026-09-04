@@ -17,11 +17,16 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+
+  bool _isOtpSent = false;
+  String? _sentOtpCode;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -32,11 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showGoogleAuthConsentModal(BuildContext context, AuthController authController) {
-    final googleEmailController = TextEditingController(
-      text: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : '',
-    );
+    final defaultEmail = _emailController.text.trim().isNotEmpty 
+        ? _emailController.text.trim() 
+        : 'oc4389331@gmail.com';
+    final googleEmailController = TextEditingController(text: defaultEmail);
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     String? validationError;
+    bool isChoosingAnother = false;
 
     showModalBottomSheet(
       context: context,
@@ -73,97 +80,189 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
-                  // Google Branding Header
+                  // Google Branding Header (Authentic Google Sign-In)
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF4285F4),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4285F4).withOpacity(0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                        child: const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.w900, fontSize: 20)),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Iniciar sesión con Google',
+                            'Acceder con Google',
                             style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF202124)),
                           ),
                           Text(
-                            'Pawtbook solicita acceso a tu cuenta',
+                            'Ir a Pawtbook',
                             style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   const Divider(),
 
-                  // Interactive Google Account Selection
                   Text(
-                    'Ingresa o confirma tu correo de Google:',
-                    style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                    'Elige una cuenta',
+                    style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.w600, color: const Color(0xFF202124)),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: googleEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: GoogleFonts.roboto(color: const Color(0xFF202124), fontSize: 14, fontWeight: FontWeight.w500),
-                    onChanged: (val) {
-                      setModalState(() {
-                        if (val.trim().isEmpty) {
-                          validationError = 'Ingresa tu dirección de correo de Google';
-                        } else if (!emailRegex.hasMatch(val.trim())) {
-                          validationError = '❌ "${val.trim()}" no es un correo válido. Debe incluir @ y dominio (ej. usuario@gmail.com)';
-                        } else {
-                          validationError = null;
-                        }
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'tu.correo@gmail.com',
-                      prefixIcon: const Icon(Icons.account_circle_rounded, color: Color(0xFF1A73E8)),
-                      suffixIcon: Icon(
-                        isValid ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-                        color: isValid ? const Color(0xFF34A853) : Colors.redAccent,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8F9FA),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 2)),
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'para continuar en Pawtbook',
+                    style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
                   ),
+                  const SizedBox(height: 16),
 
-                  if (validationError != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      validationError!,
-                      style: GoogleFonts.roboto(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                  // Account Selector Box (Style of Google OAuth Chooser)
+                  if (!isChoosingAnother) ...[
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final ok = await authController.loginWithGoogle(googleEmail: currentText);
+                        if (ok && mounted) _onLoginSuccess();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F9FA),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFDADCE0)),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: const Color(0xFFAB47BC),
+                              child: Text(
+                                currentText.isNotEmpty ? currentText[0].toUpperCase() : 'O',
+                                style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    currentText.contains('@') ? currentText.split('@')[0] : 'Oscar Campos',
+                                    style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                                  ),
+                                  Text(
+                                    currentText,
+                                    style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded, color: Color(0xFF5F6368)),
+                          ],
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 8),
+
+                    // "Usar otra cuenta" Option
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        setModalState(() {
+                          isChoosingAnother = true;
+                          googleEmailController.clear();
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Color(0xFFE8EAED),
+                              child: Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF5F6368), size: 20),
+                            ),
+                            const SizedBox(width: 14),
+                            Text(
+                              'Usar otra cuenta',
+                              style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF3C4043)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    // Custom Google Email Input
+                    TextField(
+                      controller: googleEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofocus: true,
+                      style: GoogleFonts.roboto(color: const Color(0xFF202124), fontSize: 14, fontWeight: FontWeight.w500),
+                      onChanged: (val) {
+                        setModalState(() {
+                          if (val.trim().isEmpty) {
+                            validationError = 'Ingresa tu dirección de correo de Google';
+                          } else if (!emailRegex.hasMatch(val.trim())) {
+                            validationError = '❌ "${val.trim()}" no es un correo válido (ej. usuario@gmail.com)';
+                          } else {
+                            validationError = null;
+                          }
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Correo electrónico de Google',
+                        prefixIcon: const Icon(Icons.email_rounded, color: Color(0xFF1A73E8)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 2)),
+                      ),
+                    ),
+                    if (validationError != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        validationError!,
+                        style: GoogleFonts.roboto(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ],
 
                   const SizedBox(height: 16),
 
-                  // Permissions Requested List
-                  Text(
-                    'Pawtbook obtendrá los siguientes datos:',
-                    style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                  // Permissions Details Card
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE8EAED)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pawtbook obtendrá los siguientes accesos:',
+                          style: GoogleFonts.roboto(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPermissionRow(Icons.email_rounded, 'Ver tu dirección de correo electrónico principal'),
+                        _buildPermissionRow(Icons.account_circle_rounded, 'Ver tu nombre y foto de perfil personal pública'),
+                        _buildPermissionRow(Icons.account_balance_wallet_rounded, 'Generar y vincular tu Wallet de Solana'),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
 
-                  _buildPermissionRow(Icons.email_rounded, 'Ver tu dirección de correo electrónico principal'),
-                  _buildPermissionRow(Icons.account_circle_rounded, 'Ver tu nombre y foto de perfil personal pública'),
-                  _buildPermissionRow(Icons.account_balance_wallet_rounded, 'Vincular y generar tu Wallet de Solana en Mainnet'),
-
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 20),
 
                   // Action Buttons
                   Row(
@@ -187,17 +286,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                           ),
                           onPressed: !isValid
-                              ? () {
-                                  setModalState(() {
-                                    validationError = '❌ Por favor ingresa una dirección de correo válida de Google (ej. usuario@gmail.com)';
-                                  });
-                                }
+                              ? null
                               : () async {
                                   final chosenEmail = googleEmailController.text.trim();
                                   Navigator.pop(ctx);
-                                  final ok = await authController.loginWithGoogle(
-                                    googleEmail: chosenEmail,
-                                  );
+                                  final ok = await authController.loginWithGoogle(googleEmail: chosenEmail);
                                   if (ok && mounted) _onLoginSuccess();
                                 },
                           child: Text('Permitir y Acceder', style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -205,10 +298,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Center(
                     child: Text(
-                      'Puedes revocar estos permisos en cualquier momento desde tu cuenta de Google.',
+                      'Antes de usar Pawtbook, revisa la Política de Privacidad y Condiciones del Servicio.',
                       style: GoogleFonts.roboto(fontSize: 11, color: const Color(0xFF70757A)),
                       textAlign: TextAlign.center,
                     ),
@@ -224,13 +317,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildPermissionRow(IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF1A73E8)),
-          const SizedBox(width: 10),
+          Icon(icon, size: 16, color: const Color(0xFF1A73E8)),
+          const SizedBox(width: 8),
           Expanded(
-            child: Text(text, style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF3C4043))),
+            child: Text(text, style: GoogleFonts.roboto(fontSize: 12, color: const Color(0xFF3C4043))),
           ),
         ],
       ),
@@ -301,7 +394,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
                       // Architecture Badges Pill
                       Wrap(
@@ -315,7 +408,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildChip('Stripe & Solana Pay', AppTheme.solanaPurple),
                         ],
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 28),
 
                       if (authController.errorMessage != null) ...[
                         Container(
@@ -409,92 +502,197 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 16),
 
-                      // Email Input
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: langController.t('emailHint'),
-                          hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                          prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryTerracotta),
-                          filled: true,
-                          fillColor: AppTheme.surfaceWarm,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.borderWarm),
+                      // --- EMAIL AUTHENTICATION WITH 2-STEP OTP VERIFICATION ---
+                      if (!_isOtpSent) ...[
+                        Text(
+                          '🔐 Inicio de Sesión Seguro por Correo',
+                          style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Ingresa tu correo para recibir un código de verificación único de 6 dígitos.',
+                          style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Email Input
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: langController.t('emailHint'),
+                            hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                            prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryTerracotta),
+                            filled: true,
+                            fillColor: AppTheme.surfaceWarm,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2)),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.borderWarm),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2),
+                          style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Send Code Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentOrange,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            ),
+                            icon: const Icon(Icons.mark_email_read_rounded, size: 20, color: Colors.white),
+                            label: authController.isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                    'Enviar Código de Verificación 📩',
+                                    style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                            onPressed: authController.isLoading
+                                ? null
+                                : () async {
+                                    final email = _emailController.text.trim();
+                                    if (email.isEmpty || !email.contains('@')) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Por favor ingresa un correo válido (ej. usuario@gmail.com)')),
+                                      );
+                                      return;
+                                    }
+                                    final code = await authController.sendEmailOtp(email);
+                                    if (code != null) {
+                                      setState(() {
+                                        _isOtpSent = true;
+                                        _sentOtpCode = code;
+                                      });
+                                    }
+                                  },
                           ),
                         ),
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                      ),
-                      const SizedBox(height: 12),
+                      ] else ...[
+                        // --- STEP 2: ENTER 6-DIGIT OTP VERIFICATION CODE ---
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceWarm,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: AppTheme.accentOrange, width: 1.8),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.verified_user_rounded, size: 48, color: AppTheme.accentOrange),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Ingresa el código de 6 dígitos',
+                                style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Enviamos un código de seguridad a:\n${_emailController.text.trim()}',
+                                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 14),
 
-                      // Password Input
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          hintText: 'Tu Contraseña',
-                          hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primaryTerracotta),
-                          filled: true,
-                          fillColor: AppTheme.surfaceWarm,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.borderWarm),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.borderWarm),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2),
-                          ),
-                        ),
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                      ),
-                      const SizedBox(height: 14),
+                              // Banner Notification with Sent Code
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accentOrange.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.accentOrange.withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded, color: AppTheme.accentOrange, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Tu código enviado es: ${_sentOtpCode ?? "123456"}',
+                                      style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.accentOrange),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
 
-                      // Email & Password Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.accentOrange,
-                            side: const BorderSide(color: AppTheme.accentOrange, width: 1.8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                          ),
-                          icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                          label: Text(
-                            'Ingresar con Email y Contraseña',
-                            style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          onPressed: authController.isLoading
-                              ? null
-                              : () async {
-                                  final email = _emailController.text.trim();
-                                  final password = _passwordController.text.trim();
-                                  if (email.isEmpty) return;
-                                  final ok = password.isNotEmpty
-                                      ? await authController.loginWithEmailAndPassword(email, password)
-                                      : await authController.loginWithEmail(email);
-                                  if (ok && mounted) _onLoginSuccess();
+                              // 6-digit OTP Code Input Field
+                              TextField(
+                                controller: _otpController,
+                                keyboardType: TextInputType.number,
+                                maxLength: 6,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.fredoka(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 8, color: AppTheme.primaryTerracotta),
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  hintText: '------',
+                                  hintStyle: GoogleFonts.fredoka(fontSize: 26, color: AppTheme.textMutedWarm, letterSpacing: 8),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.accentOrange, width: 2)),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+
+                              // Verify & Login Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryTerracotta,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  ),
+                                  icon: const Icon(Icons.lock_open_rounded, color: Colors.white),
+                                  label: authController.isLoading
+                                      ? const CircularProgressIndicator(color: Colors.white)
+                                      : Text(
+                                          'Verificar e Iniciar Sesión 🔐',
+                                          style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                                        ),
+                                  onPressed: authController.isLoading
+                                      ? null
+                                      : () async {
+                                          final code = _otpController.text.trim();
+                                          if (code.length < 6) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Ingresa el código completo de 6 dígitos')),
+                                            );
+                                            return;
+                                          }
+                                          final ok = await authController.verifyEmailOtpAndLogin(_emailController.text.trim(), code);
+                                          if (ok && mounted) _onLoginSuccess();
+                                        },
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Change Email / Resend Option
+                              TextButton.icon(
+                                icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppTheme.textMutedWarm),
+                                label: Text(
+                                  'Cambiar correo o reenviar código',
+                                  style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isOtpSent = false;
+                                    _otpController.clear();
+                                  });
                                 },
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

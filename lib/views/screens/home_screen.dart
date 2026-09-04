@@ -432,7 +432,167 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showEditHumanProfileModal(BuildContext context, AuthController authController) {
+    final profile = authController.currentProfile;
+    final usernameController = TextEditingController(text: profile?.username ?? '');
+    final fullNameController = TextEditingController(text: profile?.fullName ?? '');
+    final avatarUrlController = TextEditingController(text: profile?.avatarUrl ?? '');
+    final bioController = TextEditingController(text: profile?.bio ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            final avatarInput = avatarUrlController.text.trim();
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppTheme.bgWarmCream,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppTheme.borderWarm,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      '✏️ Editar Perfil Humano',
+                      style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Avatar Circle Preview
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: AppTheme.surfaceWarm,
+                      backgroundImage: avatarInput.isNotEmpty ? NetworkImage(avatarInput) : null,
+                      child: avatarInput.isEmpty
+                          ? const Icon(Icons.person_rounded, size: 44, color: AppTheme.primaryTerracotta)
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Input: URL de Foto de Perfil
+                    TextField(
+                      controller: avatarUrlController,
+                      onChanged: (_) => setModalState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Foto de Perfil (URL de imagen)',
+                        hintText: 'https://ejemplo.com/foto_humano.jpg',
+                        prefixIcon: const Icon(Icons.photo_camera_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: Nombre Completo del Humano
+                    TextField(
+                      controller: fullNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre Completo del Humano',
+                        hintText: 'ej. Oscar Campos',
+                        prefixIcon: const Icon(Icons.badge_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: Nombre de Usuario (Username)
+                    TextField(
+                      controller: usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre de Usuario (Username)',
+                        hintText: 'ej. paw_oscar',
+                        prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: Biografía / Datos del Humano
+                    TextField(
+                      controller: bioController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Datos / Biografía del Humano',
+                        hintText: 'ej. Amante de los animales, patrocinador activo en Solana 🐾',
+                        prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Save Changes Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryTerracotta,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        icon: const Icon(Icons.save_rounded, color: Colors.white),
+                        label: Text(
+                          'Guardar Cambios de Perfil',
+                          style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        onPressed: () async {
+                          final ok = await authController.updateCurrentProfile(
+                            username: usernameController.text.trim(),
+                            fullName: fullNameController.text.trim(),
+                            avatarUrl: avatarUrlController.text.trim(),
+                            bio: bioController.text.trim(),
+                          );
+                          if (ok && mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('✅ Perfil humano actualizado correctamente')),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildHumanProfileTab(AuthController authController, LanguageController langController) {
+    final profile = authController.currentProfile;
+    final avatarUrl = profile?.avatarUrl ?? '';
+    final fullName = profile?.fullName;
+    final bio = profile?.bio;
+
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
       appBar: AppBar(
@@ -443,6 +603,11 @@ class _HomeScreenState extends State<HomeScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryTerracotta),
+            tooltip: 'Editar Perfil Humano',
+            onPressed: () => _showEditHumanProfileModal(context, authController),
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             tooltip: langController.t('logOut'),
@@ -455,96 +620,139 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircleAvatar(
-                radius: 44,
-                backgroundColor: AppTheme.surfaceWarm,
-                child: Icon(Icons.person_rounded, size: 48, color: AppTheme.primaryTerracotta),
-              ),
-              const SizedBox(height: 16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            // Human Avatar Image
+            CircleAvatar(
+              radius: 48,
+              backgroundColor: AppTheme.surfaceWarm,
+              backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl.isEmpty
+                  ? const Icon(Icons.person_rounded, size: 52, color: AppTheme.primaryTerracotta)
+                  : null,
+            ),
+            const SizedBox(height: 14),
+
+            // Display Name & Username
+            if (fullName != null && fullName.isNotEmpty) ...[
               Text(
-                authController.currentProfile?.username ?? '@tutor_human',
+                fullName,
+                style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+              ),
+              Text(
+                profile?.username ?? '@tutor_human',
+                style: GoogleFonts.outfit(fontSize: 15, color: AppTheme.textMutedWarm, fontWeight: FontWeight.w600),
+              ),
+            ] else ...[
+              Text(
+                profile?.username ?? '@tutor_human',
                 style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Wallet: ${authController.currentProfile?.walletAddress ?? "Not connected"}',
-                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceWarm,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppTheme.borderWarm),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryTerracotta.withOpacity(0.06),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ],
+            ],
+
+            if (bio != null && bio.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  bio,
+                  style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 13),
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
-                    const SizedBox(height: 12),
-                    Text(
-                      langController.t('doYouHaveAPet'),
-                      style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      langController.t('registerPetPrompt'),
-                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add_rounded, color: Colors.white),
-                      label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryTerracotta,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CreatePetScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                icon: const Icon(Icons.logout_rounded, size: 18),
-                label: Text(
-                  langController.t('logOut'),
-                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  authController.logout();
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
               ),
             ],
-          ),
+
+            const SizedBox(height: 6),
+            Text(
+              'Wallet: ${profile?.walletAddress ?? "Not connected"}',
+              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+
+            // Edit Profile Button
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryTerracotta,
+                side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text('✏️ Editar Perfil Humano', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+              onPressed: () => _showEditHumanProfileModal(context, authController),
+            ),
+            const SizedBox(height: 24),
+
+            // Pet Creator Card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceWarm,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.borderWarm),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryTerracotta.withOpacity(0.06),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
+                  const SizedBox(height: 12),
+                  Text(
+                    langController.t('doYouHaveAPet'),
+                    style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    langController.t('registerPetPrompt'),
+                    style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.add_rounded, color: Colors.white),
+                    label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryTerracotta,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CreatePetScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: Text(
+                langController.t('logOut'),
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                authController.logout();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
