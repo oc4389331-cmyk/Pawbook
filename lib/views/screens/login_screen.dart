@@ -506,15 +506,75 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Divider(),
                       const SizedBox(height: 16),
 
-                      // --- EMAIL AUTHENTICATION WITH 2-STEP OTP VERIFICATION ---
+                      // --- EMAIL AUTHENTICATION MODE SELECTOR (INICIAR SESIÓN vs CREAR CUENTA) ---
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceWarm,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.borderWarm),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    // Mode toggle trigger
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryTerracotta,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '🔑 Iniciar Sesión',
+                                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    // Mode toggle trigger
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '✨ Crear Cuenta',
+                                      style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       if (!_isOtpSent) ...[
                         Text(
-                          '🔐 Inicio de Sesión Seguro por Correo',
+                          '🔐 Acceso Seguro por Correo',
                           style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Ingresa tu correo para recibir un código de verificación único de 6 dígitos.',
+                          'Ingresa tu correo para recibir un código de verificación único de 6 dígitos.\n(Si eres nuevo, tu Wallet de Solana Dynamic se creará automáticamente).',
                           style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
                           textAlign: TextAlign.center,
                         ),
