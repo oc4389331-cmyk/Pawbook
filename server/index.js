@@ -1,4 +1,6 @@
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const Stripe = require('stripe');
@@ -128,11 +130,34 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 // JSON Body Parser for all remaining routes
 app.use(express.json());
 
+// Serve static Flutter Web application build if present
+let webBuildPath = path.join(__dirname, 'public');
+if (!fs.existsSync(path.join(webBuildPath, 'index.html'))) {
+  webBuildPath = path.join(__dirname, '../build/web');
+}
+
+if (fs.existsSync(webBuildPath)) {
+  app.use(express.static(webBuildPath));
+  console.log(`🌐 Serving Flutter Web app static files from ${webBuildPath}`);
+}
+
 // --------------------------------------------------------------------------
 // 2. HEALTH CHECK ENDPOINT
 // --------------------------------------------------------------------------
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
+    status: 'ok',
+    service: 'Pawtbook Backend API',
+    version: '1.1.0',
+    stripeWebhookPath: '/api/webhooks/stripe'
+  });
+});
+app.get('/', (req, res, next) => {
+  const indexPath = path.join(webBuildPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  return res.json({
     status: 'ok',
     service: 'Pawtbook Backend API',
     version: '1.1.0',
@@ -348,6 +373,26 @@ app.post('/api/sponsorship/solana-pay', async (req, res) => {
     qrCodeData: solanaPayUrl,
     message: 'Solana Pay transaction metadata generated successfully'
   });
+});
+
+// --------------------------------------------------------------------------
+// 8. SPA FALLBACK ROUTE FOR FLUTTER WEB
+// --------------------------------------------------------------------------
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ success: false, error: 'API endpoint not found' });
+  }
+  const indexPath = path.join(webBuildPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.json({
+      status: 'ok',
+      service: 'Pawtbook Backend API',
+      version: '1.1.0',
+      message: 'Pawtbook Backend API is running. Build Flutter Web (flutter build web) to serve the frontend.'
+    });
+  }
 });
 
 app.listen(PORT, () => {

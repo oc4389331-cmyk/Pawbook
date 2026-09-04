@@ -35,150 +35,188 @@ class _LoginScreenState extends State<LoginScreen> {
     final googleEmailController = TextEditingController(
       text: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : '',
     );
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    String? validationError;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 24,
-            right: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            final currentText = googleEmailController.text.trim();
+            final isValid = currentText.isNotEmpty && emailRegex.hasMatch(currentText);
 
-              // Google Branding Header
-              Row(
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4285F4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Iniciar sesión con Google',
-                        style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF202124)),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      Text(
-                        'Pawtbook solicita acceso a tu cuenta',
-                        style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Google Branding Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF4285F4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                      ),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Iniciar sesión con Google',
+                            style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF202124)),
+                          ),
+                          Text(
+                            'Pawtbook solicita acceso a tu cuenta',
+                            style: GoogleFonts.roboto(fontSize: 13, color: const Color(0xFF5F6368)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Divider(),
+                  const SizedBox(height: 20),
+                  const Divider(),
 
-              // Interactive Google Account Selection
-              Text(
-                'Ingresa o confirma tu correo de Google:',
-                style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: googleEmailController,
-                keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.roboto(color: const Color(0xFF202124), fontSize: 14, fontWeight: FontWeight.w500),
-                decoration: InputDecoration(
-                  hintText: 'tu.correo@gmail.com',
-                  prefixIcon: const Icon(Icons.account_circle_rounded, color: Color(0xFF1A73E8)),
-                  suffixIcon: const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8F9FA),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Permissions Requested List
-              Text(
-                'Pawtbook obtendrá los siguientes datos:',
-                style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
-              ),
-              const SizedBox(height: 10),
-
-              _buildPermissionRow(Icons.email_rounded, 'Ver tu dirección de correo electrónico principal'),
-              _buildPermissionRow(Icons.account_circle_rounded, 'Ver tu nombre y foto de perfil personal pública'),
-              _buildPermissionRow(Icons.account_balance_wallet_rounded, 'Vincular y generar tu Wallet de Solana en Mainnet'),
-
-              const SizedBox(height: 22),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  // Interactive Google Account Selection
+                  Text(
+                    'Ingresa o confirma tu correo de Google:',
+                    style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: googleEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: GoogleFonts.roboto(color: const Color(0xFF202124), fontSize: 14, fontWeight: FontWeight.w500),
+                    onChanged: (val) {
+                      setModalState(() {
+                        if (val.trim().isEmpty) {
+                          validationError = 'Ingresa tu dirección de correo de Google';
+                        } else if (!emailRegex.hasMatch(val.trim())) {
+                          validationError = '❌ "${val.trim()}" no es un correo válido. Debe incluir @ y dominio (ej. usuario@gmail.com)';
+                        } else {
+                          validationError = null;
+                        }
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'tu.correo@gmail.com',
+                      prefixIcon: const Icon(Icons.account_circle_rounded, color: Color(0xFF1A73E8)),
+                      suffixIcon: Icon(
+                        isValid ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                        color: isValid ? const Color(0xFF34A853) : Colors.redAccent,
                       ),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('Cancelar', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontWeight: FontWeight.bold)),
+                      filled: true,
+                      fillColor: const Color(0xFFF8F9FA),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDADCE0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 2)),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A73E8),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+
+                  if (validationError != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      validationError!,
+                      style: GoogleFonts.roboto(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Permissions Requested List
+                  Text(
+                    'Pawtbook obtendrá los siguientes datos:',
+                    style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF3C4043)),
+                  ),
+                  const SizedBox(height: 10),
+
+                  _buildPermissionRow(Icons.email_rounded, 'Ver tu dirección de correo electrónico principal'),
+                  _buildPermissionRow(Icons.account_circle_rounded, 'Ver tu nombre y foto de perfil personal pública'),
+                  _buildPermissionRow(Icons.account_balance_wallet_rounded, 'Vincular y generar tu Wallet de Solana en Mainnet'),
+
+                  const SizedBox(height: 22),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text('Cancelar', style: GoogleFonts.roboto(color: const Color(0xFF5F6368), fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      onPressed: () async {
-                        final chosenEmail = googleEmailController.text.trim();
-                        Navigator.pop(ctx);
-                        final ok = await authController.loginWithGoogle(
-                          googleEmail: chosenEmail.isNotEmpty ? chosenEmail : null,
-                        );
-                        if (ok && mounted) _onLoginSuccess();
-                      },
-                      child: Text('Permitir y Acceder', style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isValid ? const Color(0xFF1A73E8) : Colors.grey[400],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          ),
+                          onPressed: !isValid
+                              ? () {
+                                  setModalState(() {
+                                    validationError = '❌ Por favor ingresa una dirección de correo válida de Google (ej. usuario@gmail.com)';
+                                  });
+                                }
+                              : () async {
+                                  final chosenEmail = googleEmailController.text.trim();
+                                  Navigator.pop(ctx);
+                                  final ok = await authController.loginWithGoogle(
+                                    googleEmail: chosenEmail,
+                                  );
+                                  if (ok && mounted) _onLoginSuccess();
+                                },
+                          child: Text('Permitir y Acceder', style: GoogleFonts.roboto(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Text(
+                      'Puedes revocar estos permisos en cualquier momento desde tu cuenta de Google.',
+                      style: GoogleFonts.roboto(fontSize: 11, color: const Color(0xFF70757A)),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  'Puedes revocar estos permisos en cualquier momento desde tu cuenta de Google.',
-                  style: GoogleFonts.roboto(fontSize: 11, color: const Color(0xFF70757A)),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

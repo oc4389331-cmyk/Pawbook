@@ -114,7 +114,21 @@ class DynamicAuthService {
 
   /// Dynamic.xyz Google OAuth Authentication with Embedded Solana Wallet
   Future<DynamicAuthResult> authenticateWithGoogle({String? email}) async {
-    final targetEmail = email ?? 'user.pawtbook@gmail.com';
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+    if (email != null && email.trim().isNotEmpty) {
+      final cleanEmail = email.trim();
+      if (!emailRegex.hasMatch(cleanEmail)) {
+        return DynamicAuthResult(
+          isSuccess: false,
+          errorMessage: 'El correo "$cleanEmail" no es válido. Debe tener el formato completo (ejemplo: usuario@gmail.com)',
+        );
+      }
+    }
+
+    final targetEmail = (email != null && email.trim().isNotEmpty)
+        ? email.trim()
+        : 'user.pawtbook@gmail.com';
 
     if (environmentId.isNotEmpty && !environmentId.contains('dynamic-env-id')) {
       try {

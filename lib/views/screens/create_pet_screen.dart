@@ -707,6 +707,21 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           ),
                           onPressed: () async {
                             final emailToUse = _tutorEmailController.text.trim();
+                            final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+                            if (emailToUse.isNotEmpty && !emailRegex.hasMatch(emailToUse)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: Colors.redAccent,
+                                  content: Text(
+                                    '❌ "$emailToUse" no es un correo válido. Debe incluir @ y dominio (ej. usuario@gmail.com)',
+                                    style: GoogleFonts.fredoka(color: Colors.white),
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
                             final ok = await authController.loginWithGoogle(
                               googleEmail: emailToUse.isNotEmpty ? emailToUse : null,
                             );

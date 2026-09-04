@@ -94,16 +94,29 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
+      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+      if (googleEmail != null && googleEmail.trim().isNotEmpty) {
+        final cleanEmail = googleEmail.trim();
+        if (!emailRegex.hasMatch(cleanEmail)) {
+          _errorMessage = 'El texto "$cleanEmail" no es un correo electrónico válido. Debe ser una dirección con formato completo (ej. tu.nombre@gmail.com)';
+          _setLoading(false);
+          notifyListeners();
+          return false;
+        }
+      }
+
       // Authenticate via Dynamic.xyz Google OAuth (Solana Mainnet Env ID)
       final res = await _dynamicAuthService.authenticateWithGoogle(email: googleEmail);
 
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? 'Error al autenticar con Google';
         _setLoading(false);
+        notifyListeners();
         return false;
       }
 
-      final email = res.email ?? googleEmail ?? 'mi.cuenta.google@gmail.com';
+      final email = res.email ?? googleEmail ?? 'usuario.google@gmail.com';
       final walletAddress = res.walletAddress!;
 
       await _processAuthenticatedUser(
@@ -117,6 +130,7 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
+      notifyListeners();
       return false;
     }
   }
