@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
+import '../../services/r2_storage_service.dart';
+import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
@@ -159,6 +162,142 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showEditHumanProfileModal(BuildContext context, AuthController authController) {
+    final profile = authController.currentProfile;
+    final usernameController = TextEditingController(text: profile?.username ?? '');
+    final fullNameController = TextEditingController(text: profile?.fullName ?? '');
+    final avatarUrlController = TextEditingController(text: profile?.avatarUrl ?? '');
+    final bioController = TextEditingController(text: profile?.bio ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            final avatarInput = avatarUrlController.text.trim();
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppTheme.bgWarmCream,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppTheme.borderWarm,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      '✏️ Editar Perfil Humano',
+                      style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Avatar Circle Preview
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: AppTheme.surfaceWarm,
+                      backgroundImage: avatarInput.isNotEmpty ? NetworkImage(avatarInput) : null,
+                      child: avatarInput.isEmpty
+                          ? const Icon(Icons.person_rounded, size: 44, color: AppTheme.primaryTerracotta)
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Button: Upload Photo to Cloudflare R2
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentOrange,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        ),
+                        icon: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 20),
+                        label: const Text(
+                          '📷 Seleccionar Foto (Cloudflare R2)',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        onPressed: () async {
+                          try {
+                            final picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                            if (image != null) {
+                              final bytes = await image.readAsBytes();
+                              final renderBackend = RenderBackendService();
+                              final r2Service = R2StorageService();
+
+                              final uploadRes = await renderBackend.requestUploadUrl(
+                                petId: authController.currentProfile?.id ?? 'usr_human',
+                                mediaType: 'image',
+                                filename: image.name,
+                              );
+
+                              if (uploadRes['success'] == true) {
+                                final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
+                                final publicUrl = uploadRes['publicUrl'] as String;
+
+                                final uploadedUrl = await r2Service.uploadMediaWithPresignedUrl(
+                                  presignedPutUrl: presignedPutUrl,
+                                  publicUrl: publicUrl,
+                                  bytes: bytes,
+                                  contentType: 'image/jpeg',
+                                );
+
+                                setModalState(() {
+                                  avatarUrlController.text = uploadedUrl;
+                                });
+                              }
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error al subir imagen: $e')),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Input: URL de Foto de Perfil
+                    TextField(
+                      controller: avatarUrlController,
+                      onChanged: (_) => setModalState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'URL de Foto de Perfil',
+                        hintText: 'https://media.pawbooklife.com/...',
+                        prefixIcon: const Icon(Icons.photo_camera_outlined, color: AppTheme.primaryTerracotta),
+                        filled: true,
+                        fillColor: AppTheme.surfaceWarm,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
@@ -18,6 +20,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   PetModel? _selectedPet;
   String _mediaType = 'image';
   bool _isUploading = false;
+  Uint8List? _pickedFileBytes;
+  String? _pickedFileName;
   String _sampleMediaUrl = 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800';
 
   @override
@@ -33,6 +37,27 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void dispose() {
     _captionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickMediaFile() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = _mediaType == 'video'
+          ? await picker.pickVideo(source: ImageSource.gallery)
+          : await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        setState(() {
+          _pickedFileBytes = bytes;
+          _pickedFileName = file.name;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al seleccionar archivo: $e')),
+      );
+    }
   }
 
   @override
@@ -173,29 +198,61 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
             const SizedBox(height: 20),
 
+            // Direct File Upload Button (ImagePicker to Cloudflare R2)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.solanaPurple,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.white),
+                label: Text(
+                  _pickedFileBytes != null
+                      ? '✅ Archivo Seleccionado (${_pickedFileName ?? "media"})'
+                      : '📷 Seleccionar Imagen / Video desde tu Dispositivo',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                ),
+                onPressed: _pickMediaFile,
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Media Preview Box
             Container(
-              height: 200,
+              height: 220,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: AppTheme.surfaceDark,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.borderDark),
+                border: Border.all(color: AppTheme.solanaGreen, width: 1.5),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Image.network(_sampleMediaUrl, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                    _pickedFileBytes != null
+                        ? Image.memory(_pickedFileBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                        : Image.network(_sampleMediaUrl, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
                     Container(
-                      color: Colors.black38,
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.cloud_upload, size: 36, color: AppTheme.solanaGreen),
-                          SizedBox(height: 6),
-                          Text('Cloudflare R2 (media.pawbooklife.com)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          const Icon(Icons.cloud_upload, size: 22, color: AppTheme.solanaGreen),
+                          const SizedBox(width: 8),
+                          Text(
+                            _pickedFileBytes != null
+                                ? 'Listo para subir a Cloudflare R2 (media.pawbooklife.com)'
+                                : 'Vista previa de Cloudflare R2',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                     ),
@@ -211,7 +268,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               maxLines: 3,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Escribe algo divertido sobre ...',
+                hintText: 'Escribe algo divertido sobre ${_selectedPet?.name ?? "tu mascota"}...',
                 hintStyle: const TextStyle(color: AppTheme.textMuted),
                 filled: true,
                 fillColor: AppTheme.surfaceDark,
@@ -231,7 +288,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 icon: _isUploading
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.send, color: AppTheme.solanaGreen),
-                label: Text(_isUploading ? 'Subiendo a Cloudflare R2 & Moderando...' : 'Publicar Contenido'),
+                label: Text(_isUploading ? 'Subiendo a Cloudflare R2 & Moderando...' : 'Publicar en Cloudflare R2 🚀'),
                 onPressed: _isUploading
                     ? null
                     : () async {
@@ -247,12 +304,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         setState(() => _isUploading = true);
 
                         try {
-                          final dummyBytes = List<int>.filled(1024, 0); // Mock media bytes
-                          final filename = 'media_.';
+                          final mediaBytes = _pickedFileBytes ?? List<int>.filled(1024, 0);
+                          final filename = _pickedFileName ?? 'media_${DateTime.now().millisecondsSinceEpoch}.${_mediaType == "video" ? "mp4" : "jpg"}';
 
                           await feedController.createPetPost(
                             pet: _selectedPet,
-                            mediaBytes: dummyBytes,
+                            mediaBytes: mediaBytes,
                             filename: filename,
                             mediaType: _mediaType,
                             caption: caption,
@@ -261,7 +318,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('¡Publicación enviada a revisión y aprobada por moderación! 🐾'),
+                                content: Text('¡Publicación subida a Cloudflare R2 y aprobada por moderación! 🐾'),
                                 backgroundColor: AppTheme.solanaGreen,
                               ),
                             );
@@ -271,7 +328,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error al publicar: '),
+                                content: Text('Error al publicar: $e'),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
