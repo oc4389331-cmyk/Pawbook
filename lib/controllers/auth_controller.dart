@@ -165,9 +165,15 @@ class AuthController extends ChangeNotifier {
       // Authentication > Providers > Google > Enable
       if (Supabase.instance.client != null) {
         try {
+          final redirectTo = kIsWeb
+              ? (Uri.base.host.contains('pawbooklife.com')
+                  ? 'https://pawbooklife.com'
+                  : Uri.base.origin)
+              : null;
+
           final launched = await Supabase.instance.client.auth.signInWithOAuth(
             OAuthProvider.google,
-            redirectTo: kIsWeb ? Uri.base.origin : null,
+            redirectTo: redirectTo,
           );
           if (launched) {
             _setLoading(false);
