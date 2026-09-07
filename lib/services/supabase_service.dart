@@ -248,8 +248,8 @@ class SupabaseService {
   Future<PostModel> createPost(PostModel post) async {
     if (_client != null) {
       try {
-        final res = await _client!.from('posts').insert(post.toJson()).select().single();
-        return PostModel.fromJson(res);
+        await _client!.from('posts').insert(post.toJson());
+        return post;
       } catch (e) {
         if (!_useMockFallback) throw Exception('Supabase RLS Error inserting post: $e');
       }
