@@ -365,6 +365,17 @@ class SupabaseService {
     if (_client != null) {
       try {
         final res = await _client!.from('comments').insert(comment.toJson()).select().single();
+        try {
+          await _client!.rpc('increment_comments', params: {'post_id': postId});
+        } catch (_) {} // Ignore if RPC doesn't exist yet
+        
+        // Update local cache for instant UI feedback
+        final idx = _mockPosts.indexWhere((p) => p.id == postId);
+        if (idx != -1) {
+          _mockPosts[idx] = _mockPosts[idx].copyWith(
+            commentsCount: _mockPosts[idx].commentsCount + 1,
+          );
+        }
         return CommentModel.fromJson(res);
       } catch (_) {}
     }
