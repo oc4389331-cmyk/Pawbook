@@ -379,6 +379,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           backgroundColor: AppTheme.emeraldGreen,
                                         ),
                                       );
+                                    } else if (ctx.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(authController.errorMessage ?? 'Error al guardar. Verifica la consola.'),
+                                          backgroundColor: Colors.redAccent,
+                                        ),
+                                      );
                                     }
                                   },
                           ),
