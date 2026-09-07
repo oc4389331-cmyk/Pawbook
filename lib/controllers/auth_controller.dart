@@ -88,10 +88,14 @@ class AuthController extends ChangeNotifier {
             if (email != null && email.isNotEmpty && _pendingIsSignUp) {
               final existing = await _supabaseService.getProfileByEmail(email);
               if (existing != null) {
-                // Ya tiene cuenta - en modo signup, simplemente iniciar sesión con cuenta existente
-                // (no bloqueamos porque el usuario ya pasó por Google)
-                debugPrint('[Auth] Cuenta existente encontrada en modo signup - iniciando sesión con cuenta existente.');
-                _errorMessage = 'ℹ️ Ya tienes una cuenta con este correo. ¡Has iniciado sesión!';
+                debugPrint('[Auth] Cuenta existente encontrada en modo signup - bloqueando inicio de sesión.');
+                // Bloquear inicio de sesión y mostrar error
+                await Supabase.instance.client.auth.signOut();
+                _errorMessage = '❌ Este correo ya está en uso. Por favor, ve a Iniciar Sesión.';
+                _pendingIsSignUp = false;
+                _setLoading(false);
+                notifyListeners();
+                return;
               }
             }
 
