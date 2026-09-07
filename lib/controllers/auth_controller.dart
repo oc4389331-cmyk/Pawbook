@@ -66,9 +66,10 @@ class AuthController extends ChangeNotifier {
             return;
           }
 
-          // Restaurar sesión en eventos de inicio (signedIn, tokenRefreshed)
+          // Restaurar sesión en eventos de inicio (signedIn, tokenRefreshed, initialSession)
           if ((event == AuthChangeEvent.signedIn ||
-                  event == AuthChangeEvent.tokenRefreshed) &&
+                  event == AuthChangeEvent.tokenRefreshed ||
+                  event == AuthChangeEvent.initialSession) &&
               session?.user != null &&
               _currentProfile == null) {
             final user = session!.user;
