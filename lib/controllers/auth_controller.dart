@@ -20,6 +20,7 @@ class AuthController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _userLoggedOutExplicitly = false; // Previene restauración de sesión tras logout manual
+  bool _pendingIsSignUp = false; // Guarda el modo (signup/login) durante el redirect OAuth de Google
 
   ProfileModel? get currentProfile => _currentProfile;
   List<PetModel> get userPets => List.unmodifiable(_userPets);
@@ -45,7 +46,7 @@ class AuthController extends ChangeNotifier {
   void _initSupabaseAuthListener() {
     try {
       if (Supabase.instance.client != null) {
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
           final event = data.event;
           final session = data.session;
 
@@ -65,7 +66,7 @@ class AuthController extends ChangeNotifier {
             return;
           }
 
-          // Restaurar sesión solo en eventos de inicio de sesión (signedIn, tokenRefreshed)
+          // Restaurar sesión en eventos de inicio (signedIn, tokenRefreshed)
           if ((event == AuthChangeEvent.signedIn ||
                   event == AuthChangeEvent.tokenRefreshed) &&
               session?.user != null &&
@@ -73,7 +74,7 @@ class AuthController extends ChangeNotifier {
             final user = session!.user;
             final meta = user.userMetadata ?? {};
 
-            // Extract Google OAuth profile data
+            // Extraer datos del perfil de Google OAuth
             final email = user.email ?? meta['email']?.toString();
             final fullName = meta['full_name']?.toString() ??
                 meta['name']?.toString();
@@ -81,15 +82,27 @@ class AuthController extends ChangeNotifier {
                 meta['picture']?.toString();
             final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
 
-            debugPrint('[Auth] Google OAuth user restaurado: email=$email, name=$fullName');
+            debugPrint('[Auth] Google OAuth signedIn: email=$email, name=$fullName');
 
-            _processAuthenticatedUser(
+            // Validación de cuenta duplicada DESPUÉS de que Google devuelve los datos
+            if (email != null && email.isNotEmpty && _pendingIsSignUp) {
+              final existing = await _supabaseService.getProfileByEmail(email);
+              if (existing != null) {
+                // Ya tiene cuenta - en modo signup, simplemente iniciar sesión con cuenta existente
+                // (no bloqueamos porque el usuario ya pasó por Google)
+                debugPrint('[Auth] Cuenta existente encontrada en modo signup - iniciando sesión con cuenta existente.');
+                _errorMessage = 'ℹ️ Ya tienes una cuenta con este correo. ¡Has iniciado sesión!';
+              }
+            }
+
+            await _processAuthenticatedUser(
               walletAddress: wallet,
               email: email,
               fullName: fullName,
               avatarUrl: avatarUrl,
               jwtToken: session.accessToken,
             );
+            _pendingIsSignUp = false; // Resetear bandera después de procesar
           }
         });
       }
@@ -236,44 +249,13 @@ class AuthController extends ChangeNotifier {
 
   Future<bool> loginWithGoogle({String? googleEmail, bool isSignUp = false, String? fullName}) async {
     _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
+    _pendingIsSignUp = isSignUp; // Guardar modo para validación post-OAuth
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      String? cleanEmail = googleEmail?.trim().toLowerCase();
-
-      // Check account existence if we have an email
-      if (cleanEmail != null && cleanEmail.isNotEmpty) {
-        final existingProfile = await _supabaseService.getProfileByEmail(cleanEmail);
-
-        if (isSignUp && existingProfile != null) {
-          _errorMessage = '⚠️ Este correo ya está en uso con una cuenta. Por favor inicia sesión.';
-          _setLoading(false);
-          notifyListeners();
-          return false;
-        }
-
-        if (!isSignUp && existingProfile == null) {
-          _errorMessage = '⚠️ No existe ninguna cuenta registrada con este correo. Por favor crea una cuenta primero.';
-          _setLoading(false);
-          notifyListeners();
-          return false;
-        }
-
-        final res = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
-        if (res.isSuccess && res.walletAddress != null) {
-          await _processAuthenticatedUser(
-            walletAddress: res.walletAddress!,
-            email: res.email,
-            fullName: fullName ?? (cleanEmail.split('@').first),
-            jwtToken: res.jwtToken ?? '',
-          );
-          _setLoading(false);
-          return true;
-        }
-      }
-
-      // Attempt Supabase Auth Google OAuth flow
+      // FLUJO PRINCIPAL: Redirigir directamente a Google OAuth
+      // Google devolverá email, nombre y avatar al listener onAuthStateChange
       if (Supabase.instance.client != null) {
         try {
           final redirectTo = kIsWeb
@@ -288,44 +270,32 @@ class AuthController extends ChangeNotifier {
           );
           if (launched) {
             _setLoading(false);
+            // En web: el app hace redirect a Google y regresa.
+            // El listener onAuthStateChange manejará el signedIn cuando regrese.
             return true;
           }
         } catch (e) {
-          debugPrint('Supabase Google OAuth error: $e');
+          debugPrint('[Auth] Supabase Google OAuth error: $e');
         }
       }
 
-      // Dynamic Auth fallback when OAuth isn't active on server
-      final fallbackEmail = cleanEmail ?? 'usuario.pawtbook@gmail.com';
-      final existingProfile = await _supabaseService.getProfileByEmail(fallbackEmail);
-
-      if (isSignUp && existingProfile != null) {
-        _errorMessage = '⚠️ Este correo ya está en uso con una cuenta. Por favor inicia sesión.';
-        _setLoading(false);
-        notifyListeners();
-        return false;
+      // Fallback: si Supabase OAuth no está disponible, usar Dynamic.xyz
+      if (googleEmail != null && googleEmail.trim().isNotEmpty) {
+        final cleanEmail = googleEmail.trim().toLowerCase();
+        final res = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
+        if (res.isSuccess && res.walletAddress != null) {
+          await _processAuthenticatedUser(
+            walletAddress: res.walletAddress!,
+            email: res.email,
+            fullName: fullName ?? (cleanEmail.split('@').first),
+            jwtToken: res.jwtToken ?? '',
+          );
+          _setLoading(false);
+          return true;
+        }
       }
 
-      if (!isSignUp && existingProfile == null) {
-        _errorMessage = '⚠️ No existe ninguna cuenta registrada con este correo. Por favor crea una cuenta primero.';
-        _setLoading(false);
-        notifyListeners();
-        return false;
-      }
-
-      final res = await _dynamicAuthService.authenticateWithGoogle(email: fallbackEmail);
-      if (res.isSuccess && res.walletAddress != null) {
-        await _processAuthenticatedUser(
-          walletAddress: res.walletAddress!,
-          email: res.email,
-          fullName: fullName ?? 'Usuario Google',
-          jwtToken: res.jwtToken ?? '',
-        );
-        _setLoading(false);
-        return true;
-      }
-
-      _errorMessage = '❌ No se pudo completar el inicio de sesión con Google.';
+      _errorMessage = '❌ No se pudo iniciar el proceso de autenticación con Google.';
       _setLoading(false);
       notifyListeners();
       return false;

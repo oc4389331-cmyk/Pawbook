@@ -29,7 +29,13 @@ class _LoginScreenState extends State<LoginScreen> {
     // Restablecer estado de logout para permitir nuevo inicio de sesión
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<AuthController>(context, listen: false).resetLogoutState();
+        final authController = Provider.of<AuthController>(context, listen: false);
+        authController.resetLogoutState();
+        // Si ya está autenticado (por ejemplo, si Google OAuth hizo redirect),
+        // navegar inmediatamente al HomeScreen
+        if (authController.isAuthenticated) {
+          _onLoginSuccess();
+        }
       }
     });
   }
@@ -50,101 +56,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
-    final emailText = _emailController.text.trim();
-    String? googleEmail = emailText.isNotEmpty && emailText.contains('@') ? emailText : null;
-
-    if (googleEmail == null) {
-      googleEmail = await _showGoogleEmailDialog();
-      if (googleEmail == null || googleEmail.isEmpty) return;
-    }
-
+    // Lanzar directamente el OAuth de Google - redirige a la página de Google
+    // para que el usuario autorice y Google devuelva email/nombre/avatar
     final ok = await authController.loginWithGoogle(
-      googleEmail: googleEmail,
       isSignUp: _isSignUp,
-      fullName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
     );
+    // Si loginWithGoogle devuelve true inmediatamente (OAuth lanzado en web),
+    // la navegación ocurrirá automáticamente cuando el listener detecte el signedIn.
+    // Si devuelve false con mensaje de error, se muestra el error.
     if (ok && mounted) {
       _onLoginSuccess();
     }
-  }
-
-  Future<String?> _showGoogleEmailDialog() async {
-    final dialogController = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppTheme.surfaceWarm,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(color: Color(0xFF4285F4), shape: BoxShape.circle),
-                child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Continuar con Google',
-                  style: GoogleFonts.fredoka(fontSize: 18, color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _isSignUp
-                    ? 'Ingresa tu correo electrónico de Google para crear tu cuenta:'
-                    : 'Ingresa tu correo electrónico de Google para iniciar sesión:',
-                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: dialogController,
-                keyboardType: TextInputType.emailAddress,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'usuario@gmail.com',
-                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                  prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF4285F4)),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(null),
-              child: Text('Cancelar', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4285F4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: () {
-                final text = dialogController.text.trim();
-                if (text.isNotEmpty && text.contains('@')) {
-                  Navigator.of(ctx).pop(text);
-                } else {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Por favor ingresa un correo válido')),
-                  );
-                }
-              },
-              child: Text('Continuar', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildGoogleButton(AuthController authController, LanguageController langController) {
@@ -200,6 +122,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
+
+    // Detectar autenticación exitosa (p.ej. luego del redirect de Google OAuth)
+    // y navegar al HomeScreen automáticamente
+    if (authController.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onLoginSuccess();
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
