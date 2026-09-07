@@ -92,33 +92,33 @@ class _PostCardState extends State<PostCard> {
           // Media Content served from Cloudflare R2: https://media.pawbooklife.com
           ClipRRect(
             borderRadius: BorderRadius.zero,
-            child: Container(
-              height: 260,
-              width: double.infinity,
-              color: AppTheme.surfaceDark,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Image.network(
-                    widget.post.mediaUrl,
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppTheme.surfaceDark,
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.pets, size: 48, color: AppTheme.solanaPurple),
-                              SizedBox(height: 8),
-                              Text('Pawtbook Media R2 Served', style: TextStyle(color: AppTheme.textMuted)),
-                            ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 500, minHeight: 150),
+              child: Container(
+                width: double.infinity,
+                color: AppTheme.surfaceDark,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Image.network(
+                      widget.post.mediaUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppTheme.surfaceDark,
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.pets, size: 48, color: AppTheme.solanaPurple),
+                                SizedBox(height: 8),
+                                Text('Pawtbook Media R2 Served', style: TextStyle(color: AppTheme.textMuted)),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                   if (widget.post.mediaType == 'video')
                     Container(
