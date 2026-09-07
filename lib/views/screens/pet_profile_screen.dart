@@ -293,12 +293,54 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       color: AppTheme.surfaceWarm,
-                      child: Image.network(
-                        post.mediaUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
-                        ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            post.mediaUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
+                            ),
+                          ),
+                          if (authController.currentProfile?.id == widget.pet.ownerId)
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        backgroundColor: AppTheme.surfaceWarm,
+                                        title: Text('Eliminar publicación', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                                        content: Text('¿Estás seguro de que quieres eliminar esta publicación?', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark)),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx),
+                                            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(ctx);
+                                              feedController.deletePetPost(post.id);
+                                            },
+                                            child: Text('Eliminar', style: GoogleFonts.fredoka(color: Colors.redAccent)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   );

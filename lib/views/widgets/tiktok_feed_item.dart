@@ -201,15 +201,18 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
       fit: StackFit.expand,
       children: [
         // 1. Media Background (Serving from Cloudflare R2 / Unsplash / Mixkit video)
-        Image.network(
-          widget.post.mediaUrl.contains('mixkit')
-              ? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=1000'
-              : widget.post.mediaUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFF09090B),
-            child: const Center(
-              child: Icon(Icons.pets_rounded, size: 80, color: AppTheme.primaryTerracotta),
+        Container(
+          color: Colors.black,
+          child: Image.network(
+            widget.post.mediaUrl.contains('mixkit')
+                ? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=1000'
+                : widget.post.mediaUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              color: const Color(0xFF09090B),
+              child: const Center(
+                child: Icon(Icons.pets_rounded, size: 80, color: AppTheme.primaryTerracotta),
+              ),
             ),
           ),
         ),

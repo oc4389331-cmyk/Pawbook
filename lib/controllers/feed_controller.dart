@@ -141,6 +141,19 @@ class FeedController extends ChangeNotifier {
     }
   }
 
+  Future<void> deletePetPost(String postId) async {
+    _setLoading(true);
+    try {
+      await _supabaseService.deletePost(postId);
+      _posts.removeWhere((p) => p.id == postId);
+      notifyListeners();
+    } catch (e) {
+      print('Error deleting post: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool val) {
     _isLoading = val;
     notifyListeners();

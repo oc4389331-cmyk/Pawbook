@@ -270,6 +270,16 @@ class SupabaseService {
     return fullPost;
   }
 
+  Future<bool> deletePost(String postId) async {
+    if (_client != null) {
+      try {
+        await _client!.from('posts').delete().eq('id', postId);
+      } catch (_) {}
+    }
+    _mockPosts.removeWhere((p) => p.id == postId);
+    return true;
+  }
+
   /// Toggles Like for a user on a post
   Future<bool> toggleLikePost(String userId, String postId) async {
     if (_client != null) {
