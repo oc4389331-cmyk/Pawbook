@@ -45,6 +45,35 @@ class RenderBackendService {
     };
   }
 
+  /// Update Profile via Backend (Bypasses Supabase RLS policies)
+  Future<Map<String, dynamic>> updateProfile({
+    required String id,
+    String? username,
+    String? fullName,
+    String? avatarUrl,
+    String? bio,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/profile/update'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': id,
+          'username': username,
+          'fullName': fullName,
+          'avatarUrl': avatarUrl,
+          'bio': bio,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'error': 'Server error: ${res.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Obtains Presigned R2 PUT URL from Render Backend.
   /// Enforces rule: Only requests with valid petId are authorized.
   Future<Map<String, dynamic>> requestUploadUrl({

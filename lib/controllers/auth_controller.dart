@@ -472,8 +472,23 @@ class AuthController extends ChangeNotifier {
         bio: bio != null && bio.trim().isNotEmpty ? bio.trim() : _currentProfile!.bio,
       );
 
-      final saved = await _supabaseService.updateProfile(updated);
-      _currentProfile = saved;
+      final res = await _renderBackendService.updateProfile(
+        id: updated.id,
+        username: updated.username,
+        fullName: updated.fullName,
+        avatarUrl: updated.avatarUrl,
+        bio: updated.bio,
+      );
+
+      if (res['success'] == true) {
+        _currentProfile = updated;
+      } else {
+        _errorMessage = res['error'] ?? 'Error al actualizar perfil en el servidor';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
       _setLoading(false);
       notifyListeners();
       return true;

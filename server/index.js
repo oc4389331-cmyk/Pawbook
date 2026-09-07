@@ -205,6 +205,44 @@ app.post('/api/auth/verify', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 3B. UPDATE PROFILE ENDPOINT (BYPASS RLS)
+// --------------------------------------------------------------------------
+app.post('/api/profile/update', async (req, res) => {
+  const { id, username, fullName, avatarUrl, bio } = req.body;
+  if (!id) {
+    return res.status(400).json({ success: false, error: 'Missing user id' });
+  }
+
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          username,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          bio
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase profile update error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      return res.json({ success: true, profile: data });
+    } catch (e) {
+      console.error('Supabase update exception:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({ success: false, error: 'Supabase Admin no configurado' });
+});
+
+// --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
 // --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {
