@@ -101,7 +101,7 @@ class _PostCardState extends State<PostCard> {
                 children: [
                   Image.network(
                     widget.post.mediaUrl,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     width: double.infinity,
                     height: double.infinity,
                     errorBuilder: (context, error, stackTrace) {
