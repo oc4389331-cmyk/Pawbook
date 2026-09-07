@@ -84,6 +84,13 @@ class AuthController extends ChangeNotifier {
 
             debugPrint('[Auth] Google OAuth signedIn: email=$email, name=$fullName');
 
+            // Restaurar bandera isSignUp desde la URL en la web
+            if (kIsWeb) {
+              if (Uri.base.queryParameters['isSignUp'] == 'true') {
+                _pendingIsSignUp = true;
+              }
+            }
+
             // Validación de cuenta duplicada DESPUÉS de que Google devuelve los datos
             if (email != null && email.isNotEmpty && _pendingIsSignUp) {
               final existing = await _supabaseService.getProfileByEmail(email);
@@ -262,10 +269,14 @@ class AuthController extends ChangeNotifier {
       // Google devolverá email, nombre y avatar al listener onAuthStateChange
       if (Supabase.instance.client != null) {
         try {
-          final redirectTo = kIsWeb
+          final baseRedirect = kIsWeb
               ? (Uri.base.host.contains('pawbooklife.com')
                   ? 'https://pawbooklife.com'
                   : Uri.base.origin)
+              : null;
+              
+          final redirectTo = baseRedirect != null
+              ? (isSignUp ? '$baseRedirect/?isSignUp=true' : baseRedirect)
               : null;
 
           final launched = await Supabase.instance.client.auth.signInWithOAuth(
