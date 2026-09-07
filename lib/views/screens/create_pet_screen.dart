@@ -4,10 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../../config/app_config.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/r2_storage_service.dart';
+import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
 
 class CreatePetScreen extends StatefulWidget {
@@ -147,6 +148,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   bool _isUploadingToR2 = false;
   final ImagePicker _picker = ImagePicker();
   final R2StorageService _r2Service = R2StorageService();
+  final RenderBackendService _renderBackend = RenderBackendService();
 
   @override
   void dispose() {
@@ -185,30 +187,55 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
       final bytes = await pickedFile.readAsBytes();
       final filename = 'pet_avatar_${const Uuid().v4().substring(0, 8)}.jpg';
 
-      // Data URI format for instant preview + Cloudflare R2 URL
+      // Generar base64 solo para preview local instantáneo
       final base64Image = base64Encode(bytes);
-      final dataUrl = 'data:image/jpeg;base64,$base64Image';
-      final r2PublicUrl = '${AppConfig.r2MediaDomain}/avatars/$filename';
+      final dataUrlPreview = 'data:image/jpeg;base64,$base64Image';
 
-      // Upload to Cloudflare R2 bucket
-      await _r2Service.uploadMediaWithPresignedUrl(
-        presignedPutUrl: r2PublicUrl,
-        publicUrl: r2PublicUrl,
-        bytes: bytes,
-        contentType: 'image/jpeg',
+      // Mostrar preview local inmediatamente mientras sube
+      setState(() => _selectedAvatar = dataUrlPreview);
+
+      // Paso 1: Solicitar URL presignada real al backend de Render
+      // Usamos un petId temporal ya que aun no existe la mascota
+      final tempPetId = 'avatar_${const Uuid().v4().substring(0, 8)}';
+      final uploadRes = await _renderBackend.requestUploadUrl(
+        petId: tempPetId,
+        mediaType: 'image',
+        filename: filename,
       );
 
+      String finalAvatarUrl;
+
+      if (uploadRes['success'] == true) {
+        final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
+        final publicUrl = uploadRes['publicUrl'] as String;
+
+        // Paso 2: Subir archivo a Cloudflare R2 con la URL presignada
+        finalAvatarUrl = await _r2Service.uploadMediaWithPresignedUrl(
+          presignedPutUrl: presignedPutUrl,
+          publicUrl: publicUrl,
+          bytes: bytes,
+          contentType: 'image/jpeg',
+        );
+      } else {
+        // Si el backend no está disponible: mantener preview base64 local
+        // El avatar se guardará como base64 en Supabase (fallback temporal)
+        finalAvatarUrl = dataUrlPreview;
+      }
+
       setState(() {
-        _selectedAvatar = dataUrl;
+        _selectedAvatar = finalAvatarUrl;
         _isUploadingToR2 = false;
       });
 
       if (mounted) {
+        final isRealR2 = finalAvatarUrl.startsWith('https://media.pawbooklife.com');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: AppTheme.emeraldGreen,
+            backgroundColor: isRealR2 ? AppTheme.emeraldGreen : AppTheme.accentOrange,
             content: Text(
-              '☁️ ¡Imagen cargada y guardada exitosamente en Cloudflare R2!',
+              isRealR2
+                  ? '☁️ ¡Imagen guardada exitosamente en Cloudflare R2!'
+                  : '📸 Imagen cargada en modo local (backend no disponible)',
               style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
@@ -221,7 +248,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
           SnackBar(
             backgroundColor: Colors.redAccent,
             content: Text(
-              'Error al subir imagen a Cloudflare R2: $e',
+              'Error al subir imagen: $e',
               style: GoogleFonts.fredoka(color: Colors.white),
             ),
           ),

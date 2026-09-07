@@ -18,21 +18,181 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
 
   bool _isOtpSent = false;
-  String? _sentOtpCode;
+  bool _isSignUp = false; // false = Iniciar Sesión, true = Crear Cuenta
+
+  @override
+  void initState() {
+    super.initState();
+    // Restablecer estado de logout para permitir nuevo inicio de sesión
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<AuthController>(context, listen: false).resetLogoutState();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   void _onLoginSuccess() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
+  Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
+    final emailText = _emailController.text.trim();
+    String? googleEmail = emailText.isNotEmpty && emailText.contains('@') ? emailText : null;
+
+    if (googleEmail == null) {
+      googleEmail = await _showGoogleEmailDialog();
+      if (googleEmail == null || googleEmail.isEmpty) return;
+    }
+
+    final ok = await authController.loginWithGoogle(
+      googleEmail: googleEmail,
+      isSignUp: _isSignUp,
+      fullName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+    );
+    if (ok && mounted) {
+      _onLoginSuccess();
+    }
+  }
+
+  Future<String?> _showGoogleEmailDialog() async {
+    final dialogController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceWarm,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(color: Color(0xFF4285F4), shape: BoxShape.circle),
+                child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Continuar con Google',
+                  style: GoogleFonts.fredoka(fontSize: 18, color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isSignUp
+                    ? 'Ingresa tu correo electrónico de Google para crear tu cuenta:'
+                    : 'Ingresa tu correo electrónico de Google para iniciar sesión:',
+                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: dialogController,
+                keyboardType: TextInputType.emailAddress,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'usuario@gmail.com',
+                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                  prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF4285F4)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: Text('Cancelar', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4285F4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () {
+                final text = dialogController.text.trim();
+                if (text.isNotEmpty && text.contains('@')) {
+                  Navigator.of(ctx).pop(text);
+                } else {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Por favor ingresa un correo válido')),
+                  );
+                }
+              },
+              child: Text('Continuar', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGoogleButton(AuthController authController, LanguageController langController) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.textPrimaryDark,
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
+          ),
+        ),
+        onPressed: authController.isLoading ? null : () => _handleGoogleSignIn(authController, langController),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Color(0xFF4285F4),
+                shape: BoxShape.circle,
+              ),
+              child: const Text(
+                'G',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              langController.t('continueWithGoogle'),
+              style: GoogleFonts.fredoka(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryDark,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -118,16 +278,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       if (authController.errorMessage != null) ...[
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.redAccent),
+                            color: Colors.red.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.redAccent, width: 1.5),
                           ),
-                          child: Text(
-                            authController.errorMessage!,
-                            style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 13),
-                            textAlign: TextAlign.center,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  authController.errorMessage!,
+                                  style: GoogleFonts.outfit(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -136,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Connect Solana Wallet Button (Terracotta Warm Style)
                       SizedBox(
                         width: double.infinity,
-                        height: 54,
+                        height: 52,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryTerracotta,
@@ -147,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? const CircularProgressIndicator(color: Colors.white)
                               : Text(
                                   langController.t('connectWallet'),
-                                  style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
                                 ),
                           onPressed: authController.isLoading
                               ? null
@@ -157,65 +325,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                         ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // Google Sign-In Button (Triggers Permission Consent Modal)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppTheme.textPrimaryDark,
-                            elevation: 3,
-                            shadowColor: Colors.black.withOpacity(0.08),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
-                            ),
-                          ),
-                          onPressed: authController.isLoading
-                              ? null
-                              : () async {
-                                  final ok = await authController.loginWithGoogle();
-                                  if (ok && mounted) _onLoginSuccess();
-                                },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF4285F4),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Text(
-                                  'G',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                langController.t('continueWithGoogle'),
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textPrimaryDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                       const SizedBox(height: 24),
                       const Divider(),
                       const SizedBox(height: 16),
 
-                      // --- EMAIL AUTHENTICATION MODE SELECTOR (INICIAR SESIÓN vs CREAR CUENTA) ---
+                      // --- EMAIL & GOOGLE AUTHENTICATION MODE SELECTOR (INICIAR SESIÓN vs CREAR CUENTA) ---
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(4),
@@ -226,47 +340,71 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Row(
                           children: [
+                            // Botón Iniciar Sesión
                             Expanded(
                               child: InkWell(
                                 onTap: () {
                                   setState(() {
-                                    // Mode toggle trigger
+                                    _isSignUp = false;
+                                    _isOtpSent = false;
+                                    _emailController.clear();
+                                    _otpController.clear();
+                                    _nameController.clear();
                                   });
                                 },
                                 borderRadius: BorderRadius.circular(16),
-                                child: Container(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryTerracotta,
+                                    color: !_isSignUp
+                                        ? AppTheme.primaryTerracotta
+                                        : Colors.transparent,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Center(
                                     child: Text(
                                       '🔑 Iniciar Sesión',
-                                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: GoogleFonts.fredoka(
+                                        color: !_isSignUp ? Colors.white : AppTheme.textMutedWarm,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
+                            // Botón Crear Cuenta
                             Expanded(
                               child: InkWell(
                                 onTap: () {
                                   setState(() {
-                                    // Mode toggle trigger
+                                    _isSignUp = true;
+                                    _isOtpSent = false;
+                                    _emailController.clear();
+                                    _otpController.clear();
+                                    _nameController.clear();
                                   });
                                 },
                                 borderRadius: BorderRadius.circular(16),
-                                child: Container(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: Colors.transparent,
+                                    color: _isSignUp
+                                        ? AppTheme.accentOrange
+                                        : Colors.transparent,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Center(
                                     child: Text(
                                       '✨ Crear Cuenta',
-                                      style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: GoogleFonts.fredoka(
+                                        color: _isSignUp ? Colors.white : AppTheme.textMutedWarm,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -277,51 +415,113 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
 
                       if (!_isOtpSent) ...[
+                        // Título según el modo
                         Text(
-                          '🔐 Acceso Seguro por Correo',
-                          style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                          _isSignUp ? '✨ Crea tu cuenta en Pawbook' : '🔐 Inicia Sesión en Pawbook',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Ingresa tu correo para recibir un código de verificación único de 6 dígitos.\n(Si eres nuevo, tu Wallet de Solana Dynamic se creará automáticamente).',
+                          _isSignUp
+                              ? 'Ingresa tus datos o usa Google para registrarte en la plataforma.'
+                              : 'Ingresa tu correo o usa Google para acceder a tu cuenta existente.',
                           style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
 
-                        // Email Input
+                        // --- BOTÓN GOOGLE DENTRO DE AMBAS PESTAÑAS (INICIAR SESIÓN Y CREAR CUENTA) ---
+                        _buildGoogleButton(authController, langController),
+                        const SizedBox(height: 18),
+
+                        // Divisor entre Google y Correo
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                _isSignUp ? 'o regístrate con correo' : 'o ingresa con tu correo',
+                                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Campo de nombre (solo en Crear Cuenta)
+                        if (_isSignUp) ...[
+                          TextField(
+                            controller: _nameController,
+                            keyboardType: TextInputType.name,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: InputDecoration(
+                              hintText: 'Tu nombre completo',
+                              hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                              prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.accentOrange),
+                              filled: true,
+                              fillColor: AppTheme.surfaceWarm,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.accentOrange, width: 2)),
+                            ),
+                            style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Campo Email
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
                             hintText: langController.t('emailHint'),
                             hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                            prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryTerracotta),
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                            ),
                             filled: true,
                             fillColor: AppTheme.surfaceWarm,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2)),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(
+                                color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                                width: 2,
+                              ),
+                            ),
                           ),
                           style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                         ),
                         const SizedBox(height: 14),
 
-                        // Send Code Button
+                        // Botón: Enviar código (distinto color y texto según modo)
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentOrange,
+                              backgroundColor: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             ),
-                            icon: const Icon(Icons.mark_email_read_rounded, size: 20, color: Colors.white),
+                            icon: Icon(
+                              _isSignUp ? Icons.person_add_rounded : Icons.mark_email_read_rounded,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                             label: authController.isLoading
                                 ? const CircularProgressIndicator(color: Colors.white)
                                 : Text(
-                                    'Enviar Código de Verificación 📩',
+                                    _isSignUp ? 'Crear Cuenta y Enviar Código 🚀' : 'Enviar Código de Verificación 📩',
                                     style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                                   ),
                             onPressed: authController.isLoading
@@ -334,11 +534,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                       );
                                       return;
                                     }
-                                    final code = await authController.sendEmailOtp(email);
+                                    if (_isSignUp && _nameController.text.trim().isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Por favor ingresa tu nombre completo')),
+                                      );
+                                      return;
+                                    }
+
+                                    final code = await authController.sendEmailOtp(
+                                      email,
+                                      isSignUp: _isSignUp,
+                                      fullName: _nameController.text.trim(),
+                                    );
                                     if (code != null) {
                                       setState(() {
                                         _isOtpSent = true;
-                                        _sentOtpCode = code;
                                       });
                                     }
                                   },
@@ -351,15 +561,26 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceWarm,
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AppTheme.accentOrange, width: 1.8),
+                            border: Border.all(
+                              color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                              width: 1.8,
+                            ),
                           ),
                           child: Column(
                             children: [
-                              const Icon(Icons.verified_user_rounded, size: 48, color: AppTheme.accentOrange),
+                              Icon(
+                                _isSignUp ? Icons.how_to_reg_rounded : Icons.verified_user_rounded,
+                                size: 48,
+                                color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                              ),
                               const SizedBox(height: 10),
                               Text(
-                                'Ingresa el código de 6 dígitos',
-                                style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                                _isSignUp ? '¡Ya casi! Verifica tu correo' : 'Ingresa el código de 6 dígitos',
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -409,25 +630,34 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fillColor: Colors.white,
                                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.accentOrange, width: 2)),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    borderSide: BorderSide(
+                                      color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 18),
 
-                              // Verify & Login Button
+                              // Verify & Login / Register Button
                               SizedBox(
                                 width: double.infinity,
                                 height: 52,
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryTerracotta,
+                                    backgroundColor: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                   ),
-                                  icon: const Icon(Icons.lock_open_rounded, color: Colors.white),
+                                  icon: Icon(
+                                    _isSignUp ? Icons.how_to_reg_rounded : Icons.lock_open_rounded,
+                                    color: Colors.white,
+                                  ),
                                   label: authController.isLoading
                                       ? const CircularProgressIndicator(color: Colors.white)
                                       : Text(
-                                          'Verificar e Iniciar Sesión 🔐',
+                                          _isSignUp ? 'Verificar y Crear Cuenta 🎉' : 'Verificar e Iniciar Sesión 🔐',
                                           style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                                         ),
                                   onPressed: authController.isLoading
@@ -440,7 +670,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                             );
                                             return;
                                           }
-                                          final ok = await authController.verifyEmailOtpAndLogin(_emailController.text.trim(), code);
+                                          final ok = await authController.verifyEmailOtpAndLogin(
+                                            _emailController.text.trim(),
+                                            code,
+                                            fullName: _nameController.text.trim(),
+                                          );
                                           if (ok && mounted) _onLoginSuccess();
                                         },
                                 ),

@@ -74,11 +74,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             tooltip: langController.t('logOut'),
-            onPressed: () {
-              authController.logout();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+            onPressed: () async {
+              await authController.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
             },
           ),
         ],
@@ -239,11 +241,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         langController.t('logOut'),
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
                       ),
-                      onPressed: () {
-                        authController.logout();
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        );
+                      onPressed: () async {
+                        await authController.logout();
+                        if (context.mounted) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          );
+                        }
                       },
                     ),
                   ),

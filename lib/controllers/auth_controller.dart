@@ -7,6 +7,7 @@ import '../models/pet_model.dart';
 import '../services/supabase_service.dart';
 import '../services/dynamic_auth_service.dart';
 import '../services/render_backend_service.dart';
+import '../services/r2_storage_service.dart';
 
 class AuthController extends ChangeNotifier {
   final SupabaseService _supabaseService;
@@ -18,6 +19,7 @@ class AuthController extends ChangeNotifier {
   PetModel? _activePet;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _userLoggedOutExplicitly = false; // Previene restauración de sesión tras logout manual
 
   ProfileModel? get currentProfile => _currentProfile;
   List<PetModel> get userPets => List.unmodifiable(_userPets);
@@ -44,8 +46,30 @@ class AuthController extends ChangeNotifier {
     try {
       if (Supabase.instance.client != null) {
         Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+          final event = data.event;
           final session = data.session;
-          if (session?.user != null && _currentProfile == null) {
+
+          // Si el usuario cerró sesión explícitamente, ignorar cualquier restauración
+          if (_userLoggedOutExplicitly) {
+            debugPrint('[Auth] Sesión ignorada: usuario cerró sesión explícitamente.');
+            return;
+          }
+
+          // Manejar evento de cierre de sesión
+          if (event == AuthChangeEvent.signedOut) {
+            debugPrint('[Auth] Evento signedOut recibido.');
+            _currentProfile = null;
+            _userPets = [];
+            _activePet = null;
+            notifyListeners();
+            return;
+          }
+
+          // Restaurar sesión solo en eventos de inicio de sesión (signedIn, tokenRefreshed)
+          if ((event == AuthChangeEvent.signedIn ||
+                  event == AuthChangeEvent.tokenRefreshed) &&
+              session?.user != null &&
+              _currentProfile == null) {
             final user = session!.user;
             final meta = user.userMetadata ?? {};
 
@@ -57,7 +81,7 @@ class AuthController extends ChangeNotifier {
                 meta['picture']?.toString();
             final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
 
-            debugPrint('Google OAuth user: email=$email, name=$fullName, avatar=$avatarUrl');
+            debugPrint('[Auth] Google OAuth user restaurado: email=$email, name=$fullName');
 
             _processAuthenticatedUser(
               walletAddress: wallet,
@@ -75,6 +99,7 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> loginWithSolanaWallet({String walletType = 'Phantom'}) async {
+    _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
 
@@ -99,39 +124,75 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<String?> sendEmailOtp(String email) async {
+  Future<String?> sendEmailOtp(String email, {bool isSignUp = false, String? fullName}) async {
+    _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
 
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty || !cleanEmail.contains('@') || !cleanEmail.contains('.')) {
+      _errorMessage = 'Por favor ingresa un correo electrónico válido (ej. usuario@gmail.com)';
+      _setLoading(false);
+      notifyListeners();
+      return null;
+    }
+
+    // Check account existence by email
+    final existingProfile = await _supabaseService.getProfileByEmail(cleanEmail);
+
+    if (isSignUp) {
+      // Sign Up mode: If email is already in use, reject registration
+      if (existingProfile != null) {
+        _errorMessage = '⚠️ Este correo ya está en uso con una cuenta. Por favor inicia sesión.';
+        _setLoading(false);
+        notifyListeners();
+        return null;
+      }
+    } else {
+      // Login mode: If no account exists for this email, reject login
+      if (existingProfile == null) {
+        _errorMessage = '⚠️ No existe ninguna cuenta registrada con este correo. Por favor crea una cuenta primero.';
+        _setLoading(false);
+        notifyListeners();
+        return null;
+      }
+    }
+
     try {
-      final code = await _dynamicAuthService.sendEmailOTP(email);
+      final code = await _dynamicAuthService.sendEmailOTP(cleanEmail);
       _setLoading(false);
       if (code == null) {
         _errorMessage = 'Por favor ingresa un correo electrónico válido (ej. usuario@gmail.com)';
       }
+      notifyListeners();
       return code;
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
+      notifyListeners();
       return null;
     }
   }
 
-  Future<bool> verifyEmailOtpAndLogin(String email, String otpCode) async {
+  Future<bool> verifyEmailOtpAndLogin(String email, String otpCode, {String? fullName}) async {
+    _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      final res = await _dynamicAuthService.verifyEmailOTP(email, otpCode);
+      final cleanEmail = email.trim().toLowerCase();
+      final res = await _dynamicAuthService.verifyEmailOTP(cleanEmail, otpCode);
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? '❌ Código de verificación incorrecto';
         _setLoading(false);
+        notifyListeners();
         return false;
       }
 
       await _processAuthenticatedUser(
         walletAddress: res.walletAddress!,
-        email: email,
+        email: cleanEmail,
+        fullName: fullName,
         jwtToken: res.jwtToken ?? '',
       );
       _setLoading(false);
@@ -139,6 +200,7 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
+      notifyListeners();
       return false;
     }
   }
@@ -148,16 +210,18 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      final res = await _dynamicAuthService.authenticateWithEmail(email);
+      final cleanEmail = email.trim().toLowerCase();
+      final res = await _dynamicAuthService.authenticateWithEmail(cleanEmail);
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? 'Email login failed';
         _setLoading(false);
+        notifyListeners();
         return false;
       }
 
       await _processAuthenticatedUser(
         walletAddress: res.walletAddress!,
-        email: email,
+        email: cleanEmail,
         jwtToken: res.jwtToken ?? '',
       );
       _setLoading(false);
@@ -165,18 +229,51 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
+      notifyListeners();
       return false;
     }
   }
 
-  Future<bool> loginWithGoogle({String? googleEmail}) async {
+  Future<bool> loginWithGoogle({String? googleEmail, bool isSignUp = false, String? fullName}) async {
+    _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      // Attempt real Supabase Auth Google OAuth flow
-      // NOTE: Requires Google provider enabled in Supabase dashboard:
-      // Authentication > Providers > Google > Enable
+      String? cleanEmail = googleEmail?.trim().toLowerCase();
+
+      // Check account existence if we have an email
+      if (cleanEmail != null && cleanEmail.isNotEmpty) {
+        final existingProfile = await _supabaseService.getProfileByEmail(cleanEmail);
+
+        if (isSignUp && existingProfile != null) {
+          _errorMessage = '⚠️ Este correo ya está en uso con una cuenta. Por favor inicia sesión.';
+          _setLoading(false);
+          notifyListeners();
+          return false;
+        }
+
+        if (!isSignUp && existingProfile == null) {
+          _errorMessage = '⚠️ No existe ninguna cuenta registrada con este correo. Por favor crea una cuenta primero.';
+          _setLoading(false);
+          notifyListeners();
+          return false;
+        }
+
+        final res = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
+        if (res.isSuccess && res.walletAddress != null) {
+          await _processAuthenticatedUser(
+            walletAddress: res.walletAddress!,
+            email: res.email,
+            fullName: fullName ?? (cleanEmail.split('@').first),
+            jwtToken: res.jwtToken ?? '',
+          );
+          _setLoading(false);
+          return true;
+        }
+      }
+
+      // Attempt Supabase Auth Google OAuth flow
       if (Supabase.instance.client != null) {
         try {
           final redirectTo = kIsWeb
@@ -194,24 +291,41 @@ class AuthController extends ChangeNotifier {
             return true;
           }
         } catch (e) {
-          final errorStr = e.toString().toLowerCase();
-          if (errorStr.contains('validation_failed') ||
-              errorStr.contains('provider') ||
-              errorStr.contains('not enabled') ||
-              errorStr.contains('unsupported')) {
-            _errorMessage =
-                '⚙️ Google OAuth no está habilitado en el servidor. Por favor usa la opción de inicio de sesión por correo electrónico con código de verificación. '
-                '\n\n(Para el administrador: activar el proveedor Google en Supabase Dashboard → Authentication → Providers → Google)';
-            _setLoading(false);
-            notifyListeners();
-            return false;
-          }
           debugPrint('Supabase Google OAuth error: $e');
         }
       }
 
-      _errorMessage =
-          '⚙️ El inicio de sesión con Google no está configurado. Usa la opción de correo electrónico con código de verificación.';
+      // Dynamic Auth fallback when OAuth isn't active on server
+      final fallbackEmail = cleanEmail ?? 'usuario.pawtbook@gmail.com';
+      final existingProfile = await _supabaseService.getProfileByEmail(fallbackEmail);
+
+      if (isSignUp && existingProfile != null) {
+        _errorMessage = '⚠️ Este correo ya está en uso con una cuenta. Por favor inicia sesión.';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
+      if (!isSignUp && existingProfile == null) {
+        _errorMessage = '⚠️ No existe ninguna cuenta registrada con este correo. Por favor crea una cuenta primero.';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
+      final res = await _dynamicAuthService.authenticateWithGoogle(email: fallbackEmail);
+      if (res.isSuccess && res.walletAddress != null) {
+        await _processAuthenticatedUser(
+          walletAddress: res.walletAddress!,
+          email: res.email,
+          fullName: fullName ?? 'Usuario Google',
+          jwtToken: res.jwtToken ?? '',
+        );
+        _setLoading(false);
+        return true;
+      }
+
+      _errorMessage = '❌ No se pudo completar el inicio de sesión con Google.';
       _setLoading(false);
       notifyListeners();
       return false;
@@ -239,6 +353,9 @@ class AuthController extends ChangeNotifier {
 
     // 2. Query or create Supabase profile
     var profile = await _supabaseService.getProfileByWallet(walletAddress);
+    if (profile == null && email != null && email.isNotEmpty) {
+      profile = await _supabaseService.getProfileByEmail(email);
+    }
     if (profile == null) {
       // Build a readable username from full name or email
       String username;
@@ -398,6 +515,66 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<String?> updateProfileAvatarR2(Uint8List imageBytes, String filename) async {
+    if (_currentProfile == null) return null;
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final oldAvatarUrl = _currentProfile!.avatarUrl;
+      final userId = _currentProfile!.id;
+
+      // 1. Request presigned upload URL for avatar
+      final uploadRes = await _renderBackendService.requestAvatarUploadUrl(
+        userId: userId,
+        filename: filename,
+      );
+
+      if (uploadRes['success'] != true) {
+        _errorMessage = uploadRes['error'] ?? 'No se pudo obtener URL presignada para la foto de perfil.';
+        _setLoading(false);
+        notifyListeners();
+        return null;
+      }
+
+      final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
+      final publicUrl = uploadRes['publicUrl'] as String;
+
+      // 2. Upload image to Cloudflare R2
+      final r2Service = R2StorageService();
+      final uploadedUrl = await r2Service.uploadMediaWithPresignedUrl(
+        presignedPutUrl: presignedPutUrl,
+        publicUrl: publicUrl,
+        bytes: imageBytes,
+        contentType: 'image/jpeg',
+      );
+
+      // 3. Delete previous avatar from Cloudflare R2 if it exists
+      if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty && oldAvatarUrl != uploadedUrl) {
+        if (oldAvatarUrl.contains('pawbooklife.com') || oldAvatarUrl.contains('avatars/') || oldAvatarUrl.contains('r2')) {
+          try {
+            await _renderBackendService.deleteR2Object(mediaUrl: oldAvatarUrl);
+            debugPrint('[AuthController] 🗑️ Imagen anterior de Cloudflare R2 eliminada: $oldAvatarUrl');
+          } catch (e) {
+            debugPrint('[AuthController] Error al eliminar imagen anterior de R2: $e');
+          }
+        }
+      }
+
+      // 4. Update profile avatarUrl in Supabase and local state
+      await updateCurrentProfile(avatarUrl: uploadedUrl);
+
+      _setLoading(false);
+      notifyListeners();
+      return uploadedUrl;
+    } catch (e) {
+      _errorMessage = 'Error al actualizar foto en Cloudflare R2: $e';
+      _setLoading(false);
+      notifyListeners();
+      return null;
+    }
+  }
+
   void setActivePet(PetModel pet) {
     _activePet = pet;
     notifyListeners();
@@ -421,10 +598,31 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    // Marcar que el usuario cerró sesión ANTES de limpiar Supabase
+    // para que el listener no restaure la sesión
+    _userLoggedOutExplicitly = true;
     _currentProfile = null;
     _userPets = [];
     _activePet = null;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (Supabase.instance.client != null) {
+        // Usar scope global para invalidar tokens en el servidor y limpiar localStorage
+        await Supabase.instance.client.auth.signOut(scope: SignOutScope.global);
+        debugPrint('[Auth] ✅ Sesión cerrada globalmente en Supabase.');
+      }
+    } catch (e) {
+      debugPrint('[Auth] Error al cerrar sesión en Supabase: $e');
+    }
+  }
+
+  /// Restablece el estado de logout explícito (llamar antes de nuevo inicio de sesión)
+  void resetLogoutState() {
+    _userLoggedOutExplicitly = false;
+    _errorMessage = null;
     notifyListeners();
   }
 

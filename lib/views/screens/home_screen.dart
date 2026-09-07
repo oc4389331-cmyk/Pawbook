@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5,8 +6,6 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
-import '../../services/r2_storage_service.dart';
-import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
@@ -217,14 +216,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     CircleAvatar(
                       radius: 44,
                       backgroundColor: AppTheme.surfaceWarm,
-                      backgroundImage: avatarInput.isNotEmpty ? NetworkImage(avatarInput) : null,
+                      backgroundImage: avatarInput.isNotEmpty
+                          ? (avatarInput.startsWith('data:')
+                              ? MemoryImage(base64Decode(avatarInput.split(',').last)) as ImageProvider
+                              : NetworkImage(avatarInput))
+                          : null,
                       child: avatarInput.isEmpty
                           ? const Icon(Icons.person_rounded, size: 44, color: AppTheme.primaryTerracotta)
                           : null,
                     ),
                     const SizedBox(height: 14),
 
-                    // Button: Upload Photo to Cloudflare R2
+                    // Button: Pick Image from Desktop/Device
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -233,9 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           backgroundColor: AppTheme.accentOrange,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                         ),
-                        icon: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.desktop_windows_rounded, color: Colors.white, size: 20),
                         label: const Text(
-                          '📷 Seleccionar Foto (Cloudflare R2)',
+                          '🖥️ Buscar Imagen en Escritorio',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         onPressed: () async {
@@ -244,34 +247,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
                             if (image != null) {
                               final bytes = await image.readAsBytes();
-                              final renderBackend = RenderBackendService();
-                              final r2Service = R2StorageService();
+                              final base64Preview = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                              setModalState(() {
+                                avatarUrlController.text = base64Preview;
+                              });
 
-                              final uploadRes = await renderBackend.requestUploadUrl(
-                                petId: authController.currentProfile?.id ?? 'usr_human',
-                                mediaType: 'image',
-                                filename: image.name,
-                              );
-
-                              if (uploadRes['success'] == true) {
-                                final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
-                                final publicUrl = uploadRes['publicUrl'] as String;
-
-                                final uploadedUrl = await r2Service.uploadMediaWithPresignedUrl(
-                                  presignedPutUrl: presignedPutUrl,
-                                  publicUrl: publicUrl,
-                                  bytes: bytes,
-                                  contentType: 'image/jpeg',
-                                );
-
+                              // Upload immediately to Cloudflare R2 and delete old photo
+                              final uploadedUrl = await authController.updateProfileAvatarR2(bytes, image.name);
+                              if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
                                 setModalState(() {
                                   avatarUrlController.text = uploadedUrl;
                                 });
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: AppTheme.emeraldGreen,
+                                      content: Text('☁️ ¡Foto actualizada en Cloudflare R2 y anterior eliminada exitosamente! 🗑️'),
+                                    ),
+                                  );
+                                }
                               }
                             }
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error al subir imagen: $e')),
+                              SnackBar(content: Text('Error al buscar/subir imagen: $e')),
                             );
                           }
                         },
@@ -284,8 +284,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: avatarUrlController,
                       onChanged: (_) => setModalState(() {}),
                       decoration: InputDecoration(
-                        labelText: 'URL de Foto de Perfil',
-                        hintText: 'https://media.pawbooklife.com/...',
+                        labelText: 'URL de Foto de Perfil (Cloudflare R2)',
+                        hintText: 'https://media.pawbooklife.com/avatars/...',
                         prefixIcon: const Icon(Icons.photo_camera_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
                         fillColor: AppTheme.surfaceWarm,
@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Navigator.pop(ctx);
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
-                                          content: Text('¡Perfil actualizado y guardado en Supabase exitosamente! ✨'),
+                                          content: Text('¡Perfil actualizado y guardado exitosamente! ✨'),
                                           backgroundColor: AppTheme.emeraldGreen,
                                         ),
                                       );
@@ -688,11 +688,13 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             tooltip: langController.t('logOut'),
-            onPressed: () {
-              authController.logout();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+            onPressed: () async {
+              await authController.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
             },
           ),
         ],
@@ -822,11 +824,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 langController.t('logOut'),
                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
               ),
-              onPressed: () {
-                authController.logout();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
+              onPressed: () async {
+                await authController.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
               },
             ),
           ],

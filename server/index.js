@@ -4,7 +4,7 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const Stripe = require('stripe');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -247,6 +247,81 @@ app.post('/api/media/upload-url', async (req, res) => {
     publicUrl,
     initialStatus: 'pending_review'
   });
+});
+
+// --------------------------------------------------------------------------
+// 4B. CLOUDFLARE R2 AVATAR PRESIGNED UPLOAD URL ENDPOINT
+// --------------------------------------------------------------------------
+app.post('/api/media/avatar-upload-url', async (req, res) => {
+  const { userId, filename } = req.body;
+  if (!userId) {
+    return res.status(400).json({ success: false, error: 'Missing userId' });
+  }
+
+  const ext = filename ? filename.split('.').pop() : 'jpg';
+  const uniqueKey = `avatars/${userId}_${Date.now()}.${ext}`;
+  const publicUrl = `${R2_CUSTOM_DOMAIN}/${uniqueKey}`;
+
+  let presignedPutUrl = `${R2_CUSTOM_DOMAIN}/upload-signed-vault/${uniqueKey}?signature=mock_r2_avatar_sig`;
+
+  if (r2Client) {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: uniqueKey,
+        ContentType: 'image/jpeg',
+      });
+      presignedPutUrl = await getSignedUrl(r2Client, command, { expiresIn: 900 });
+    } catch (err) {
+      console.error('Error generating Cloudflare R2 Avatar Presigned URL:', err);
+      return res.status(500).json({ success: false, error: 'Failed to generate R2 Presigned URL' });
+    }
+  }
+
+  return res.json({
+    success: true,
+    userId,
+    key: uniqueKey,
+    presignedPutUrl,
+    publicUrl,
+  });
+});
+
+// --------------------------------------------------------------------------
+// 4C. CLOUDFLARE R2 DELETE OBJECT ENDPOINT (DELETES PREVIOUS AVATAR/MEDIA)
+// --------------------------------------------------------------------------
+app.post('/api/media/delete-object', async (req, res) => {
+  const { mediaUrl, objectKey } = req.body;
+  let key = objectKey;
+  if (!key && mediaUrl) {
+    if (mediaUrl.includes(R2_CUSTOM_DOMAIN)) {
+      key = mediaUrl.replace(`${R2_CUSTOM_DOMAIN}/`, '');
+    } else if (mediaUrl.includes('/')) {
+      key = mediaUrl.split('/').slice(3).join('/');
+    }
+  }
+
+  if (!key) {
+    return res.status(400).json({ success: false, error: 'Missing objectKey or mediaUrl' });
+  }
+
+  if (r2Client) {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+      });
+      await r2Client.send(command);
+      console.log(`🗑️ Deleted R2 Object: ${key}`);
+      return res.json({ success: true, key, message: 'Object deleted successfully from Cloudflare R2' });
+    } catch (err) {
+      console.error(`Error deleting Cloudflare R2 object ${key}:`, err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  console.log(`🗑️ [Mock R2] Deleted object: ${key}`);
+  return res.json({ success: true, key, message: 'Mock R2 object deleted' });
 });
 
 // --------------------------------------------------------------------------

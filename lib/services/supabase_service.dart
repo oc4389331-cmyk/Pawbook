@@ -108,6 +108,27 @@ class SupabaseService {
   }
 
   // --- Profile Operations ---
+  Future<ProfileModel?> getProfileByEmail(String email) async {
+    if (email.trim().isEmpty) return null;
+    final cleanEmail = email.trim().toLowerCase();
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('profiles')
+            .select()
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+        if (res != null) return ProfileModel.fromJson(res);
+      } catch (e) {
+        if (!_useMockFallback) rethrow;
+      }
+    }
+    return _mockProfiles.values.cast<ProfileModel?>().firstWhere(
+          (p) => p?.email?.trim().toLowerCase() == cleanEmail,
+          orElse: () => null,
+        );
+  }
+
   Future<ProfileModel?> getProfileByWallet(String walletAddress) async {
     if (_client != null) {
       try {
