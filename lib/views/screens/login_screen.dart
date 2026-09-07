@@ -14,7 +14,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
@@ -23,16 +23,27 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isOtpSent = false;
   bool _isSignUp = false; // false = Iniciar Sesión, true = Crear Cuenta
 
+  // Controlador de animación para el loader de patita
+  late AnimationController _pawAnimController;
+  late Animation<double> _pawScaleAnim;
+
   @override
   void initState() {
     super.initState();
+    // Inicializar animación de patita
+    _pawAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _pawScaleAnim = Tween<double>(begin: 0.85, end: 1.15).animate(
+      CurvedAnimation(parent: _pawAnimController, curve: Curves.easeInOut),
+    );
+
     // Restablecer estado de logout para permitir nuevo inicio de sesión
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final authController = Provider.of<AuthController>(context, listen: false);
         authController.resetLogoutState();
-        // Si ya está autenticado (por ejemplo, si Google OAuth hizo redirect),
-        // navegar inmediatamente al HomeScreen
         if (authController.isAuthenticated) {
           _onLoginSuccess();
         }
@@ -42,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _pawAnimController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
@@ -131,11 +143,13 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgWarmCream,
-      body: SafeArea(
-        child: Column(
-          children: [
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppTheme.bgWarmCream,
+          body: SafeArea(
+            child: Column(
+              children: [
             // Language Selector Bar at Top
             Padding(
               padding: const EdgeInsets.only(top: 12, right: 20),
@@ -231,35 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 20),
                       ],
 
-                      // Connect Solana Wallet Button (Terracotta Warm Style)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryTerracotta,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                          ),
-                          icon: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white),
-                          label: authController.isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : Text(
-                                  langController.t('connectWallet'),
-                                  style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
-                                ),
-                          onPressed: authController.isLoading
-                              ? null
-                              : () async {
-                                  final ok = await authController.loginWithSolanaWallet(walletType: 'Phantom');
-                                  if (ok && mounted) _onLoginSuccess();
-                                },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(),
-                      const SizedBox(height: 16),
-
-                      // --- EMAIL & GOOGLE AUTHENTICATION MODE SELECTOR (INICIAR SESIÓN vs CREAR CUENTA) ---
+                      // --- EMAIL & GOOGLE AUTHENTICATION MODE SELECTOR ---
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(4),
@@ -611,8 +597,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 10),
 
-                              // Change Email / Resend Option
-                              TextButton.icon(
+                                  TextButton.icon(
                                 icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppTheme.textMutedWarm),
                                 label: Text(
                                   'Cambiar correo o reenviar código',
@@ -637,7 +622,112 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
       ),
-    );
+    ),
+
+    // ── PAW LOADING OVERLAY ──────────────────────────────────────────────
+    if (authController.isLoading)
+      Positioned.fill(
+        child: Container(
+          color: AppTheme.bgWarmCream.withOpacity(0.90),
+          child: Center(
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Círculo exterior con glow
+                  Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppTheme.primaryTerracotta.withOpacity(0.15),
+                          AppTheme.primaryTerracotta.withOpacity(0.0),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      // Patita pulsante con ScaleTransition
+                      child: ScaleTransition(
+                        scale: _pawScaleAnim,
+                        child: Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.surfaceWarm,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryTerracotta.withOpacity(0.25),
+                                blurRadius: 24,
+                                spreadRadius: 6,
+                              ),
+                            ],
+                            border: Border.all(
+                              color: AppTheme.primaryTerracotta.withOpacity(0.3),
+                              width: 2.5,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.pets_rounded,
+                              size: 46,
+                              color: AppTheme.primaryTerracotta,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    '🐾 Iniciando sesión...',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryTerracotta,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Un momento, estamos preparando\ntu perfil en Pawbook',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: AppTheme.textMutedWarm,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Dots de progreso
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (i) {
+                      return AnimatedBuilder(
+                        animation: _pawAnimController,
+                        builder: (_, __) {
+                          final delay = i * 0.33;
+                          final val = ((_pawAnimController.value - delay).clamp(0.0, 1.0));
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppTheme.primaryTerracotta.withOpacity(0.3 + val * 0.7),
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
   }
 
   Widget _buildChip(String label, Color color) {
