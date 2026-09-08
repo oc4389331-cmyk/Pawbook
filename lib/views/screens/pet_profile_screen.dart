@@ -12,8 +12,9 @@ import 'login_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
   final PetModel pet;
+  final VoidCallback? onSwitchToHuman;
 
-  const PetProfileScreen({super.key, required this.pet});
+  const PetProfileScreen({super.key, required this.pet, this.onSwitchToHuman});
 
   @override
   State<PetProfileScreen> createState() => _PetProfileScreenState();
@@ -74,7 +75,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final feedController = Provider.of<FeedController>(context);
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
-    final isOwner = authController.activePet?.id == widget.pet.id;
+    final isOwner = authController.activePet?.id == widget.pet.id || authController.userPets.any((p) => p.id == widget.pet.id);
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -86,6 +87,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
+          if (isOwner && widget.onSwitchToHuman != null)
+            IconButton(
+              icon: const Icon(Icons.person_pin_rounded, color: AppTheme.primaryTerracotta, size: 28),
+              tooltip: 'Cambiar a Perfil Humano (Tutor)',
+              onPressed: widget.onSwitchToHuman,
+            ),
           if (isOwner)
             IconButton(
               icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
@@ -104,6 +111,61 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Switch to Human Profile Banner (Visible for owner)
+            if (isOwner)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceWarm,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.borderWarm),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppTheme.primaryTerracotta,
+                      backgroundImage: (authController.currentProfile?.avatarUrl != null && authController.currentProfile!.avatarUrl!.isNotEmpty)
+                          ? NetworkImage(authController.currentProfile!.avatarUrl!)
+                          : null,
+                      child: (authController.currentProfile?.avatarUrl == null || authController.currentProfile!.avatarUrl!.isEmpty)
+                          ? const Icon(Icons.person, color: Colors.white, size: 18)
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '👤 Tutor: ${authController.currentProfile?.fullName ?? authController.currentProfile?.username ?? "Humano"}',
+                            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '🏆 PawtScore: ${authController.currentProfile?.pawtScore ?? 0} pts (Patrocinador)',
+                            style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryTerracotta,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      icon: const Icon(Icons.switch_account_rounded, size: 16),
+                      label: Text('Humano', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                      onPressed: widget.onSwitchToHuman ?? () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
             // Header Hero Card (Pawly Warm Style)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

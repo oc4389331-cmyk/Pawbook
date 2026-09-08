@@ -35,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasShownRegisterWall = false;
   int _currentFeedPage = 0;
   final Set<String> _followedPetIds = {};
+  bool _showPetProfileTab = true;
 
   @override
   void initState() {
@@ -699,11 +700,24 @@ class _HomeScreenState extends State<HomeScreen> {
           // Tab 1: Marketplace (Exclusive Bandanas)
           const MarketplaceScreen(),
 
-          // Tab 2: Pet Profile (or Human Tutor profile)
+          // Tab 2: Profile (Switchable between Pet Profile and Human Tutor Profile)
           authController.isAuthenticated
-              ? (authController.hasPet
-                  ? PetProfileScreen(pet: authController.activePet!)
-                  : _buildHumanProfileTab(authController, langController))
+              ? (authController.hasPet && _showPetProfileTab && authController.activePet != null
+                  ? PetProfileScreen(
+                      pet: authController.activePet!,
+                      onSwitchToHuman: () {
+                        setState(() => _showPetProfileTab = false);
+                      },
+                    )
+                  : _buildHumanProfileTab(
+                      authController,
+                      langController,
+                      onSwitchToPet: authController.hasPet
+                          ? () {
+                              setState(() => _showPetProfileTab = true);
+                            }
+                          : null,
+                    ))
               : _buildGuestProfilePromptTab(authController, langController),
 
           // Tab 3: Rewards Store
@@ -1258,7 +1272,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHumanProfileTab(AuthController authController, LanguageController langController) {
+  Widget _buildHumanProfileTab(AuthController authController, LanguageController langController, {VoidCallback? onSwitchToPet}) {
     final profile = authController.currentProfile;
     final avatarUrl = profile?.avatarUrl ?? '';
     final fullName = profile?.fullName;
@@ -1275,6 +1289,12 @@ class _HomeScreenState extends State<HomeScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
         ),
         actions: [
+          if (authController.hasPet && onSwitchToPet != null)
+            IconButton(
+              icon: const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 26),
+              tooltip: 'Cambiar a Perfil de Mascota (@${authController.activePet?.name ?? "Mascota"})',
+              onPressed: onSwitchToPet,
+            ),
           IconButton(
             icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryTerracotta),
             tooltip: 'Editar Perfil Humano',
@@ -1298,6 +1318,67 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            // Switcher to Pet Profile Banner (if user has pets)
+            if (authController.hasPet && onSwitchToPet != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryTerracotta.withOpacity(0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: NetworkImage(
+                        (authController.activePet?.avatarUrl != null && authController.activePet!.avatarUrl.isNotEmpty)
+                            ? authController.activePet!.avatarUrl
+                            : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '🐾 Modo Mascota Creadora',
+                            style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Perfil de @${authController.activePet?.name ?? "Mascota"}',
+                            style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.primaryTerracotta,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                      onPressed: onSwitchToPet,
+                      child: Text(
+                        'Ver Mascota 🐾',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Human Avatar Image
             CircleAvatar(
               radius: 48,
