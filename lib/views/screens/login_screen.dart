@@ -260,6 +260,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             Expanded(
                               child: InkWell(
                                 onTap: () {
+                                  authController.clearError();
                                   setState(() {
                                     _isSignUp = false;
                                     _isOtpSent = false;
@@ -295,6 +296,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             Expanded(
                               child: InkWell(
                                 onTap: () {
+                                  authController.clearError();
                                   setState(() {
                                     _isSignUp = true;
                                     _isOtpSent = false;

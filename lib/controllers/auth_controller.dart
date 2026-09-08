@@ -8,6 +8,7 @@ import '../services/supabase_service.dart';
 import '../services/dynamic_auth_service.dart';
 import '../services/render_backend_service.dart';
 import '../services/r2_storage_service.dart';
+import '../services/auth_storage_service.dart';
 
 class AuthController extends ChangeNotifier {
   final SupabaseService _supabaseService;
@@ -85,27 +86,45 @@ class AuthController extends ChangeNotifier {
 
             debugPrint('[Auth] Google OAuth signedIn: email=$email, name=$fullName');
 
-            // Restaurar bandera isSignUp desde la URL en la web
-            if (kIsWeb) {
-              if (Uri.base.queryParameters['isSignUp'] == 'true') {
-                _pendingIsSignUp = true;
-              }
-            }
+            // Leer intención OAuth desde almacenamiento persistente (sobrevive redirección en web)
+            final storedOauthAction = AuthStorageService.instance.getItem('pawtbook_oauth_action');
+            final isSignUpMode = storedOauthAction == 'signup' || _pendingIsSignUp || (kIsWeb && Uri.base.queryParameters['isSignUp'] == 'true');
+            final isLoginMode = storedOauthAction == 'login';
 
-            // Validación de cuenta duplicada DESPUÉS de que Google devuelve los datos
-            if (email != null && email.isNotEmpty && _pendingIsSignUp) {
+            // 1. VALIDACIÓN EN MODO "CREAR CUENTA" (Sign Up):
+            // Si el usuario eligió "Crear Cuenta" con Google, pero el correo ya existe en base de datos -> BLOQUEAR
+            if (email != null && email.isNotEmpty && isSignUpMode) {
               final existing = await _supabaseService.getProfileByEmail(email);
               if (existing != null) {
-                debugPrint('[Auth] Cuenta existente encontrada en modo signup - bloqueando inicio de sesión.');
-                // Bloquear inicio de sesión y mostrar error
-                await Supabase.instance.client.auth.signOut();
-                _errorMessage = '❌ Este correo ya está en uso. Por favor, ve a Iniciar Sesión.';
+                debugPrint('[Auth] Cuenta existente encontrada para $email en modo Crear Cuenta - bloqueando.');
+                AuthStorageService.instance.removeItem('pawtbook_oauth_action');
                 _pendingIsSignUp = false;
+                await Supabase.instance.client.auth.signOut();
+                _errorMessage = '⚠️ Este correo ($email) ya tiene una cuenta registrada. Por favor, selecciona "Iniciar Sesión".';
                 _setLoading(false);
                 notifyListeners();
                 return;
               }
             }
+
+            // 2. VALIDACIÓN EN MODO "INICIAR SESIÓN" (Login):
+            // Si el usuario eligió "Iniciar Sesión" con Google, pero el correo no existe en base de datos -> BLOQUEAR
+            if (email != null && email.isNotEmpty && isLoginMode) {
+              final existing = await _supabaseService.getProfileByEmail(email);
+              if (existing == null) {
+                debugPrint('[Auth] No existe cuenta para $email en modo Iniciar Sesión - bloqueando.');
+                AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+                await Supabase.instance.client.auth.signOut();
+                _errorMessage = '⚠️ No existe una cuenta registrada con el correo ($email). Por favor, ve a "Crear Cuenta".';
+                _setLoading(false);
+                notifyListeners();
+                return;
+              }
+            }
+
+            // Limpiar la intención de OAuth una vez completada la validación
+            AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+            _pendingIsSignUp = false;
 
             await _processAuthenticatedUser(
               walletAddress: wallet,
@@ -114,7 +133,6 @@ class AuthController extends ChangeNotifier {
               avatarUrl: avatarUrl,
               jwtToken: session.accessToken,
             );
-            _pendingIsSignUp = false; // Resetear bandera después de procesar
           }
         });
       }
@@ -262,6 +280,8 @@ class AuthController extends ChangeNotifier {
   Future<bool> loginWithGoogle({String? googleEmail, bool isSignUp = false, String? fullName}) async {
     _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _pendingIsSignUp = isSignUp; // Guardar modo para validación post-OAuth
+    // Persistir la acción elegida en localStorage para sobrevivir la redirección del navegador
+    AuthStorageService.instance.setItem('pawtbook_oauth_action', isSignUp ? 'signup' : 'login');
     _setLoading(true);
     _errorMessage = null;
 
@@ -298,6 +318,18 @@ class AuthController extends ChangeNotifier {
       // Fallback: si Supabase OAuth no está disponible, usar Dynamic.xyz
       if (googleEmail != null && googleEmail.trim().isNotEmpty) {
         final cleanEmail = googleEmail.trim().toLowerCase();
+        
+        if (isSignUp) {
+          final existing = await _supabaseService.getProfileByEmail(cleanEmail);
+          if (existing != null) {
+            AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+            _errorMessage = '⚠️ Este correo ($cleanEmail) ya tiene una cuenta registrada. Por favor, selecciona "Iniciar Sesión".';
+            _setLoading(false);
+            notifyListeners();
+            return false;
+          }
+        }
+
         final res = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
         if (res.isSuccess && res.walletAddress != null) {
           await _processAuthenticatedUser(
@@ -620,9 +652,13 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  /// Restablece el estado de logout explícito (llamar antes de nuevo inicio de sesión)
   void resetLogoutState() {
     _userLoggedOutExplicitly = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
