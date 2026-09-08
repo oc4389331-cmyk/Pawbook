@@ -1362,7 +1362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     FutureBuilder<List<PetModel>>(
                       future: feedController.getFollowedPets(profile.id),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                           return const Center(
                             child: Padding(
                               padding: EdgeInsets.all(16.0),

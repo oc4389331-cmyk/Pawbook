@@ -59,7 +59,6 @@ class FeedController extends ChangeNotifier {
   Future<List<PetModel>> getFollowedPets(String humanId) async {
     final pets = await _supabaseService.getFollowedPets(humanId);
     _followedPetIds.addAll(pets.map((p) => p.id));
-    notifyListeners();
     return pets;
   }
 

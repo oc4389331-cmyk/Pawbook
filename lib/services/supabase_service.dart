@@ -622,27 +622,56 @@ class SupabaseService {
   }
 
   Future<List<PetModel>> getFollowedPets(String humanId) async {
+    final followedPetIds = <String>{};
+
+    // Check local mock set
+    for (final key in _mockFollows) {
+      if (key.startsWith('${humanId}_')) {
+        followedPetIds.add(key.substring('${humanId}_'.length));
+      }
+    }
+
+    // Try Render backend
     try {
       final backend = RenderBackendService();
       final backendIds = await backend.getFollowedPetIds(humanId);
+      followedPetIds.addAll(backendIds);
       for (final id in backendIds) {
         _mockFollows.add('${humanId}_$id');
       }
     } catch (_) {}
 
+    // Query Supabase directly
     if (!_useMockFallback && _client != null) {
       try {
-        final res = await _client!.from('follows').select('pets(*)').eq('follower_id', humanId);
-        final list = (res as List).map((e) => PetModel.fromJson(e['pets'])).toList();
-        if (list.isNotEmpty) {
+        final res = await _client!.from('follows').select('following_pet_id').eq('follower_id', humanId);
+        if (res is List) {
+          for (final item in res) {
+            final pid = item['following_pet_id'] as String?;
+            if (pid != null && pid.isNotEmpty) {
+              followedPetIds.add(pid);
+              _mockFollows.add('${humanId}_$pid');
+            }
+          }
+        }
+      } catch (e) {
+        print('Note on Supabase follows query: $e');
+      }
+
+      if (followedPetIds.isNotEmpty) {
+        try {
+          final petsRes = await _client!.from('pets').select().inFilter('id', followedPetIds.toList());
+          final list = (petsRes as List).map((e) => PetModel.fromJson(e)).toList();
           for (final p in list) {
             _mockPets[p.id] = p;
           }
           return list;
+        } catch (e) {
+          print('Note on Supabase fetching followed pets: $e');
         }
-      } catch (_) {}
+      }
     }
-    return _mockPets.values.where((p) => _mockFollows.contains('${humanId}_${p.id}')).toList();
+    return _mockPets.values.where((p) => followedPetIds.contains(p.id) || _mockFollows.contains('${humanId}_${p.id}')).toList();
   }
 
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {

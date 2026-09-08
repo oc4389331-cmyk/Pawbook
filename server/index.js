@@ -574,11 +574,15 @@ app.get('/api/follows/list', async (req, res) => {
   }
   if (supabaseAdmin) {
     try {
-      const { data, error } = await supabaseAdmin.from('follows').select('following_pet_id, pets(*)').eq('follower_id', followerId);
+      const { data, error } = await supabaseAdmin.from('follows').select('following_pet_id').eq('follower_id', followerId);
       if (!error && data) {
         const dbPetIds = data.map(d => d.following_pet_id).filter(Boolean);
         const allIds = Array.from(new Set([...followedPetIds, ...dbPetIds]));
-        const pets = data.map(d => d.pets).filter(Boolean);
+        let pets = [];
+        if (allIds.length > 0) {
+          const { data: petData } = await supabaseAdmin.from('pets').select('*').in('id', allIds);
+          pets = petData || [];
+        }
         return res.json({ success: true, followedPetIds: allIds, pets });
       }
     } catch (e) {
