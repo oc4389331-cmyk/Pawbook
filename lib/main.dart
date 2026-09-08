@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/app_config.dart';
+import 'controllers/oracle_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/pet_controller.dart';
@@ -55,6 +56,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => LanguageController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OracleController(backendUrl: renderBackendService.baseUrl),
         ),
       ],
       child: const PawtbookApp(),

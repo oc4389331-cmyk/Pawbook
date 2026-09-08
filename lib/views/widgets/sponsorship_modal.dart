@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
+import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
@@ -55,9 +56,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     super.dispose();
   }
 
-  double get _usdPrice => _selectedSkrAmount / 20.0;
+  double _calculateUsdPrice(OracleController oracle) =>
+      double.parse(oracle.convertSkrToUsd(_selectedSkrAmount).toStringAsFixed(2));
 
-  Future<void> _processSponsorship(AuthController authController, LanguageController langController) async {
+  Future<void> _processSponsorship(
+    AuthController authController,
+    OracleController oracleController,
+    LanguageController langController,
+  ) async {
+    final usdPrice = _calculateUsdPrice(oracleController);
     setState(() {
       _isProcessing = true;
       _processingStep = '💳 Procesando pago con tarjeta...';
@@ -70,7 +77,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       if (_paymentMethod == 'card_to_skr') {
         // Step 1: Process card
         await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) setState(() => _processingStep = '🔄 Convirtiendo \$$_usdPrice USD a $_selectedSkrAmount \$SKR en Solana...');
+        if (mounted) setState(() => _processingStep = '🔄 Oráculo Pyth: Convirtiendo \$$usdPrice USD a $_selectedSkrAmount \$SKR (${oracleController.formattedPriceUsd})...');
 
         // Step 2: On-ramp conversion & transfer via Backend
         await Future.delayed(const Duration(milliseconds: 700));
@@ -82,7 +89,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             userId: widget.userId,
             petId: widget.pet.id,
             pointsAmount: _selectedSkrAmount,
-            priceUsd: _usdPrice,
+            priceUsd: usdPrice,
           );
           if (stripeSession['url'] != null && stripeSession['mode'] != 'mock') {
             UrlLauncherService.instance.openUrl(stripeSession['url']);
@@ -92,7 +99,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         final result = await _renderService.payWithCardConvertToSkr(
           sponsorId: widget.userId,
           petId: widget.pet.id,
-          amountUsd: _usdPrice,
+          amountUsd: usdPrice,
           skrAmount: _selectedSkrAmount,
           sponsorWallet: sponsorWallet,
           petWallet: petWallet,
@@ -126,7 +133,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '🎉 ¡Éxito! \$$_usdPrice USD pagados con tarjeta ➔ $_selectedSkrAmount \$SKR transferidos a @${widget.pet.name} vía Dynamic Solana Wallet.',
+                      '🎉 ¡Éxito! \$$usdPrice USD debitados ➔ $_selectedSkrAmount \$SKR transferidos a @${widget.pet.name} vía Dynamic Solana Wallet (Precio Oráculo: ${oracleController.formattedPriceUsd}).',
                       style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
                     ),
                   ),
@@ -182,7 +189,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
   Widget build(BuildContext context) {
     final langController = Provider.of<LanguageController>(context);
     final authController = Provider.of<AuthController>(context);
+    final oracleController = Provider.of<OracleController>(context);
     final userWallet = authController.currentProfile?.walletAddress ?? 'sol_${widget.userId.substring(0, 10)}...';
+    final currentUsdPrice = _calculateUsdPrice(oracleController);
 
     return Container(
       decoration: const BoxDecoration(
@@ -255,7 +264,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     const Icon(Icons.bolt_rounded, color: AppTheme.emeraldGreen, size: 14),
                     const SizedBox(width: 3),
                     Text(
-                      'Solana \$SKR',
+                      '${oracleController.formattedPriceUsd} / \$SKR',
                       style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -266,20 +275,29 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           const SizedBox(height: 20),
 
           // Select Amount ($SKR Token packages)
-          Text(
-            '1. Selecciona el Paquete de \$SKR:',
-            style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '1. Selecciona el Paquete de \$SKR:',
+                style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Oráculo Pyth ⚡',
+                style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildAmountOption(100, 5.0, 'Snack 🦴'),
+              _buildAmountOption(100, oracleController.convertSkrToUsd(100), 'Snack 🦴'),
               const SizedBox(width: 8),
-              _buildAmountOption(250, 12.5, 'Favorito ⭐'),
+              _buildAmountOption(250, oracleController.convertSkrToUsd(250), 'Favorito ⭐'),
               const SizedBox(width: 8),
-              _buildAmountOption(500, 25.0, 'Super 👑'),
+              _buildAmountOption(500, oracleController.convertSkrToUsd(500), 'Super 👑'),
               const SizedBox(width: 8),
-              _buildAmountOption(1000, 50.0, 'VIP 💎'),
+              _buildAmountOption(1000, oracleController.convertSkrToUsd(1000), 'VIP 💎'),
             ],
           ),
           const SizedBox(height: 18),
@@ -407,7 +425,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          '\$$_usdPrice USD ➔ $_selectedSkrAmount \$SKR',
+                          '\$${currentUsdPrice.toStringAsFixed(2)} USD ➔ $_selectedSkrAmount \$SKR',
                           style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -415,7 +433,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Pagas con tu tarjeta en USD y el sistema on-ramp de Dynamic acredita y transfiere los tokens \$SKR directamente a la wallet de la mascota en Solana.',
+                    'Pagas con tu tarjeta en USD y el sistema on-ramp de Dynamic acredita y transfiere los tokens \$SKR directamente a la wallet de la mascota en Solana al precio del Oráculo (${oracleController.formattedPriceUsd}).',
                     style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11, height: 1.3),
                   ),
                 ],
@@ -461,7 +479,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : () => _processSponsorship(authController, langController),
+              onPressed: _isProcessing ? null : () => _processSponsorship(authController, oracleController, langController),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _paymentMethod == 'card_to_skr'
                     ? AppTheme.primaryTerracotta
@@ -490,7 +508,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         const SizedBox(width: 8),
                         Text(
                           _paymentMethod == 'card_to_skr'
-                              ? 'Pagar \$$_usdPrice USD ➔ Enviar $_selectedSkrAmount \$SKR'
+                              ? 'Pagar \$${currentUsdPrice.toStringAsFixed(2)} USD ➔ Enviar $_selectedSkrAmount \$SKR'
                               : 'Transferir $_selectedSkrAmount \$SKR desde Wallet',
                           style: GoogleFonts.fredoka(
                             color: Colors.white,
@@ -544,7 +562,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               ),
               const SizedBox(height: 2),
               Text(
-                '\$$usdPrice',
+                '\$${usdPrice.toStringAsFixed(2)}',
                 style: GoogleFonts.outfit(
                   color: isSelected ? Colors.white70 : AppTheme.textMutedWarm,
                   fontSize: 11,

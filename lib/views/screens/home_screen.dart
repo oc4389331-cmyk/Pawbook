@@ -15,6 +15,7 @@ import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
 import '../widgets/sponsorship_modal.dart';
+import '../widgets/live_oracle_ticker.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
 import 'login_screen.dart';
@@ -876,6 +877,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Row(
                       children: [
+                        const LiveOracleTicker(compact: true),
+                        const SizedBox(width: 8),
                         const LanguageSelector(isDark: true),
                         const SizedBox(width: 8),
                         GestureDetector(
