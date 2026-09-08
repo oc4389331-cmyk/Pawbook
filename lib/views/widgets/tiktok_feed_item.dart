@@ -312,17 +312,18 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
           child: Column(
             children: [
               // Pet Profile Avatar with mint badge
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    debugPrint('Tapped Avatar! Navigating to PetProfileScreen');
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
-                    );
-                  },
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
+                  );
+                },
+                child: SizedBox(
+                  width: 60,
+                  height: 70, // Extra height to cover the overlapping + icon
                   child: Stack(
-                    alignment: Alignment.bottomCenter,
+                    alignment: Alignment.topCenter,
                     clipBehavior: Clip.none,
                     children: [
                       Container(
@@ -337,14 +338,14 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
                         ),
                       ),
                       Positioned(
-                        bottom: -4,
+                        bottom: 10,
                         child: Container(
                           padding: const EdgeInsets.all(2),
                           decoration: const BoxDecoration(
                             color: AppTheme.primaryTerracotta,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.add, color: Colors.white, size: 14),
+                          child: const Icon(Icons.add, color: Colors.white, size: 16),
                         ),
                       ),
                     ],
