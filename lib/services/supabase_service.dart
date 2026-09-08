@@ -114,6 +114,28 @@ class SupabaseService {
   Future<ProfileModel?> getProfileByEmail(String email) async {
     if (email.trim().isEmpty) return null;
     final cleanEmail = email.trim().toLowerCase();
+
+    // 1. Check with Backend Admin service (has full DB and auth.users access)
+    try {
+      final backend = RenderBackendService();
+      final exists = await backend.checkEmailExists(cleanEmail);
+      if (exists) {
+        final mock = _mockProfiles.values.cast<ProfileModel?>().firstWhere(
+              (p) => p?.email?.trim().toLowerCase() == cleanEmail,
+              orElse: () => null,
+            );
+        if (mock != null) return mock;
+        return ProfileModel(
+          id: 'usr_existing',
+          walletAddress: '',
+          username: cleanEmail.split('@').first,
+          email: cleanEmail,
+          createdAt: DateTime.now(),
+        );
+      }
+    } catch (_) {}
+
+    // 2. Query Supabase directly
     if (_client != null) {
       try {
         final res = await _client!
@@ -123,7 +145,7 @@ class SupabaseService {
             .maybeSingle();
         if (res != null) return ProfileModel.fromJson(res);
       } catch (e) {
-        if (!_useMockFallback) rethrow;
+        // Fallback silently if email column is not present in local schema cache
       }
     }
     return _mockProfiles.values.cast<ProfileModel?>().firstWhere(

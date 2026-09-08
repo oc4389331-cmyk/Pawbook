@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- Safely add column if upgrading existing database
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS favorite_species TEXT[] DEFAULT '{}';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;

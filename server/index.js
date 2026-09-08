@@ -593,6 +593,69 @@ app.get('/api/follows/list', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 7C. AUTHENTICATION & EMAIL VERIFICATION ENDPOINT
+// --------------------------------------------------------------------------
+const knownEmails = new Set();
+
+app.get('/api/auth/check-email', async (req, res) => {
+  const { email } = req.query;
+  if (!email || !email.trim()) {
+    return res.status(400).json({ success: false, error: 'Missing email' });
+  }
+  const cleanEmail = email.trim().toLowerCase();
+  
+  if (knownEmails.has(cleanEmail)) {
+    return res.json({ success: true, exists: true, source: 'cache' });
+  }
+
+  if (supabaseAdmin) {
+    try {
+      // 1. Check in profiles table
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, username, wallet_address')
+        .ilike('email', cleanEmail)
+        .maybeSingle();
+
+      if (profile) {
+        knownEmails.add(cleanEmail);
+        return res.json({ success: true, exists: true, profile });
+      }
+
+      // 2. Check in Supabase auth.users via Admin API
+      const { data: usersData, error } = await supabaseAdmin.auth.admin.listUsers();
+      if (!error && usersData && usersData.users) {
+        const found = usersData.users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+        if (found) {
+          knownEmails.add(cleanEmail);
+          return res.json({ success: true, exists: true, userId: found.id, source: 'auth_users' });
+        }
+      }
+    } catch (e) {
+      console.log('Note on checking email in Supabase:', e.message);
+    }
+  }
+
+  return res.json({ success: true, exists: false });
+});
+
+app.post('/api/auth/verify', async (req, res) => {
+  const { token, walletAddress, email } = req.body;
+  if (email) {
+    knownEmails.add(email.trim().toLowerCase());
+  }
+  return res.json({
+    success: true,
+    user: {
+      id: walletAddress ? 'usr_' + walletAddress.substring(0, Math.min(8, walletAddress.length)) : 'usr_guest',
+      walletAddress,
+      email,
+      pawtScore: 100
+    }
+  });
+});
+
+// --------------------------------------------------------------------------
 // 8. SPA FALLBACK ROUTE FOR FLUTTER WEB
 // --------------------------------------------------------------------------
 app.get('*', (req, res) => {

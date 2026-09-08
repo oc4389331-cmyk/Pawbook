@@ -309,4 +309,20 @@ class RenderBackendService {
     } catch (_) {}
     return [];
   }
+
+  /// Checks if an email is already registered in the backend/Supabase database
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      final clean = email.trim().toLowerCase();
+      final res = await _client.get(
+        Uri.parse('$baseUrl/api/auth/check-email?email=${Uri.encodeComponent(clean)}'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['exists'] == true;
+      }
+    } catch (_) {}
+    return false;
+  }
 }
+

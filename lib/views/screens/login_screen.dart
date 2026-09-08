@@ -68,17 +68,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
-    // Lanzar directamente el OAuth de Google - redirige a la página de Google
-    // para que el usuario autorice y Google devuelva email/nombre/avatar
-    final ok = await authController.loginWithGoogle(
+    await authController.loginWithGoogle(
       isSignUp: _isSignUp,
     );
-    // Si loginWithGoogle devuelve true inmediatamente (OAuth lanzado en web),
-    // la navegación ocurrirá automáticamente cuando el listener detecte el signedIn.
-    // Si devuelve false con mensaje de error, se muestra el error.
-    if (ok && mounted) {
-      _onLoginSuccess();
-    }
   }
 
   Widget _buildGoogleButton(AuthController authController, LanguageController langController) {
