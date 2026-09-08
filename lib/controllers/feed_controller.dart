@@ -40,18 +40,27 @@ class FeedController extends ChangeNotifier {
   }
 
   // --- Follows & Pet Profile ---
+  final Set<String> _followedPetIds = {};
+  Set<String> get followedPetIds => _followedPetIds;
+  bool isFollowingPet(String petId) => _followedPetIds.contains(petId);
+
   Future<void> followPet(String humanId, String petId) async {
-    await _supabaseService.followPet(humanId, petId);
+    _followedPetIds.add(petId);
     notifyListeners();
+    await _supabaseService.followPet(humanId, petId);
   }
 
   Future<void> unfollowPet(String humanId, String petId) async {
-    await _supabaseService.unfollowPet(humanId, petId);
+    _followedPetIds.remove(petId);
     notifyListeners();
+    await _supabaseService.unfollowPet(humanId, petId);
   }
 
   Future<List<PetModel>> getFollowedPets(String humanId) async {
-    return await _supabaseService.getFollowedPets(humanId);
+    final pets = await _supabaseService.getFollowedPets(humanId);
+    _followedPetIds.addAll(pets.map((p) => p.id));
+    notifyListeners();
+    return pets;
   }
 
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {

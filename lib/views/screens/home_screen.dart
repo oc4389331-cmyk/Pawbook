@@ -646,7 +646,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isOwner = authController.activePet?.id == post.petId;
     final isLiked = post.isLikedByCurrentUser;
     final likesCount = post.likesCount;
-    final isFollowing = _followedPetIds.contains(post.petId);
+    final isFollowing = feedController.isFollowingPet(post.petId) || _followedPetIds.contains(post.petId);
     final petAvatar = post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200';
 
     return Column(
@@ -693,10 +693,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                       if (isFollowing) {
                         await feedController.unfollowPet(currentUserId, post.petId);
+                        _followedPetIds.remove(post.petId);
                         if (mounted) {
-                          setState(() {
-                            _followedPetIds.remove(post.petId);
-                          });
+                          setState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Dejaste de seguir a @${post.petName ?? "mascota"}'),
@@ -706,10 +705,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                       } else {
                         await feedController.followPet(currentUserId, post.petId);
+                        _followedPetIds.add(post.petId);
                         if (mounted) {
-                          setState(() {
-                            _followedPetIds.add(post.petId);
-                          });
+                          setState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: AppTheme.emeraldGreen,

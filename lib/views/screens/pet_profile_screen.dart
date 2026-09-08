@@ -161,49 +161,52 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   ),
                   const SizedBox(height: 18),
                   
-                  if (!isOwner && authController.isAuthenticated)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isFollowing ? AppTheme.surfaceWarm : AppTheme.primaryTerracotta,
-                            foregroundColor: _isFollowing ? AppTheme.primaryTerracotta : Colors.white,
-                            elevation: _isFollowing ? 0 : 2,
-                            side: BorderSide(color: AppTheme.primaryTerracotta, width: _isFollowing ? 1 : 0),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  if (!isOwner && authController.isAuthenticated) ...[
+                    Builder(builder: (_) {
+                      final isFollowing = feedController.isFollowingPet(widget.pet.id) || _isFollowing;
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isFollowing ? AppTheme.surfaceWarm : AppTheme.primaryTerracotta,
+                              foregroundColor: isFollowing ? AppTheme.primaryTerracotta : Colors.white,
+                              elevation: isFollowing ? 0 : 2,
+                              side: BorderSide(color: AppTheme.primaryTerracotta, width: isFollowing ? 1 : 0),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            icon: Icon(isFollowing ? Icons.check_rounded : Icons.person_add_rounded),
+                            label: Text(isFollowing ? 'Siguiendo' : 'Seguir', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                            onPressed: () async {
+                              final myId = authController.currentProfile!.id;
+                              if (isFollowing) {
+                                await feedController.unfollowPet(myId, widget.pet.id);
+                                setState(() => _isFollowing = false);
+                              } else {
+                                await feedController.followPet(myId, widget.pet.id);
+                                setState(() => _isFollowing = true);
+                              }
+                            },
                           ),
-                          icon: Icon(_isFollowing ? Icons.check_rounded : Icons.person_add_rounded),
-                          label: Text(_isFollowing ? 'Siguiendo' : 'Seguir', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-                          onPressed: () async {
-                            final myId = authController.currentProfile!.id;
-                            if (_isFollowing) {
-                              await feedController.unfollowPet(myId, widget.pet.id);
-                              setState(() => _isFollowing = false);
-                            } else {
-                              await feedController.followPet(myId, widget.pet.id);
-                              setState(() => _isFollowing = true);
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentOrange,
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentOrange,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            icon: const Icon(Icons.volunteer_activism_rounded),
+                            label: Text('Patrocinar', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              SponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile!.id);
+                            },
                           ),
-                          icon: const Icon(Icons.volunteer_activism_rounded),
-                          label: Text('Patrocinar', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                            SponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile!.id);
-                          },
-                        ),
-                      ],
-                    ),
-                  if (!isOwner && authController.isAuthenticated)
+                        ],
+                      );
+                    }),
                     const SizedBox(height: 18),
+                  ],
 
                   // Solana NFT Badge & Verification Button Section
                   if (_verifiedNftAddress != null && _verifiedNftAddress!.isNotEmpty && !_verifiedNftAddress!.contains('SolMint')) ...[

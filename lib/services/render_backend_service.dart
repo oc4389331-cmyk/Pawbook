@@ -233,4 +233,58 @@ class RenderBackendService {
       'message': 'Simulated Stripe Checkout URL',
     };
   }
+
+  /// Follows a pet via Render Backend (syncs to Supabase & in-memory store)
+  Future<bool> followPet(String followerId, String petId) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/follows/follow'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'followerId': followerId,
+          'petId': petId,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['success'] == true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Unfollows a pet via Render Backend
+  Future<bool> unfollowPet(String followerId, String petId) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/follows/unfollow'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'followerId': followerId,
+          'petId': petId,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['success'] == true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Gets list of followed pet IDs from Backend
+  Future<List<String>> getFollowedPetIds(String followerId) async {
+    try {
+      final res = await _client.get(
+        Uri.parse('$baseUrl/api/follows/list?followerId=$followerId'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['followedPetIds'] != null) {
+          return List<String>.from(data['followedPetIds']);
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
 }

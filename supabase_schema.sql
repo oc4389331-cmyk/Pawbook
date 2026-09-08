@@ -104,6 +104,15 @@ CREATE TABLE IF NOT EXISTS public.orders (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
+-- 9. Follows Table (Follow pet creators)
+CREATE TABLE IF NOT EXISTS public.follows (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    follower_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    following_pet_id TEXT NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    CONSTRAINT unique_follower_pet UNIQUE (follower_id, following_pet_id)
+);
+
 -- ====================================================================
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE & ALGORITHM RECOMMENDATION
 -- ====================================================================
@@ -115,6 +124,8 @@ CREATE INDEX IF NOT EXISTS idx_post_likes_user ON public.post_likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_likes_post ON public.post_likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON public.comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_sponsorships_pet ON public.sponsorships(pet_id);
+CREATE INDEX IF NOT EXISTS idx_follows_follower ON public.follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_follows_pet ON public.follows(following_pet_id);
 
 -- ====================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -128,6 +139,17 @@ ALTER TABLE public.post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsorships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
+
+-- Follows Policies
+DROP POLICY IF EXISTS "Public Follows Read Access" ON public.follows;
+CREATE POLICY "Public Follows Read Access" ON public.follows FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert follows" ON public.follows;
+CREATE POLICY "Users can insert follows" ON public.follows FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can delete follows" ON public.follows;
+CREATE POLICY "Users can delete follows" ON public.follows FOR DELETE USING (true);
 
 -- Profiles Policies
 DROP POLICY IF EXISTS "Public Profiles Read Access" ON public.profiles;

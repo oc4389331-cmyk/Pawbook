@@ -6,6 +6,7 @@ import '../models/post_model.dart';
 import '../models/comment_model.dart';
 import '../models/sponsorship_model.dart';
 import '../models/reward_order_model.dart';
+import 'render_backend_service.dart';
 
 class SupabaseService {
   SupabaseClient? _client;
@@ -224,6 +225,22 @@ class SupabaseService {
             .order('created_at', ascending: false);
 
         final posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
+        for (final p in posts) {
+          if (!_mockPets.containsKey(p.petId)) {
+            _mockPets[p.petId] = PetModel(
+              id: p.petId,
+              ownerId: 'usr_owner',
+              name: p.petName ?? 'Mascota Creadora',
+              species: 'Pet',
+              breed: 'Pawtbook Creator',
+              bio: 'Star creator pet on Solana 🐾',
+              avatarUrl: p.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
+              nftMintAddress: p.nftMintAddress,
+              totalSponsoredScore: 500,
+              createdAt: DateTime.now(),
+            );
+          }
+        }
         if (currentUserId != null && currentUserId.isNotEmpty) {
           final likedRes = await _client!
               .from('post_likes')
@@ -476,6 +493,12 @@ class SupabaseService {
 
   // --- Follows & Profiles ---
   Future<void> followPet(String humanId, String petId) async {
+    _mockFollows.add('${humanId}_$petId');
+    try {
+      final backend = RenderBackendService();
+      await backend.followPet(humanId, petId);
+    } catch (_) {}
+
     if (!_useMockFallback && _client != null) {
       try {
         await _client!.from('follows').insert({
@@ -484,23 +507,41 @@ class SupabaseService {
         });
       } catch (_) {}
     }
-    _mockFollows.add('${humanId}_$petId');
   }
 
   Future<void> unfollowPet(String humanId, String petId) async {
+    _mockFollows.remove('${humanId}_$petId');
+    try {
+      final backend = RenderBackendService();
+      await backend.unfollowPet(humanId, petId);
+    } catch (_) {}
+
     if (!_useMockFallback && _client != null) {
       try {
         await _client!.from('follows').delete().eq('follower_id', humanId).eq('following_pet_id', petId);
       } catch (_) {}
     }
-    _mockFollows.remove('${humanId}_$petId');
   }
 
   Future<List<PetModel>> getFollowedPets(String humanId) async {
+    try {
+      final backend = RenderBackendService();
+      final backendIds = await backend.getFollowedPetIds(humanId);
+      for (final id in backendIds) {
+        _mockFollows.add('${humanId}_$id');
+      }
+    } catch (_) {}
+
     if (!_useMockFallback && _client != null) {
       try {
         final res = await _client!.from('follows').select('pets(*)').eq('follower_id', humanId);
-        return (res as List).map((e) => PetModel.fromJson(e['pets'])).toList();
+        final list = (res as List).map((e) => PetModel.fromJson(e['pets'])).toList();
+        if (list.isNotEmpty) {
+          for (final p in list) {
+            _mockPets[p.id] = p;
+          }
+          return list;
+        }
       } catch (_) {}
     }
     return _mockPets.values.where((p) => _mockFollows.contains('${humanId}_${p.id}')).toList();

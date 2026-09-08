@@ -489,6 +489,73 @@ app.post('/api/sponsorship/solana-pay', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 7B. FOLLOWS & PROFILES ENDPOINTS
+// --------------------------------------------------------------------------
+const serverFollows = new Set(); // "followerId_petId"
+
+app.post('/api/follows/follow', async (req, res) => {
+  const { followerId, petId } = req.body;
+  if (!followerId || !petId) {
+    return res.status(400).json({ success: false, error: 'Missing followerId or petId' });
+  }
+  serverFollows.add(`${followerId}_${petId}`);
+  if (supabaseAdmin) {
+    try {
+      await supabaseAdmin.from('follows').upsert({
+        follower_id: followerId,
+        following_pet_id: petId,
+      }, { onConflict: 'follower_id,following_pet_id' });
+    } catch (e) {
+      console.log('Note on Supabase follow insert:', e.message);
+    }
+  }
+  return res.json({ success: true, isFollowing: true });
+});
+
+app.post('/api/follows/unfollow', async (req, res) => {
+  const { followerId, petId } = req.body;
+  if (!followerId || !petId) {
+    return res.status(400).json({ success: false, error: 'Missing followerId or petId' });
+  }
+  serverFollows.delete(`${followerId}_${petId}`);
+  if (supabaseAdmin) {
+    try {
+      await supabaseAdmin.from('follows').delete().eq('follower_id', followerId).eq('following_pet_id', petId);
+    } catch (e) {
+      console.log('Note on Supabase unfollow delete:', e.message);
+    }
+  }
+  return res.json({ success: true, isFollowing: false });
+});
+
+app.get('/api/follows/list', async (req, res) => {
+  const { followerId } = req.query;
+  if (!followerId) {
+    return res.status(400).json({ success: false, error: 'Missing followerId' });
+  }
+  const followedPetIds = [];
+  for (const key of serverFollows) {
+    if (key.startsWith(`${followerId}_`)) {
+      followedPetIds.push(key.substring(`${followerId}_`.length));
+    }
+  }
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin.from('follows').select('following_pet_id, pets(*)').eq('follower_id', followerId);
+      if (!error && data) {
+        const dbPetIds = data.map(d => d.following_pet_id).filter(Boolean);
+        const allIds = Array.from(new Set([...followedPetIds, ...dbPetIds]));
+        const pets = data.map(d => d.pets).filter(Boolean);
+        return res.json({ success: true, followedPetIds: allIds, pets });
+      }
+    } catch (e) {
+      console.log('Note on Supabase follow select:', e.message);
+    }
+  }
+  return res.json({ success: true, followedPetIds, pets: [] });
+});
+
+// --------------------------------------------------------------------------
 // 8. SPA FALLBACK ROUTE FOR FLUTTER WEB
 // --------------------------------------------------------------------------
 app.get('*', (req, res) => {
