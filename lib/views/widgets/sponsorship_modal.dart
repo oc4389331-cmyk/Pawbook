@@ -6,6 +6,7 @@ import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 
 class SponsorshipModal extends StatefulWidget {
@@ -74,6 +75,19 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         // Step 2: On-ramp conversion & transfer via Backend
         await Future.delayed(const Duration(milliseconds: 700));
         if (mounted) setState(() => _processingStep = '⚡ Transfiriendo $_selectedSkrAmount \$SKR a la wallet de @${widget.pet.name} (Dynamic.xyz)...');
+
+        // Try creating real Stripe checkout / on-ramp session
+        try {
+          final stripeSession = await _renderService.createStripeCheckoutSession(
+            userId: widget.userId,
+            petId: widget.pet.id,
+            pointsAmount: _selectedSkrAmount,
+            priceUsd: _usdPrice,
+          );
+          if (stripeSession['url'] != null && stripeSession['mode'] != 'mock') {
+            UrlLauncherService.instance.openUrl(stripeSession['url']);
+          }
+        } catch (_) {}
 
         final result = await _renderService.payWithCardConvertToSkr(
           sponsorId: widget.userId,
