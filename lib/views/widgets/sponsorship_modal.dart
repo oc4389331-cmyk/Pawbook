@@ -73,8 +73,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       final payerWallet = walletResult.walletAddress ??
           authController.currentProfile?.walletAddress ??
           'sol_${widget.userId.substring(0, 12)}';
-      final petWallet = widget.pet.nftMintAddress ??
-          'PawSol${widget.pet.id.replaceAll("-", "").substring(0, 16)}';
+      final petWallet = widget.pet.dynamicWalletAddress;
 
       // Step 2: Request user approval / sign transfer
       if (mounted) {
@@ -224,7 +223,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           ),
                         ),
                         Text(
-                          'Wallet Dynamic: $userWallet',
+                          'Wallet Dynamic: ${widget.pet.dynamicWalletAddress}',
                           style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
