@@ -7,6 +7,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../models/post_model.dart';
+import '../../models/pet_model.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
@@ -31,13 +32,24 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   bool _hasShownRegisterWall = false;
   int _currentFeedPage = 0;
+  final Set<String> _followedPetIds = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authController = Provider.of<AuthController>(context, listen: false);
-      Provider.of<FeedController>(context, listen: false).fetchActivePosts(currentUserId: authController.currentProfile?.id);
+      final feedController = Provider.of<FeedController>(context, listen: false);
+      feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id);
+      if (authController.currentProfile != null) {
+        feedController.getFollowedPets(authController.currentProfile!.id).then((pets) {
+          if (mounted) {
+            setState(() {
+              _followedPetIds.addAll(pets.map((p) => p.id));
+            });
+          }
+        });
+      }
     });
   }
 
@@ -548,24 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            // ACTION SIDEBAR — lives OUTSIDE the PageView so taps are never swallowed
-            if (currentPost != null)
-              Positioned(
-                right: 14,
-                bottom: 110,
-                child: _buildActionSidebar(currentPost, currentUserId, authController, langController, feedController),
-              ),
-
-            // BOTTOM LEFT INFO — also outside PageView
-            if (currentPost != null)
-              Positioned(
-                left: 16,
-                bottom: 30,
-                right: 90,
-                child: _buildBottomInfo(currentPost),
-              ),
-
-            // Top Overlay Header
+            // Top Overlay Header — placed FIRST so sidebar renders on top
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -624,6 +619,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+            // ACTION SIDEBAR — rendered AFTER header so it appears on top
+            if (currentPost != null)
+              Positioned(
+                right: 14,
+                bottom: 110,
+                child: _buildActionSidebar(currentPost, currentUserId, authController, langController, feedController),
+              ),
+
+            // BOTTOM LEFT INFO — also rendered after header
+            if (currentPost != null)
+              Positioned(
+                left: 16,
+                bottom: 30,
+                right: 90,
+                child: _buildBottomInfo(currentPost),
+              ),
           ],
         ),
       ),
@@ -634,46 +646,109 @@ class _HomeScreenState extends State<HomeScreen> {
     final isOwner = authController.activePet?.id == post.petId;
     final isLiked = post.isLikedByCurrentUser;
     final likesCount = post.likesCount;
+    final isFollowing = _followedPetIds.contains(post.petId);
     final petAvatar = post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200';
 
     return Column(
       children: [
-        // --- Pet Profile Avatar ---
-        GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
-            );
-          },
-          child: Container(
-            width: 60,
-            height: 70,
-            color: Colors.transparent,
-            child: Stack(
-              alignment: Alignment.topCenter,
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
-                  child: CircleAvatar(radius: 24, backgroundImage: NetworkImage(petAvatar)),
-                ),
-                Positioned(
-                  bottom: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: AppTheme.primaryTerracotta, shape: BoxShape.circle),
-                    child: const Icon(Icons.add, color: Colors.white, size: 16),
+        // --- Pet Profile Avatar with Follow Badge ---
+        SizedBox(
+          width: 64,
+          height: 72,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              // Avatar Tap -> Opens Pet Profile Screen
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.emeraldGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundImage: NetworkImage(petAvatar),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // Plus (+) / Check (✓) Follow Button Badge
+              if (!isOwner)
+                Positioned(
+                  bottom: 6,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      if (!authController.isAuthenticated) {
+                        _showTikTokRegistrationWall(context, authController);
+                        return;
+                      }
+                      if (isFollowing) {
+                        await feedController.unfollowPet(currentUserId, post.petId);
+                        if (mounted) {
+                          setState(() {
+                            _followedPetIds.remove(post.petId);
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Dejaste de seguir a @${post.petName ?? "mascota"}'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } else {
+                        await feedController.followPet(currentUserId, post.petId);
+                        if (mounted) {
+                          setState(() {
+                            _followedPetIds.add(post.petId);
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppTheme.emeraldGreen,
+                              content: Text('🐾 ¡Ahora sigues a @${post.petName ?? "mascota"}!'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(3.5),
+                      decoration: BoxDecoration(
+                        color: isFollowing ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isFollowing ? Icons.check : Icons.add,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 18),
 
         // --- Like Button ---
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             if (!authController.isAuthenticated) {
               _showTikTokRegistrationWall(context, authController);
@@ -698,6 +773,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // --- Comment Button ---
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () async {
             final supabaseService = SupabaseService();
             final comments = await supabaseService.getCommentsForPost(post.id);
@@ -747,6 +823,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // --- More Options ---
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             showModalBottomSheet(
               context: context,
@@ -796,6 +873,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // --- Sponsor Button ---
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
           },
@@ -827,6 +905,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
@@ -867,6 +946,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildGuestProfilePromptTab(AuthController authController, LanguageController langController) {
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
+      appBar: AppBar(
+        backgroundColor: AppTheme.bgWarmCream,
+        elevation: 0,
+        title: Text(
+          langController.t('profile'),
+          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
+        ),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(28),
@@ -941,6 +1028,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final avatarUrl = profile?.avatarUrl ?? '';
     final fullName = profile?.fullName;
     final bio = profile?.bio;
+    final feedController = Provider.of<FeedController>(context, listen: false);
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -1033,6 +1121,117 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: Text('✏️ Editar Perfil Humano', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
               onPressed: () => _showEditHumanProfileModal(context, authController),
+            ),
+            const SizedBox(height: 24),
+
+            // --- Section: Followed Pets (Mascotas que sigo) ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceWarm,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.borderWarm),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        '🐾 Mascotas que sigo',
+                        style: GoogleFonts.fredoka(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryTerracotta,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (profile != null)
+                    FutureBuilder<List<PetModel>>(
+                      future: feedController.getFollowedPets(profile.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2),
+                            ),
+                          );
+                        }
+                        final followedPets = snapshot.data ?? [];
+                        if (followedPets.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Center(
+                              child: Text(
+                                'Aún no sigues a ninguna mascota.\n¡Toca el botón + en los videos del feed para seguir a tus creadores favoritos! 🐾',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                              ),
+                            ),
+                          );
+                        }
+                        return SizedBox(
+                          height: 120,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: followedPets.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 14),
+                            itemBuilder: (context, idx) {
+                              final pet = followedPets[idx];
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => PetProfileScreen(pet: pet)),
+                                  );
+                                },
+                                child: Container(
+                                  width: 88,
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.bgWarmCream,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppTheme.borderWarm),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 26,
+                                        backgroundImage: NetworkImage(
+                                          pet.avatarUrl.isNotEmpty
+                                              ? pet.avatarUrl
+                                              : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        pet.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.fredoka(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: AppTheme.primaryTerracotta,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
