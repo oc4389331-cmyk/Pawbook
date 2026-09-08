@@ -6,9 +6,12 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
+import '../../models/post_model.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
+import '../widgets/sponsorship_modal.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
 import 'login_screen.dart';
@@ -27,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
   bool _hasShownRegisterWall = false;
+  int _currentFeedPage = 0;
 
   @override
   void initState() {
@@ -507,6 +511,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final currentPost = feedController.posts.isNotEmpty ? feedController.posts[_currentFeedPage] : null;
+
     return Container(
       color: Colors.black,
       alignment: Alignment.center,
@@ -514,13 +520,13 @@ class _HomeScreenState extends State<HomeScreen> {
         constraints: const BoxConstraints(maxWidth: 500),
         child: Stack(
           children: [
-            // Vertical PageView (TikTok Style)
+            // Vertical PageView (TikTok Style) — only background media
             PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
               itemCount: feedController.posts.length,
               onPageChanged: (index) {
-                // Trigger Registration Wall after watching 3 videos for guests!
+                setState(() => _currentFeedPage = index);
                 if (!authController.isAuthenticated && index >= 3 && !_hasShownRegisterWall) {
                   setState(() => _hasShownRegisterWall = true);
                   _showTikTokRegistrationWall(context, authController);
@@ -542,7 +548,24 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            // Top Overlay Header (Pawly Warm Style)
+            // ACTION SIDEBAR — lives OUTSIDE the PageView so taps are never swallowed
+            if (currentPost != null)
+              Positioned(
+                right: 14,
+                bottom: 110,
+                child: _buildActionSidebar(currentPost, currentUserId, authController, langController, feedController),
+              ),
+
+            // BOTTOM LEFT INFO — also outside PageView
+            if (currentPost != null)
+              Positioned(
+                left: 16,
+                bottom: 30,
+                right: 90,
+                child: _buildBottomInfo(currentPost),
+              ),
+
+            // Top Overlay Header
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -606,6 +629,240 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildActionSidebar(PostModel post, String currentUserId, AuthController authController, LanguageController langController, FeedController feedController) {
+    final isOwner = authController.activePet?.id == post.petId;
+    final isLiked = post.isLikedByCurrentUser;
+    final likesCount = post.likesCount;
+    final petAvatar = post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200';
+
+    return Column(
+      children: [
+        // --- Pet Profile Avatar ---
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
+            );
+          },
+          child: Container(
+            width: 60,
+            height: 70,
+            color: Colors.transparent,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
+                  child: CircleAvatar(radius: 24, backgroundImage: NetworkImage(petAvatar)),
+                ),
+                Positioned(
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: AppTheme.primaryTerracotta, shape: BoxShape.circle),
+                    child: const Icon(Icons.add, color: Colors.white, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+
+        // --- Like Button ---
+        GestureDetector(
+          onTap: () {
+            if (!authController.isAuthenticated) {
+              _showTikTokRegistrationWall(context, authController);
+              return;
+            }
+            feedController.toggleLikePost(currentUserId, post.id);
+            setState(() {});
+          },
+          child: Column(
+            children: [
+              Icon(
+                isLiked ? Icons.favorite : Icons.favorite_border,
+                color: isLiked ? const Color(0xFFEF4444) : Colors.white,
+                size: 36,
+              ),
+              const SizedBox(height: 4),
+              Text('$likesCount', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // --- Comment Button ---
+        GestureDetector(
+          onTap: () async {
+            final supabaseService = SupabaseService();
+            final comments = await supabaseService.getCommentsForPost(post.id);
+            if (!mounted) return;
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: AppTheme.bgWarmCream,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              builder: (_) => DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.6,
+                builder: (__, sc) => ListView(
+                  controller: sc,
+                  children: [
+                    const SizedBox(height: 12),
+                    Center(child: Text('Comentarios', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta))),
+                    const SizedBox(height: 8),
+                    ...comments.map((c) => ListTile(
+                      leading: const CircleAvatar(backgroundColor: AppTheme.primaryTerracotta, child: Icon(Icons.person, color: Colors.white, size: 18)),
+                      title: Text(c.content, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark)),
+                    )),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: Column(
+            children: [
+              const Icon(Icons.comment_rounded, color: Colors.white, size: 34),
+              const SizedBox(height: 4),
+              Text('${post.commentsCount}', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // --- Views ---
+        Column(
+          children: [
+            const Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 30),
+            const SizedBox(height: 4),
+            Text('${post.viewsCount}', style: GoogleFonts.fredoka(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 11)),
+          ],
+        ),
+        const SizedBox(height: 22),
+
+        // --- More Options ---
+        GestureDetector(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: AppTheme.bgWarmCream,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              builder: (ctx) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(width: 40, height: 5, decoration: BoxDecoration(color: AppTheme.borderWarm, borderRadius: BorderRadius.circular(3))),
+                    const SizedBox(height: 20),
+                    if (isOwner)
+                      ListTile(
+                        leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                        title: Text('Eliminar publicación', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await feedController.deletePetPost(post.id);
+                          if (mounted) setState(() {});
+                        },
+                      )
+                    else
+                      ListTile(
+                        leading: const Icon(Icons.report_problem_outlined, color: Colors.orange),
+                        title: Text('Reportar / Bloquear', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.orange)),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await feedController.reportPost(post.id, userId: currentUserId);
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: const Column(
+            children: [
+              Icon(Icons.more_vert_rounded, color: Colors.white, size: 30),
+              SizedBox(height: 4),
+            ],
+          ),
+        ),
+        const SizedBox(height: 22),
+
+        // --- Sponsor Button ---
+        GestureDetector(
+          onTap: () {
+            SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: AppTheme.primaryTerracotta.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)],
+            ),
+            child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(langController.t('sponsor'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+      ],
+    );
+  }
+
+  Widget _buildBottomInfo(PostModel post) {
+    final petName = post.petName ?? 'Mascota';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
+                );
+              },
+              child: Text(
+                '@$petName',
+                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (post.nftMintAddress != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.solanaPurple.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.solanaPurple),
+                ),
+                child: Text('Solana NFT 🐾', style: GoogleFonts.fredoka(color: AppTheme.solanaGreen, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(post.caption, style: GoogleFonts.outfit(color: Colors.white, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+        if (post.tags.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            children: post.tags.map((t) => Text('#$t', style: GoogleFonts.fredoka(color: AppTheme.accentOrange, fontWeight: FontWeight.bold, fontSize: 12))).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
 
   Widget _buildGuestProfilePromptTab(AuthController authController, LanguageController langController) {
     return Scaffold(
