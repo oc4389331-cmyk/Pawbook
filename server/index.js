@@ -243,6 +243,39 @@ app.post('/api/profile/update', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 3C. UPDATE USER ANIMAL/PET PREFERENCES & AFFINITIES
+// --------------------------------------------------------------------------
+app.post('/api/profile/preferences', async (req, res) => {
+  const { userId, favoriteSpecies } = req.body;
+  if (!userId || !favoriteSpecies) {
+    return res.status(400).json({ success: false, error: 'Missing userId or favoriteSpecies' });
+  }
+
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({ favorite_species: favoriteSpecies })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase preferences update error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      return res.json({ success: true, favoriteSpecies: data.favorite_species });
+    } catch (e) {
+      console.error('Supabase preferences exception:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({ success: true, favoriteSpecies });
+});
+
+// --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
 // --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {

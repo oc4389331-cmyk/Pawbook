@@ -74,6 +74,28 @@ class RenderBackendService {
     }
   }
 
+  /// Updates User Favorite Species / Preferences for Algorithm
+  Future<bool> updateUserPreferences({
+    required String userId,
+    required List<String> favoriteSpecies,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/profile/preferences'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'favoriteSpecies': favoriteSpecies,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['success'] == true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// Obtains Presigned R2 PUT URL from Render Backend.
   /// Enforces rule: Only requests with valid petId are authorized.
   Future<Map<String, dynamic>> requestUploadUrl({

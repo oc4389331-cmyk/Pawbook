@@ -20,6 +20,7 @@ class SupabaseService {
   final List<SponsorshipModel> _mockSponsorships = [];
   final Set<String> _mockLikedPostUserKeys = {}; // "userId_postId"
   final Set<String> _mockFollows = {}; // "humanId_petId"
+  final Map<String, Map<String, int>> _userSpeciesAffinity = {}; // userId -> { 'Dog': 15, 'Cat': 5 }
   final List<RewardOrderModel> _mockOrders = [];
 
   SupabaseService({bool useMockFallback = true}) : _useMockFallback = useMockFallback {
@@ -214,8 +215,46 @@ class SupabaseService {
     return pet;
   }
 
-  // --- Posts & Recommendation Algorithm Operations ---
+  // --- User Animal Preference Tracking & Recommendation Algorithm ---
+  Future<void> recordUserInteraction({
+    required String userId,
+    required String species,
+    int weight = 1,
+  }) async {
+    if (userId.isEmpty || species.isEmpty) return;
+    final cleanSpecies = species.trim();
+    if (cleanSpecies.isEmpty) return;
+
+    _userSpeciesAffinity.putIfAbsent(userId, () => {});
+    _userSpeciesAffinity[userId]![cleanSpecies] = (_userSpeciesAffinity[userId]![cleanSpecies] ?? 0) + weight;
+
+    // Derive top favorite species list sorted by interaction affinity points
+    final entries = _userSpeciesAffinity[userId]!.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topSpecies = entries.map((e) => e.key).take(5).toList();
+
+    // Update local profile
+    if (_mockProfiles.containsKey(userId)) {
+      _mockProfiles[userId] = _mockProfiles[userId]!.copyWith(favoriteSpecies: topSpecies);
+    }
+
+    // Persist to Backend & Supabase
+    try {
+      final backend = RenderBackendService();
+      await backend.updateUserPreferences(userId: userId, favoriteSpecies: topSpecies);
+    } catch (_) {}
+
+    if (_client != null) {
+      try {
+        await _client!.from('profiles').update({'favorite_species': topSpecies}).eq('id', userId);
+      } catch (_) {}
+    }
+  }
+
+  // --- Posts & Personalized Recommendation Algorithm Operations ---
   Future<List<PostModel>> getActivePosts({String? currentUserId}) async {
+    List<PostModel> posts = [];
+
     if (_client != null) {
       try {
         final res = await _client!
@@ -224,14 +263,14 @@ class SupabaseService {
             .eq('status', 'active')
             .order('created_at', ascending: false);
 
-        final posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
+        posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
         for (final p in posts) {
           if (!_mockPets.containsKey(p.petId)) {
             _mockPets[p.petId] = PetModel(
               id: p.petId,
               ownerId: 'usr_owner',
               name: p.petName ?? 'Mascota Creadora',
-              species: 'Pet',
+              species: p.petSpecies ?? 'Dog',
               breed: 'Pawtbook Creator',
               bio: 'Star creator pet on Solana 🐾',
               avatarUrl: p.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
@@ -248,19 +287,49 @@ class SupabaseService {
               .eq('user_id', currentUserId);
           final likedIds = (likedRes as List).map((e) => e['post_id'] as String).toSet();
 
-          return posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
+          posts = posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
         }
-        return posts;
       } catch (e) {
         if (!_useMockFallback) rethrow;
       }
     }
 
-    return _mockPosts.where((p) => p.status == PostStatus.active && p.reportCount < 3).map((p) {
-      final key = '${currentUserId}_${p.id}';
-      return p.copyWith(isLikedByCurrentUser: _mockLikedPostUserKeys.contains(key));
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (posts.isEmpty) {
+      posts = _mockPosts.where((p) => p.status == PostStatus.active && p.reportCount < 3).map((p) {
+        final key = '${currentUserId}_${p.id}';
+        return p.copyWith(isLikedByCurrentUser: _mockLikedPostUserKeys.contains(key));
+      }).toList();
+    }
+
+    // Recommendation Algorithm: Personalized ranking
+    if (currentUserId != null && currentUserId.isNotEmpty) {
+      final userFavs = _userSpeciesAffinity[currentUserId]?.keys.toList() ?? [];
+
+      int scorePost(PostModel post) {
+        int score = (post.likesCount * 3) + post.viewsCount + (post.commentsCount * 4);
+        final pet = _mockPets[post.petId];
+        final species = pet?.species ?? 'Dog';
+
+        // Species preference affinity bonus
+        if (userFavs.contains(species)) {
+          final rankIndex = userFavs.indexOf(species);
+          score += (200 - (rankIndex * 40));
+        }
+
+        // Followed pet bonus
+        if (_mockFollows.contains('${currentUserId}_${post.petId}')) {
+          score += 100;
+        }
+
+        return score;
+      }
+
+      posts.sort((a, b) => scorePost(b).compareTo(scorePost(a)));
+    } else {
+      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+
+    return posts;
   }
 
   Future<PostModel> createPost(PostModel post) async {
@@ -298,8 +367,10 @@ class SupabaseService {
     return true;
   }
 
-  /// Toggles Like for a user on a post
+  /// Toggles Like for a user on a post & updates preference algorithm
   Future<bool> toggleLikePost(String userId, String postId) async {
+    bool isLiked = false;
+
     if (_client != null) {
       try {
         final existing = await _client!
@@ -312,7 +383,7 @@ class SupabaseService {
         if (existing != null) {
           await _client!.from('post_likes').delete().eq('user_id', userId).eq('post_id', postId);
           await _client!.rpc('decrement_likes', params: {'post_id': postId});
-          return false; // Now un-liked
+          isLiked = false;
         } else {
           await _client!.from('post_likes').insert({
             'id': 'like_${DateTime.now().millisecondsSinceEpoch}',
@@ -320,37 +391,48 @@ class SupabaseService {
             'post_id': postId,
           });
           await _client!.rpc('increment_likes', params: {'post_id': postId});
-          return true; // Now liked
+          isLiked = true;
         }
       } catch (_) {}
+    } else {
+      // Mock Fallback
+      final key = '${userId}_$postId';
+      final idx = _mockPosts.indexWhere((p) => p.id == postId);
+      if (_mockLikedPostUserKeys.contains(key)) {
+        _mockLikedPostUserKeys.remove(key);
+        if (idx != -1) {
+          _mockPosts[idx] = _mockPosts[idx].copyWith(
+            likesCount: max(0, _mockPosts[idx].likesCount - 1),
+            isLikedByCurrentUser: false,
+          );
+        }
+        isLiked = false;
+      } else {
+        _mockLikedPostUserKeys.add(key);
+        if (idx != -1) {
+          _mockPosts[idx] = _mockPosts[idx].copyWith(
+            likesCount: _mockPosts[idx].likesCount + 1,
+            isLikedByCurrentUser: true,
+          );
+        }
+        isLiked = true;
+      }
     }
 
-    // Mock Fallback
-    final key = '${userId}_$postId';
-    final idx = _mockPosts.indexWhere((p) => p.id == postId);
-    if (_mockLikedPostUserKeys.contains(key)) {
-      _mockLikedPostUserKeys.remove(key);
-      if (idx != -1) {
-        _mockPosts[idx] = _mockPosts[idx].copyWith(
-          likesCount: max(0, _mockPosts[idx].likesCount - 1),
-          isLikedByCurrentUser: false,
-        );
+    // Interaction signal: +3 points for liked species
+    if (isLiked) {
+      final post = _mockPosts.firstWhere((p) => p.id == postId, orElse: () => PostModel(id: '', petId: '', mediaUrl: '', caption: '', createdAt: DateTime.now()));
+      final pet = _mockPets[post.petId];
+      if (pet != null) {
+        recordUserInteraction(userId: userId, species: pet.species, weight: 3);
       }
-      return false;
-    } else {
-      _mockLikedPostUserKeys.add(key);
-      if (idx != -1) {
-        _mockPosts[idx] = _mockPosts[idx].copyWith(
-          likesCount: _mockPosts[idx].likesCount + 1,
-          isLikedByCurrentUser: true,
-        );
-      }
-      return true;
     }
+
+    return isLiked;
   }
 
-  /// Increments views count for recommendation algorithm
-  Future<void> recordPostView(String postId) async {
+  /// Increments views count & updates user preference algorithm
+  Future<void> recordPostView(String postId, {String? userId}) async {
     final idx = _mockPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       _mockPosts[idx] = _mockPosts[idx].copyWith(viewsCount: _mockPosts[idx].viewsCount + 1);
@@ -360,6 +442,17 @@ class SupabaseService {
       try {
         await _client!.rpc('increment_views', params: {'post_id': postId});
       } catch (_) {}
+    }
+
+    // Interaction signal: +1 point for watched species
+    if (userId != null && userId.isNotEmpty) {
+      final post = idx != -1 ? _mockPosts[idx] : null;
+      if (post != null) {
+        final pet = _mockPets[post.petId];
+        if (pet != null) {
+          recordUserInteraction(userId: userId, species: pet.species, weight: 1);
+        }
+      }
     }
   }
 
@@ -494,6 +587,11 @@ class SupabaseService {
   // --- Follows & Profiles ---
   Future<void> followPet(String humanId, String petId) async {
     _mockFollows.add('${humanId}_$petId');
+    final pet = _mockPets[petId];
+    if (pet != null) {
+      recordUserInteraction(userId: humanId, species: pet.species, weight: 5);
+    }
+
     try {
       final backend = RenderBackendService();
       await backend.followPet(humanId, petId);

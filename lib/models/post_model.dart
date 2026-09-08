@@ -17,6 +17,7 @@ class PostModel {
   // Joined metadata & local state for UI convenience
   final String? petName;
   final String? petAvatarUrl;
+  final String? petSpecies;
   final String? nftMintAddress;
   final bool isLikedByCurrentUser;
 
@@ -35,6 +36,7 @@ class PostModel {
     required this.createdAt,
     this.petName,
     this.petAvatarUrl,
+    this.petSpecies,
     this.nftMintAddress,
     this.isLikedByCurrentUser = false,
   });
@@ -71,6 +73,7 @@ class PostModel {
           : DateTime.now(),
       petName: json['pet_name'] ?? json['pets']?['name'],
       petAvatarUrl: json['pet_avatar_url'] ?? json['pets']?['avatar_url'],
+      petSpecies: json['pet_species'] ?? json['pets']?['species'] ?? 'Dog',
       nftMintAddress: json['nft_mint_address'] ?? json['pets']?['nft_mint_address'],
       isLikedByCurrentUser: json['is_liked_by_user'] ?? false,
     );
@@ -111,6 +114,7 @@ class PostModel {
     DateTime? createdAt,
     String? petName,
     String? petAvatarUrl,
+    String? petSpecies,
     String? nftMintAddress,
     bool? isLikedByCurrentUser,
   }) {
@@ -129,6 +133,7 @@ class PostModel {
       createdAt: createdAt ?? this.createdAt,
       petName: petName ?? this.petName,
       petAvatarUrl: petAvatarUrl ?? this.petAvatarUrl,
+      petSpecies: petSpecies ?? this.petSpecies,
       nftMintAddress: nftMintAddress ?? this.nftMintAddress,
       isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
     );

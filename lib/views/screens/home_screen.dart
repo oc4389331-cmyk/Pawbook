@@ -1231,6 +1231,83 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // --- Section: Algorithm & Content Preferences ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceWarm,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.borderWarm),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, color: AppTheme.accentOrange, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        '🎯 Preferencias de Contenido (Algoritmo)',
+                        style: GoogleFonts.fredoka(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryTerracotta,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Basado en los videos que ves, likes y las mascotas que sigues, el algoritmo de Pawtbook prioriza estos animales en tu feed:',
+                    style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (profile?.favoriteSpecies.isNotEmpty ?? false)
+                        ? profile!.favoriteSpecies.map((species) {
+                            String emoji = '🐾';
+                            if (species.toLowerCase().contains('dog') || species.toLowerCase().contains('perro')) emoji = '🐕';
+                            if (species.toLowerCase().contains('cat') || species.toLowerCase().contains('gato')) emoji = '🐱';
+                            if (species.toLowerCase().contains('bird') || species.toLowerCase().contains('ave')) emoji = '🦜';
+                            if (species.toLowerCase().contains('rabbit') || species.toLowerCase().contains('conejo')) emoji = '🐰';
+
+                            return Chip(
+                              backgroundColor: AppTheme.primaryTerracotta.withOpacity(0.12),
+                              side: const BorderSide(color: AppTheme.primaryTerracotta),
+                              avatar: Text(emoji, style: const TextStyle(fontSize: 16)),
+                              label: Text(
+                                species,
+                                style: GoogleFonts.fredoka(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryTerracotta,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            );
+                          }).toList()
+                        : [
+                            Chip(
+                              backgroundColor: AppTheme.surfaceWarm,
+                              side: const BorderSide(color: AppTheme.borderWarm),
+                              avatar: const Text('🐕', style: TextStyle(fontSize: 16)),
+                              label: Text('Perros (Principal)', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
+                            ),
+                            Chip(
+                              backgroundColor: AppTheme.surfaceWarm,
+                              side: const BorderSide(color: AppTheme.borderWarm),
+                              avatar: const Text('🐱', style: TextStyle(fontSize: 16)),
+                              label: Text('Gatos', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
+                            ),
+                          ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Pet Creator Card

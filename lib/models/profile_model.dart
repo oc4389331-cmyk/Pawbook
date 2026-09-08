@@ -7,6 +7,7 @@ class ProfileModel {
   final String? avatarUrl;
   final String? bio;
   final int pawtScore;
+  final List<String> favoriteSpecies;
   final DateTime createdAt;
 
   ProfileModel({
@@ -18,10 +19,18 @@ class ProfileModel {
     this.avatarUrl,
     this.bio,
     this.pawtScore = 0,
+    this.favoriteSpecies = const [],
     required this.createdAt,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    List<String> favs = [];
+    if (json['favorite_species'] != null) {
+      if (json['favorite_species'] is List) {
+        favs = (json['favorite_species'] as List).map((e) => e.toString()).toList();
+      }
+    }
+
     return ProfileModel(
       id: json['id'] ?? '',
       walletAddress: json['wallet_address'] ?? '',
@@ -31,6 +40,7 @@ class ProfileModel {
       avatarUrl: json['avatar_url'],
       bio: json['bio'],
       pawtScore: (json['pawt_score'] ?? 0) as int,
+      favoriteSpecies: favs,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
@@ -47,6 +57,7 @@ class ProfileModel {
       'avatar_url': avatarUrl,
       'bio': bio,
       'pawt_score': pawtScore,
+      'favorite_species': favoriteSpecies,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -60,6 +71,7 @@ class ProfileModel {
     String? avatarUrl,
     String? bio,
     int? pawtScore,
+    List<String>? favoriteSpecies,
     DateTime? createdAt,
   }) {
     return ProfileModel(
@@ -71,6 +83,7 @@ class ProfileModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bio: bio ?? this.bio,
       pawtScore: pawtScore ?? this.pawtScore,
+      favoriteSpecies: favoriteSpecies ?? this.favoriteSpecies,
       createdAt: createdAt ?? this.createdAt,
     );
   }
