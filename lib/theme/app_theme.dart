@@ -14,6 +14,7 @@ class AppTheme {
   static const Color solanaGreen = Color(0xFF14F195);
 
   static const Color textPrimaryDark = Color(0xFF3B1414);
+  static const Color warmBrown = Color(0xFF4A2828);
   static const Color textMutedWarm = Color(0xFF7A5C5C);
   static const Color borderWarm = Color(0xFFEED5C5);
 

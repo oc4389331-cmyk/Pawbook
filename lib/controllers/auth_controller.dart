@@ -22,6 +22,7 @@ class AuthController extends ChangeNotifier {
   String? _errorMessage;
   bool _userLoggedOutExplicitly = false; // Previene restauración de sesión tras logout manual
   bool _pendingIsSignUp = false; // Guarda el modo (signup/login) durante el redirect OAuth de Google
+  bool _isPetModeActive = true;
 
   ProfileModel? get currentProfile => _currentProfile;
   List<PetModel> get userPets => List.unmodifiable(_userPets);
@@ -33,6 +34,19 @@ class AuthController extends ChangeNotifier {
   bool get hasPet => _userPets.isNotEmpty;
   bool get isHumanOnly => _userPets.isEmpty;
   bool get isPetCreator => _userPets.isNotEmpty;
+  bool get isPetModeActive => _isPetModeActive && hasPet;
+
+  void setPetModeActive(bool value) {
+    _isPetModeActive = value;
+    notifyListeners();
+  }
+
+  void toggleProfileMode() {
+    if (hasPet) {
+      _isPetModeActive = !_isPetModeActive;
+      notifyListeners();
+    }
+  }
 
   AuthController({
     SupabaseService? supabaseService,

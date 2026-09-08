@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasShownRegisterWall = false;
   int _currentFeedPage = 0;
   final Set<String> _followedPetIds = {};
-  bool _showPetProfileTab = true;
 
   @override
   void initState() {
@@ -702,11 +701,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Tab 2: Profile (Switchable between Pet Profile and Human Tutor Profile)
           authController.isAuthenticated
-              ? (authController.hasPet && _showPetProfileTab && authController.activePet != null
+              ? (authController.isPetModeActive && authController.activePet != null
                   ? PetProfileScreen(
                       pet: authController.activePet!,
                       onSwitchToHuman: () {
-                        setState(() => _showPetProfileTab = false);
+                        authController.setPetModeActive(false);
                       },
                     )
                   : _buildHumanProfileTab(
@@ -714,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       langController,
                       onSwitchToPet: authController.hasPet
                           ? () {
-                              setState(() => _showPetProfileTab = true);
+                              authController.setPetModeActive(true);
                             }
                           : null,
                     ))
@@ -725,22 +724,58 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // Floating Action Button (+ Video) ONLY visible for Pet Creators
-      floatingActionButton: authController.hasPet
-          ? FloatingActionButton.extended(
-              backgroundColor: AppTheme.primaryTerracotta,
-              elevation: 8,
-              icon: const Icon(Icons.videocam_rounded, color: Colors.white),
-              label: Text(
-                langController.t('addVideo'),
-                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-                );
-              },
-            )
+      // Floating Action Button (+ Video): Differentiates between Pet Creator Mode vs Human Tutor Mode
+      floatingActionButton: authController.isAuthenticated
+          ? (authController.isPetModeActive
+              ? FloatingActionButton.extended(
+                  key: const ValueKey('fab_pet_mode'),
+                  backgroundColor: AppTheme.primaryTerracotta,
+                  elevation: 8,
+                  icon: const Icon(Icons.videocam_rounded, color: Colors.white),
+                  label: Text(
+                    '+ Video (@${authController.activePet?.name ?? "Mascota"})',
+                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                  ),
+                  tooltip: 'Publicar video como @${authController.activePet?.name ?? "Mascota"}',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                    );
+                  },
+                )
+              : (authController.hasPet
+                  ? FloatingActionButton.extended(
+                      key: const ValueKey('fab_human_mode_with_pet'),
+                      backgroundColor: AppTheme.warmBrown,
+                      elevation: 6,
+                      icon: const Icon(Icons.pets_rounded, color: AppTheme.accentOrange),
+                      label: Text(
+                        '🐾 Publicar como @${authController.activePet?.name ?? "Mascota"}',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                      ),
+                      tooltip: 'Modo Humano activo. Toca para publicar como tu mascota @${authController.activePet?.name}',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                        );
+                      },
+                    )
+                  : FloatingActionButton.extended(
+                      key: const ValueKey('fab_create_pet'),
+                      backgroundColor: AppTheme.accentOrange,
+                      elevation: 6,
+                      icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
+                      label: Text(
+                        '🐶 Registrar Mascota',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                      ),
+                      tooltip: 'Registra a tu mascota creadora para subir videos',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CreatePetScreen()),
+                        );
+                      },
+                    )))
           : null,
 
       bottomNavigationBar: Container(
