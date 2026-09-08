@@ -21,7 +21,7 @@ class AppConfig {
   // Dynamic.xyz Auth Configuration
   static const String dynamicEnvironmentId = String.fromEnvironment(
     'DYNAMIC_ENVIRONMENT_ID',
-    defaultValue: 'e84fa2357-6be3-4bc4-b90d-2082608d7889',
+    defaultValue: '84fa2357-6be3-4bc4-b90d-2082608d7889',
   );
 
   // App Identity
