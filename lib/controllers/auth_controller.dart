@@ -454,8 +454,15 @@ class AuthController extends ChangeNotifier {
     }
     _currentProfile = profile;
 
-    // 3. Query user pets
-    _userPets = await _supabaseService.getPetsForOwner(_currentProfile!.id);
+    // 3. Query user pets and ensure Dynamic Solana Wallet Address is assigned
+    final rawPets = await _supabaseService.getPetsForOwner(_currentProfile!.id);
+    _userPets = rawPets.map((p) {
+      if (p.nftMintAddress == null || p.nftMintAddress!.isEmpty) {
+        return p.copyWith(nftMintAddress: p.dynamicWalletAddress);
+      }
+      return p;
+    }).toList();
+
     if (_userPets.isNotEmpty) {
       _activePet = _userPets.first;
     } else {
@@ -507,8 +514,14 @@ class AuthController extends ChangeNotifier {
         );
       }
 
-      // 2. Link pet to owner ID and register in Supabase
-      final petWithOwner = pet.copyWith(ownerId: _currentProfile!.id);
+      // 2. Link pet to owner ID and ensure valid Dynamic Solana Wallet Address
+      final petWallet = (pet.nftMintAddress != null && pet.nftMintAddress!.isNotEmpty)
+          ? pet.nftMintAddress!
+          : pet.dynamicWalletAddress;
+      final petWithOwner = pet.copyWith(
+        ownerId: _currentProfile!.id,
+        nftMintAddress: petWallet,
+      );
       final createdPet = await _supabaseService.createPet(petWithOwner);
 
       _userPets.add(createdPet);

@@ -23,6 +23,24 @@ class PetModel {
     required this.createdAt,
   });
 
+  /// Deterministic or on-chain Dynamic Solana Wallet Address for this pet
+  String get dynamicWalletAddress {
+    if (nftMintAddress != null &&
+        nftMintAddress!.isNotEmpty &&
+        !nftMintAddress!.startsWith('SolMint')) {
+      return nftMintAddress!;
+    }
+    const base58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    final hash = ('pet_${name.toLowerCase()}_${id.replaceAll("-", "")}').hashCode.abs();
+    final sb = StringBuffer('PawSol');
+    int cur = hash;
+    for (int i = 0; i < 38; i++) {
+      cur = (cur * 1664525 + 1013904223) & 0x7FFFFFFF;
+      sb.write(base58Chars[cur % base58Chars.length]);
+    }
+    return sb.toString();
+  }
+
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
       id: json['id'] ?? '',

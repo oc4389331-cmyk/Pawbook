@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
@@ -270,12 +271,88 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     const SizedBox(height: 18),
                   ],
 
+                  // Solana Dynamic Wallet Card for this Pet
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Wallet Solana (Dynamic.xyz):',
+                                  style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.emeraldGreen,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Activa ⚡',
+                                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.pet.dynamicWalletAddress,
+                                style: GoogleFonts.sourceCodePro(
+                                  color: AppTheme.textPrimaryDark,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.emeraldGreen),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Copiar Wallet',
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: widget.pet.dynamicWalletAddress));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.emeraldGreen,
+                                    duration: const Duration(seconds: 2),
+                                    content: Text('⚡ ¡Wallet de @${widget.pet.name} copiada al portapapeles! (${widget.pet.dynamicWalletAddress})'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Solana NFT Badge & Verification Button Section
                   if (_verifiedNftAddress != null && _verifiedNftAddress!.isNotEmpty && !_verifiedNftAddress!.contains('SolMint')) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppTheme.emeraldGreen.withOpacity(0.12),
+                        color: AppTheme.emeraldGreen.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: AppTheme.emeraldGreen),
                       ),
