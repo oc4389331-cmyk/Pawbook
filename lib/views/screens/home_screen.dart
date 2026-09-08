@@ -8,7 +8,9 @@ import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../models/post_model.dart';
 import '../../models/pet_model.dart';
+import '../../models/comment_model.dart';
 import '../../services/supabase_service.dart';
+import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
@@ -178,6 +180,237 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showCommentsModal(BuildContext context, PostModel post, String currentUserId, AuthController authController, LanguageController langController) {
+    final commentController = TextEditingController();
+    final supabaseService = SupabaseService();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.72,
+              decoration: const BoxDecoration(
+                color: AppTheme.bgWarmCream,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  // Handle indicator
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderWarm,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '💬 ${langController.t("comments")}',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryTerracotta,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppTheme.textMutedWarm, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: AppTheme.borderWarm, height: 1),
+
+                  // Comments List
+                  Expanded(
+                    child: FutureBuilder<List<CommentModel>>(
+                      future: supabaseService.getCommentsForPost(post.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2),
+                          );
+                        }
+                        final comments = snapshot.data ?? [];
+                        if (comments.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.chat_bubble_outline_rounded, size: 48, color: AppTheme.textMutedWarm),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    '¡Sé el primero en comentar esta publicación! 🐾',
+                                    style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 14),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          itemCount: comments.length,
+                          itemBuilder: (context, idx) {
+                            final c = comments[idx];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: AppTheme.surfaceWarm,
+                                    child: Text(
+                                      (c.username != null && c.username!.isNotEmpty)
+                                          ? c.username![0].toUpperCase()
+                                          : 'P',
+                                      style: GoogleFonts.fredoka(
+                                        color: AppTheme.primaryTerracotta,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c.username ?? '@usuario',
+                                          style: GoogleFonts.fredoka(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: AppTheme.primaryTerracotta,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          c.content,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 14,
+                                            color: AppTheme.textPrimaryDark,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Bottom Comment Input Box
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.surfaceWarm,
+                      border: Border(top: BorderSide(color: AppTheme.borderWarm, width: 1)),
+                    ),
+                    child: SafeArea(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.bgWarmCream,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppTheme.borderWarm),
+                              ),
+                              child: TextField(
+                                controller: commentController,
+                                style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
+                                decoration: InputDecoration(
+                                  hintText: authController.isAuthenticated
+                                      ? 'Añadir un comentario amable... 🐾'
+                                      : 'Inicia sesión para comentar... 🐾',
+                                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                              onPressed: () async {
+                                if (!authController.isAuthenticated) {
+                                  Navigator.pop(ctx);
+                                  _showTikTokRegistrationWall(context, authController);
+                                  return;
+                                }
+
+                                final text = commentController.text.trim();
+                                if (text.isEmpty) return;
+
+                                if (ProfanityFilterService.hasProfanity(text)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppTheme.primaryTerracotta,
+                                      content: Text(
+                                        '⚠️ ${langController.t("profanityWarning")}',
+                                        style: GoogleFonts.fredoka(color: Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final sanitized = ProfanityFilterService.sanitize(text);
+                                commentController.clear();
+                                await supabaseService.addComment(currentUserId, post.id, sanitized);
+                                if (mounted) {
+                                  setState(() {});
+                                  setModalState(() {});
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -772,32 +1005,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // --- Comment Button ---
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () async {
-            final supabaseService = SupabaseService();
-            final comments = await supabaseService.getCommentsForPost(post.id);
-            if (!mounted) return;
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: AppTheme.bgWarmCream,
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-              builder: (_) => DraggableScrollableSheet(
-                expand: false,
-                initialChildSize: 0.6,
-                builder: (__, sc) => ListView(
-                  controller: sc,
-                  children: [
-                    const SizedBox(height: 12),
-                    Center(child: Text('Comentarios', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta))),
-                    const SizedBox(height: 8),
-                    ...comments.map((c) => ListTile(
-                      leading: const CircleAvatar(backgroundColor: AppTheme.primaryTerracotta, child: Icon(Icons.person, color: Colors.white, size: 18)),
-                      title: Text(c.content, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark)),
-                    )),
-                  ],
-                ),
-              ),
-            );
+          onTap: () {
+            _showCommentsModal(context, post, currentUserId, authController, langController);
           },
           child: Column(
             children: [
