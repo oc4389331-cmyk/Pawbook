@@ -27,16 +27,35 @@ class FeedController extends ChangeNotifier {
         _r2StorageService = r2StorageService ?? R2StorageService(),
         _renderBackendService = renderBackendService ?? RenderBackendService();
 
-  Future<void> fetchActivePosts() async {
+  Future<void> fetchActivePosts({String? currentUserId}) async {
     _setLoading(true);
     try {
-      _posts = await _supabaseService.getActivePosts();
+      _posts = await _supabaseService.getActivePosts(currentUserId: currentUserId);
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       _setLoading(false);
     }
+  }
+
+  // --- Follows & Pet Profile ---
+  Future<void> followPet(String humanId, String petId) async {
+    await _supabaseService.followPet(humanId, petId);
+    notifyListeners();
+  }
+
+  Future<void> unfollowPet(String humanId, String petId) async {
+    await _supabaseService.unfollowPet(humanId, petId);
+    notifyListeners();
+  }
+
+  Future<List<PetModel>> getFollowedPets(String humanId) async {
+    return await _supabaseService.getFollowedPets(humanId);
+  }
+
+  Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {
+    return await _supabaseService.getPostsForPet(petId, currentUserId: currentUserId);
   }
 
   /// Creates a new post for a pet. Enforces ROLE RESTRICTION & Moderation Pipeline.
@@ -126,8 +145,8 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> reportPost(String postId) async {
-    await _supabaseService.reportPost(postId);
+  Future<void> reportPost(String postId, {String userId = 'usr_guest'}) async {
+    await _supabaseService.reportPost(postId, userId);
     final idx = _posts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       final current = _posts[idx];
@@ -141,6 +160,7 @@ class FeedController extends ChangeNotifier {
     }
   }
 
+
   Future<void> deletePetPost(String postId) async {
     _setLoading(true);
     try {
@@ -151,6 +171,28 @@ class FeedController extends ChangeNotifier {
       print('Error deleting post: $e');
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<void> toggleLikePost(String userId, String postId) async {
+    final isLikedNow = await _supabaseService.toggleLikePost(userId, postId);
+    final idx = _posts.indexWhere((p) => p.id == postId);
+    if (idx != -1) {
+      final current = _posts[idx];
+      // Note: toggleLikePost in SupabaseService already calculates the new state, but we need to update the local _posts list.
+      // We don't know the exact count if it was modified by others, but we can just use our local diff.
+      int newCount = current.likesCount;
+      if (isLikedNow && !current.isLikedByCurrentUser) {
+        newCount++;
+      } else if (!isLikedNow && current.isLikedByCurrentUser) {
+        newCount = newCount > 0 ? newCount - 1 : 0;
+      }
+      
+      _posts[idx] = current.copyWith(
+        likesCount: newCount,
+        isLikedByCurrentUser: isLikedNow,
+      );
+      // notifyListeners(); // Optional: UI is already updated optimistically in TikTokFeedItem
     }
   }
 

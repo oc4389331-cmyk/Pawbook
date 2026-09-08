@@ -119,17 +119,17 @@ class _PostCardState extends State<PostCard> {
                         );
                       },
                     ),
-                  ),
-                  if (widget.post.mediaType == 'video')
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
+                    if (widget.post.mediaType == 'video')
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.play_arrow, size: 36, color: AppTheme.solanaGreen),
                       ),
-                      child: const Icon(Icons.play_arrow, size: 36, color: AppTheme.solanaGreen),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

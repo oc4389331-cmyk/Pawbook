@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
+import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../models/post_model.dart';
 import '../../models/pet_model.dart';
@@ -8,6 +10,7 @@ import '../../models/comment_model.dart';
 import '../../services/supabase_service.dart';
 import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
+import '../screens/pet_profile_screen.dart';
 import 'sponsorship_modal.dart';
 
 class TikTokFeedItem extends StatefulWidget {
@@ -41,13 +44,22 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
     _supabaseService.recordPostView(widget.post.id);
   }
 
+  @override
+  void didUpdateWidget(TikTokFeedItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.post.likesCount != oldWidget.post.likesCount || widget.post.isLikedByCurrentUser != oldWidget.post.isLikedByCurrentUser) {
+      _likesCount = widget.post.likesCount;
+      _isLiked = widget.post.isLikedByCurrentUser;
+    }
+  }
+
   void _handleLike() async {
     setState(() {
       _isLiked = !_isLiked;
       _likesCount += _isLiked ? 1 : -1;
     });
 
-    await _supabaseService.toggleLikePost(widget.currentUserId, widget.post.id);
+    await Provider.of<FeedController>(context, listen: false).toggleLikePost(widget.currentUserId, widget.post.id);
     if (widget.onLikeToggled != null) widget.onLikeToggled!();
   }
 
@@ -191,9 +203,56 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
     );
   }
 
+  void _showOptionsBottomSheet(BuildContext context, bool isOwner, LanguageController langController) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgWarmCream,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(width: 40, height: 5, decoration: BoxDecoration(color: AppTheme.borderWarm, borderRadius: BorderRadius.circular(3))),
+              const SizedBox(height: 20),
+              if (isOwner)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                  title: Text('Eliminar publicación', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await Provider.of<FeedController>(context, listen: false).deletePetPost(widget.post.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Publicación eliminada')));
+                    }
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.report_problem_outlined, color: Colors.orange),
+                  title: Text('Reportar / Bloquear', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await Provider.of<FeedController>(context, listen: false).reportPost(widget.post.id, userId: widget.currentUserId);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Publicación reportada y bloqueada para ti')));
+                    }
+                  },
+                ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langController = Provider.of<LanguageController>(context);
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final isOwner = authController.activePet?.id == widget.post.petId;
     final petName = widget.post.petName ?? 'Mascota';
     final petAvatar = widget.post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200';
 
@@ -253,32 +312,44 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
           child: Column(
             children: [
               // Pet Profile Avatar with mint badge
-              Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.emeraldGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(petAvatar),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primaryTerracotta,
-                        shape: BoxShape.circle,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    debugPrint('Tapped Avatar! Navigating to PetProfileScreen');
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
+                    );
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.emeraldGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundImage: NetworkImage(petAvatar),
+                        ),
                       ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 14),
-                    ),
+                      Positioned(
+                        bottom: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryTerracotta,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 22),
 
@@ -331,6 +402,18 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
               ),
               const SizedBox(height: 22),
 
+              // MORE OPTIONS BUTTON
+              GestureDetector(
+                onTap: () => _showOptionsBottomSheet(context, isOwner, langController),
+                child: const Column(
+                  children: [
+                    Icon(Icons.more_vert_rounded, color: Colors.white, size: 30),
+                    SizedBox(height: 4),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+
               // SPONSORSHIP BAR BUTTON (Dual Stripe & Solana Pay Modal)
               GestureDetector(
                 onTap: () {
@@ -379,12 +462,26 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
             children: [
               Row(
                 children: [
-                  Text(
-                    '@$petName',
-                    style: GoogleFonts.fredoka(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        debugPrint('Tapped Name! Navigating to PetProfileScreen');
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Text(
+                          '@$petName',
+                          style: GoogleFonts.fredoka(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),

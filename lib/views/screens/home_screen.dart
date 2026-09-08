@@ -32,7 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<FeedController>(context, listen: false).fetchActivePosts();
+      final authController = Provider.of<AuthController>(context, listen: false);
+      Provider.of<FeedController>(context, listen: false).fetchActivePosts(currentUserId: authController.currentProfile?.id);
     });
   }
 
@@ -498,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(langController.t('noActivePosts'), style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => feedController.fetchActivePosts(),
+              onPressed: () => feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id),
               child: Text(langController.t('refreshFeed'), style: GoogleFonts.fredoka()),
             ),
           ],
@@ -506,96 +507,103 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Stack(
-      children: [
-        // Vertical PageView (TikTok Style)
-        PageView.builder(
-          controller: _pageController,
-          scrollDirection: Axis.vertical,
-          itemCount: feedController.posts.length,
-          onPageChanged: (index) {
-            // Trigger Registration Wall after watching 3 videos for guests!
-            if (!authController.isAuthenticated && index >= 3 && !_hasShownRegisterWall) {
-              setState(() => _hasShownRegisterWall = true);
-              _showTikTokRegistrationWall(context, authController);
-            }
-          },
-          itemBuilder: (context, index) {
-            final post = feedController.posts[index];
-            return TikTokFeedItem(
-              post: post,
-              currentUserId: currentUserId,
-              onLikeToggled: () {
-                if (!authController.isAuthenticated) {
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Stack(
+          children: [
+            // Vertical PageView (TikTok Style)
+            PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              itemCount: feedController.posts.length,
+              onPageChanged: (index) {
+                // Trigger Registration Wall after watching 3 videos for guests!
+                if (!authController.isAuthenticated && index >= 3 && !_hasShownRegisterWall) {
+                  setState(() => _hasShownRegisterWall = true);
                   _showTikTokRegistrationWall(context, authController);
-                } else {
-                  setState(() {});
                 }
               },
-            );
-          },
-        ),
-
-        // Top Overlay Header (Pawly Warm Style)
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.pets_rounded, color: AppTheme.accentOrange, size: 28),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Pawtbook',
-                      style: GoogleFonts.fredoka(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          const Shadow(color: Colors.black45, blurRadius: 8),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const LanguageSelector(isDark: true),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        if (!authController.isAuthenticated) {
-                          _showTikTokRegistrationWall(context, authController);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white30),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${authController.currentProfile?.pawtScore ?? 100} pts',
-                              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              itemBuilder: (context, index) {
+                final post = feedController.posts[index];
+                return TikTokFeedItem(
+                  post: post,
+                  currentUserId: currentUserId,
+                  onLikeToggled: () {
+                    if (!authController.isAuthenticated) {
+                      _showTikTokRegistrationWall(context, authController);
+                    } else {
+                      setState(() {});
+                    }
+                  },
+                );
+              },
             ),
-          ),
+
+            // Top Overlay Header (Pawly Warm Style)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.pets_rounded, color: AppTheme.accentOrange, size: 28),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Pawtbook',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [
+                              const Shadow(color: Colors.black45, blurRadius: 8),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const LanguageSelector(isDark: true),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            if (!authController.isAuthenticated) {
+                              _showTikTokRegistrationWall(context, authController);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white30),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${authController.currentProfile?.pawtScore ?? 100} pts',
+                                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

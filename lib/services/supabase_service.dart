@@ -18,6 +18,7 @@ class SupabaseService {
   final List<CommentModel> _mockComments = [];
   final List<SponsorshipModel> _mockSponsorships = [];
   final Set<String> _mockLikedPostUserKeys = {}; // "userId_postId"
+  final Set<String> _mockFollows = {}; // "humanId_petId"
   final List<RewardOrderModel> _mockOrders = [];
 
   SupabaseService({bool useMockFallback = true}) : _useMockFallback = useMockFallback {
@@ -446,13 +447,7 @@ class SupabaseService {
     }
   }
 
-  Future<void> reportPost(String postId) async {
-    final idx = _mockPosts.indexWhere((p) => p.id == postId);
-    if (idx != -1) {
-      final current = _mockPosts[idx];
-      _mockPosts[idx] = current.copyWith(reportCount: current.reportCount + 1);
-    }
-  }
+
 
   // --- Orders Operations ---
   Future<List<RewardOrderModel>> getOrdersForUser(String userId) async {
@@ -463,4 +458,72 @@ class SupabaseService {
     _mockOrders.add(order);
     return order;
   }
+
+  // --- Post Moderation ---
+
+  Future<void> reportPost(String postId, String userId) async {
+    if (!_useMockFallback && _client != null) {
+      try {
+        await _client!.from('reports').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reason': 'inappropriate',
+        });
+      } catch (_) {}
+    }
+    _mockPosts.removeWhere((p) => p.id == postId);
+  }
+
+  // --- Follows & Profiles ---
+  Future<void> followPet(String humanId, String petId) async {
+    if (!_useMockFallback && _client != null) {
+      try {
+        await _client!.from('follows').insert({
+          'follower_id': humanId,
+          'following_pet_id': petId,
+        });
+      } catch (_) {}
+    }
+    _mockFollows.add('${humanId}_$petId');
+  }
+
+  Future<void> unfollowPet(String humanId, String petId) async {
+    if (!_useMockFallback && _client != null) {
+      try {
+        await _client!.from('follows').delete().eq('follower_id', humanId).eq('following_pet_id', petId);
+      } catch (_) {}
+    }
+    _mockFollows.remove('${humanId}_$petId');
+  }
+
+  Future<List<PetModel>> getFollowedPets(String humanId) async {
+    if (!_useMockFallback && _client != null) {
+      try {
+        final res = await _client!.from('follows').select('pets(*)').eq('follower_id', humanId);
+        return (res as List).map((e) => PetModel.fromJson(e['pets'])).toList();
+      } catch (_) {}
+    }
+    return _mockPets.values.where((p) => _mockFollows.contains('${humanId}_${p.id}')).toList();
+  }
+
+  Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {
+    if (!_useMockFallback && _client != null) {
+      try {
+        final res = await _client!.from('posts').select('*, pets(*)').eq('pet_id', petId).order('created_at', ascending: false);
+        final posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          final likedRes = await _client!.from('post_likes').select('post_id').eq('user_id', currentUserId);
+          final likedIds = (likedRes as List).map((e) => e['post_id'] as String).toSet();
+          return posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
+        }
+        return posts;
+      } catch (_) {}
+    }
+    return _mockPosts.where((p) => p.petId == petId).map((p) {
+      final key = '${currentUserId}_${p.id}';
+      return p.copyWith(isLikedByCurrentUser: _mockLikedPostUserKeys.contains(key));
+    }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
 }
+
+

@@ -6,6 +6,7 @@ import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../theme/app_theme.dart';
+import '../../models/post_model.dart';
 import '../widgets/sponsorship_modal.dart';
 import 'login_screen.dart';
 
@@ -21,11 +22,25 @@ class PetProfileScreen extends StatefulWidget {
 class _PetProfileScreenState extends State<PetProfileScreen> {
   bool _isVerifyingNft = false;
   String? _verifiedNftAddress;
+  bool _isFollowing = false;
+  Future<List<PostModel>>? _postsFuture;
 
   @override
   void initState() {
     super.initState();
     _verifiedNftAddress = widget.pet.nftMintAddress;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthController>(context, listen: false);
+      final feed = Provider.of<FeedController>(context, listen: false);
+      if (auth.currentProfile != null) {
+        feed.getFollowedPets(auth.currentProfile!.id).then((pets) {
+          if (mounted) setState(() => _isFollowing = pets.any((p) => p.id == widget.pet.id));
+        });
+      }
+      setState(() {
+        _postsFuture = feed.getPostsForPet(widget.pet.id, currentUserId: auth.currentProfile?.id);
+      });
+    });
   }
 
   Future<void> _verifySolanaWalletNft(AuthController authController) async {
@@ -59,7 +74,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final feedController = Provider.of<FeedController>(context);
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
-    final petPosts = feedController.posts.where((p) => p.petId == widget.pet.id).toList();
+    final isOwner = authController.activePet?.id == widget.pet.id;
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -71,18 +86,19 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            tooltip: langController.t('logOut'),
-            onPressed: () async {
-              await authController.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              }
-            },
-          ),
+          if (isOwner)
+            IconButton(
+              icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              tooltip: langController.t('logOut'),
+              onPressed: () async {
+                await authController.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
+              },
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -144,6 +160,50 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 18),
+                  
+                  if (!isOwner && authController.isAuthenticated)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isFollowing ? AppTheme.surfaceWarm : AppTheme.primaryTerracotta,
+                            foregroundColor: _isFollowing ? AppTheme.primaryTerracotta : Colors.white,
+                            elevation: _isFollowing ? 0 : 2,
+                            side: BorderSide(color: AppTheme.primaryTerracotta, width: _isFollowing ? 1 : 0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          icon: Icon(_isFollowing ? Icons.check_rounded : Icons.person_add_rounded),
+                          label: Text(_isFollowing ? 'Siguiendo' : 'Seguir', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                          onPressed: () async {
+                            final myId = authController.currentProfile!.id;
+                            if (_isFollowing) {
+                              await feedController.unfollowPet(myId, widget.pet.id);
+                              setState(() => _isFollowing = false);
+                            } else {
+                              await feedController.followPet(myId, widget.pet.id);
+                              setState(() => _isFollowing = true);
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentOrange,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          icon: const Icon(Icons.volunteer_activism_rounded),
+                          label: Text('Patrocinar', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            SponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile!.id);
+                          },
+                        ),
+                      ],
+                    ),
+                  if (!isOwner && authController.isAuthenticated)
+                    const SizedBox(height: 18),
 
                   // Solana NFT Badge & Verification Button Section
                   if (_verifiedNftAddress != null && _verifiedNftAddress!.isNotEmpty && !_verifiedNftAddress!.contains('SolMint')) ...[
@@ -192,12 +252,18 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   ],
 
                   // Stats Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatColumn('PawtScore', '${widget.pet.totalSponsoredScore} pts', AppTheme.accentOrange),
-                      _buildStatColumn('Publicaciones', '${petPosts.length}', AppTheme.primaryTerracotta),
-                    ],
+                  FutureBuilder<List<PostModel>>(
+                    future: _postsFuture,
+                    builder: (context, snapshot) {
+                      final postsCount = snapshot.data?.length ?? 0;
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildStatColumn('PawtScore', '${widget.pet.totalSponsoredScore} pts', AppTheme.accentOrange),
+                          _buildStatColumn('Publicaciones', '$postsCount', AppTheme.primaryTerracotta),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 18),
 
@@ -267,16 +333,29 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               ),
             ),
 
-            if (petPosts.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'Esta mascota aún no tiene publicaciones activas.',
-                  style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                ),
-              )
-            else
-              GridView.builder(
+            FutureBuilder<List<PostModel>>(
+              future: _postsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator(color: AppTheme.primaryTerracotta)),
+                  );
+                }
+                
+                final petPosts = snapshot.data ?? [];
+
+                if (petPosts.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      'Esta mascota aún no tiene publicaciones activas.',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                    ),
+                  );
+                }
+                  
+                return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -303,7 +382,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
                             ),
                           ),
-                          if (authController.currentProfile?.id == widget.pet.ownerId)
+                          if (isOwner)
                             Positioned(
                               top: 4,
                               right: 4,
@@ -330,6 +409,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                             onPressed: () {
                                               Navigator.pop(ctx);
                                               feedController.deletePetPost(post.id);
+                                              setState(() {
+                                                _postsFuture = feedController.getPostsForPet(widget.pet.id, currentUserId: authController.currentProfile?.id);
+                                              });
                                             },
                                             child: Text('Eliminar', style: GoogleFonts.fredoka(color: Colors.redAccent)),
                                           ),
@@ -345,7 +427,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     ),
                   );
                 },
-              ),
+              );
+            }),
             const SizedBox(height: 24),
           ],
         ),
