@@ -1143,7 +1143,11 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
+            if (!authController.isAuthenticated) {
+              _showTikTokRegistrationWall(context, authController);
+            } else {
+              SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(10),

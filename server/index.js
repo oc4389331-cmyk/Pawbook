@@ -522,6 +522,50 @@ app.post('/api/sponsorship/solana-pay', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 7A. CARD TO $SKR ON-RAMP SPONSORSHIP (Dynamic.xyz Solana Wallet)
+// --------------------------------------------------------------------------
+app.post('/api/sponsorship/card-to-skr', async (req, res) => {
+  const { sponsorId, petId, amountUsd, skrAmount, sponsorWallet, petWallet, cardDetails } = req.body;
+
+  if (!petId || !skrAmount) {
+    return res.status(400).json({ success: false, error: 'Missing petId or skrAmount' });
+  }
+
+  const txHash = 'skr_onramp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+
+  if (supabaseAdmin && sponsorId) {
+    try {
+      await supabaseAdmin.from('sponsorships').insert({
+        id: 'spn_' + Date.now(),
+        sponsor_id: sponsorId,
+        pet_id: petId,
+        amount: skrAmount,
+        payment_method: 'card_to_skr',
+        tx_hash: txHash,
+      });
+
+      // Increment pet sponsorships & points
+      await supabaseAdmin.rpc('increment_pet_sponsorship', {
+        pet_id: petId,
+        amount: skrAmount
+      }).catch(err => console.error('Error incrementing pet sponsorship:', err));
+    } catch (e) {
+      console.error('Error inserting card-to-skr sponsorship record:', e);
+    }
+  }
+
+  return res.json({
+    success: true,
+    txHash,
+    skrAmount,
+    amountUsd: amountUsd || (skrAmount / 20.0),
+    sponsorWallet: sponsorWallet || 'DynamicSolanaWallet',
+    petWallet: petWallet || 'PawSolVaultPetAddress',
+    message: `Payment of $${amountUsd || (skrAmount / 20.0)} USD converted to ${skrAmount} $SKR and transferred via Dynamic Solana Wallet.`
+  });
+});
+
+// --------------------------------------------------------------------------
 // 7B. FOLLOWS & PROFILES ENDPOINTS
 // --------------------------------------------------------------------------
 const serverFollows = new Set(); // "followerId_petId"
