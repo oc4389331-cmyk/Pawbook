@@ -89,18 +89,21 @@ class AuthController extends ChangeNotifier {
             // Leer intención OAuth desde almacenamiento persistente (sobrevive redirección en web)
             final storedOauthAction = AuthStorageService.instance.getItem('pawtbook_oauth_action');
             final isSignUpMode = storedOauthAction == 'signup' || _pendingIsSignUp || (kIsWeb && Uri.base.queryParameters['isSignUp'] == 'true');
-            final isLoginMode = storedOauthAction == 'login';
+            final isLoginMode = storedOauthAction == 'login' || (kIsWeb && Uri.base.queryParameters['isSignUp'] == 'false');
 
             // 1. VALIDACIÓN EN MODO "CREAR CUENTA" (Sign Up):
-            // Si el usuario eligió "Crear Cuenta" con Google, pero el correo ya existe en base de datos -> BLOQUEAR
-            if (email != null && email.isNotEmpty && isSignUpMode) {
-              final existing = await _supabaseService.getProfileByEmail(email);
+            // Si el usuario eligió "Crear Cuenta" con Google, pero la cuenta ya existe en base de datos -> BLOQUEAR
+            if (isSignUpMode) {
+              final existingByWallet = await _supabaseService.getProfileByWallet(wallet);
+              final existingByEmail = (email != null && email.isNotEmpty) ? await _supabaseService.getProfileByEmail(email) : null;
+              final existing = existingByWallet ?? existingByEmail;
+
               if (existing != null) {
-                debugPrint('[Auth] Cuenta existente encontrada para $email en modo Crear Cuenta - bloqueando.');
+                debugPrint('[Auth] Cuenta existente encontrada para ${email ?? wallet} en modo Crear Cuenta - bloqueando.');
                 AuthStorageService.instance.removeItem('pawtbook_oauth_action');
                 _pendingIsSignUp = false;
                 await Supabase.instance.client.auth.signOut();
-                _errorMessage = '⚠️ Este correo ($email) ya tiene una cuenta registrada. Por favor, selecciona "Iniciar Sesión".';
+                _errorMessage = '⚠️ Este correo (${email ?? "Google"}) ya tiene una cuenta registrada en Pawbook. Por favor, selecciona "Iniciar Sesión".';
                 _setLoading(false);
                 notifyListeners();
                 return;
@@ -108,14 +111,17 @@ class AuthController extends ChangeNotifier {
             }
 
             // 2. VALIDACIÓN EN MODO "INICIAR SESIÓN" (Login):
-            // Si el usuario eligió "Iniciar Sesión" con Google, pero el correo no existe en base de datos -> BLOQUEAR
-            if (email != null && email.isNotEmpty && isLoginMode) {
-              final existing = await _supabaseService.getProfileByEmail(email);
+            // Si el usuario eligió "Iniciar Sesión" con Google, pero no tiene cuenta creada -> BLOQUEAR
+            if (isLoginMode) {
+              final existingByWallet = await _supabaseService.getProfileByWallet(wallet);
+              final existingByEmail = (email != null && email.isNotEmpty) ? await _supabaseService.getProfileByEmail(email) : null;
+              final existing = existingByWallet ?? existingByEmail;
+
               if (existing == null) {
-                debugPrint('[Auth] No existe cuenta para $email en modo Iniciar Sesión - bloqueando.');
+                debugPrint('[Auth] No existe cuenta para ${email ?? wallet} en modo Iniciar Sesión - bloqueando.');
                 AuthStorageService.instance.removeItem('pawtbook_oauth_action');
                 await Supabase.instance.client.auth.signOut();
-                _errorMessage = '⚠️ No existe una cuenta registrada con el correo ($email). Por favor, ve a "Crear Cuenta".';
+                _errorMessage = '⚠️ No existe una cuenta registrada con el correo (${email ?? "este usuario"}). Por favor, ve a "Crear Cuenta".';
                 _setLoading(false);
                 notifyListeners();
                 return;

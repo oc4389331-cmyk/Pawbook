@@ -660,6 +660,34 @@ class _HomeScreenState extends State<HomeScreen> {
     final langController = Provider.of<LanguageController>(context);
     final currentUserId = authController.currentProfile?.id ?? 'usr_guest';
 
+    if (authController.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final msg = authController.errorMessage;
+        if (msg != null && mounted) {
+          authController.clearError();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppTheme.primaryTerracotta,
+              duration: const Duration(seconds: 5),
+              content: Text(
+                msg,
+                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14),
+              ),
+              action: SnackBarAction(
+                label: 'Ir a Login',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
       body: IndexedStack(

@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             const SizedBox(width: 12),
             Text(
-              langController.t('continueWithGoogle'),
+              _isSignUp ? '✨ Crear Cuenta con Google' : '🔑 Iniciar Sesión con Google',
               style: GoogleFonts.fredoka(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
