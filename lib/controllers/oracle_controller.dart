@@ -30,13 +30,13 @@ class OraclePriceData {
   factory OraclePriceData.fromJson(Map<String, dynamic> json) {
     return OraclePriceData(
       symbol: json['symbol'] ?? 'SKR',
-      name: json['name'] ?? 'Seeker / Pawbook Token',
-      priceUsd: (json['priceUsd'] is num) ? (json['priceUsd'] as num).toDouble() : 0.0524,
-      priceSol: (json['priceSol'] is num) ? (json['priceSol'] as num).toDouble() : 0.00034,
-      change24h: (json['change24h'] is num) ? (json['change24h'] as num).toDouble() : 4.25,
-      high24h: (json['high24h'] is num) ? (json['high24h'] as num).toDouble() : 0.056,
-      low24h: (json['low24h'] is num) ? (json['low24h'] as num).toDouble() : 0.049,
-      oracleProvider: json['oracleProvider'] ?? 'Pyth Network / Jupiter Solana Feed',
+      name: json['name'] ?? 'Seeker',
+      priceUsd: (json['priceUsd'] is num) ? (json['priceUsd'] as num).toDouble() : 0.0215,
+      priceSol: (json['priceSol'] is num) ? (json['priceSol'] as num).toDouble() : 0.00014,
+      change24h: (json['change24h'] is num) ? (json['change24h'] as num).toDouble() : 1.76,
+      high24h: (json['high24h'] is num) ? (json['high24h'] as num).toDouble() : 0.023,
+      low24h: (json['low24h'] is num) ? (json['low24h'] as num).toDouble() : 0.020,
+      oracleProvider: json['oracleProvider'] ?? 'Solana DEX (Orca / Jupiter Feed)',
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.tryParse(json['lastUpdated'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -48,10 +48,10 @@ class OracleController extends ChangeNotifier {
   final String _backendUrl;
   final http.Client _httpClient;
 
-  double _priceUsd = 0.0524;
-  double _priceSol = 0.00034;
-  double _change24h = 4.35;
-  String _oracleProvider = 'Pyth / Jupiter Solana Feed';
+  double _priceUsd = 0.0215;
+  double _priceSol = 0.00014;
+  double _change24h = 1.76;
+  String _oracleProvider = 'Solana DEX (Orca / Jupiter)';
   DateTime _lastUpdated = DateTime.now();
   bool _isLoading = false;
   Timer? _pollingTimer;
@@ -84,7 +84,7 @@ class OracleController extends ChangeNotifier {
     try {
       final res = await _httpClient.get(
         Uri.parse('$_backendUrl/api/oracle/skr-price'),
-      );
+      ).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['success'] == true) {
@@ -99,12 +99,12 @@ class OracleController extends ChangeNotifier {
         }
       }
     } catch (_) {
-      // Fallback algorithmic live simulation
+      // Fallback algorithmic live simulation based on real $SKR market price (0.0215)
       final now = DateTime.now().millisecondsSinceEpoch;
       final cycle = (now / 15000);
-      final drift = (cycle % 10 - 5) * 0.0003;
-      _priceUsd = double.parse((0.0524 + drift).toStringAsFixed(4));
-      _change24h = 4.15 + drift * 10;
+      final drift = (cycle % 10 - 5) * 0.00008;
+      _priceUsd = double.parse((0.02156 + drift).toStringAsFixed(5));
+      _change24h = 1.76 + drift * 10;
       _lastUpdated = DateTime.now();
       notifyListeners();
     }
