@@ -5,6 +5,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
+import '../../services/dynamic_auth_service.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
@@ -34,47 +35,18 @@ class SponsorshipModal extends StatefulWidget {
 
 class _SponsorshipModalState extends State<SponsorshipModal> {
   int _selectedSkrAmount = 100;
-  String _paymentMethod = 'card_to_skr'; // 'card_to_skr' or 'solana_direct'
+  String _selectedWallet = 'Phantom'; // 'Phantom', 'Solflare', 'Seeker', 'Dynamic'
   bool _isProcessing = false;
   String _processingStep = '';
 
-  final _cardNumberController = TextEditingController(text: '4242 4242 4242 4242');
-  final _cardExpiryController = TextEditingController(text: '12/28');
-  final _cardCvcController = TextEditingController(text: '777');
-  final _cardHolderController = TextEditingController(text: 'Tutor Pawtbook');
-
+  final DynamicAuthService _dynamicAuthService = DynamicAuthService();
   final RenderBackendService _renderService = RenderBackendService();
   final SupabaseService _supabaseService = SupabaseService();
-
-  @override
-  void dispose() {
-    _cardNumberController.dispose();
-    _cardExpiryController.dispose();
-    _cardCvcController.dispose();
-    _cardHolderController.dispose();
-    super.dispose();
-  }
 
   double _calculateUsdPrice(OracleController oracle) =>
       double.parse(oracle.convertSkrToUsd(_selectedSkrAmount).toStringAsFixed(2));
 
-  void _fillTestCard() {
-    setState(() {
-      _cardNumberController.text = '4242 4242 4242 4242';
-      _cardExpiryController.text = '12/28';
-      _cardCvcController.text = '777';
-      _cardHolderController.text = 'Tutor Pawtbook';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: AppTheme.emeraldGreen,
-        duration: Duration(seconds: 2),
-        content: Text('💳 Datos de tarjeta de prueba cargados correctamente ✨'),
-      ),
-    );
-  }
-
-  Future<void> _processSponsorship(
+  Future<void> _processWalletSponsorship(
     AuthController authController,
     OracleController oracleController,
     LanguageController langController,
@@ -82,158 +54,100 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     final usdPrice = _calculateUsdPrice(oracleController);
-
-    // Validation for Card
-    if (_paymentMethod == 'card_to_skr') {
-      final cardNum = _cardNumberController.text.replaceAll(' ', '').trim();
-      if (cardNum.length < 15) {
-        messenger.showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('⚠️ Por favor ingresa un número de tarjeta válido (16 dígitos).'),
-          ),
-        );
-        return;
-      }
-      if (_cardExpiryController.text.trim().isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('⚠️ Por favor ingresa la fecha de vencimiento (MM/AA).'),
-          ),
-        );
-        return;
-      }
-      if (_cardCvcController.text.trim().length < 3) {
-        messenger.showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('⚠️ Por favor ingresa un CVC/CVV válido (3 dígitos).'),
-          ),
-        );
-        return;
-      }
-    }
+    final solPrice = (usdPrice / 155.0).toStringAsFixed(5);
 
     setState(() {
       _isProcessing = true;
-      _processingStep = '💳 Autorizando tarjeta con el banco...';
+      _processingStep = '⚡ Abriendo y conectando con $_selectedWallet...';
     });
 
-    final sponsorWallet = authController.currentProfile?.walletAddress ?? 'sol_${widget.userId.substring(0, 12)}';
-    final petWallet = widget.pet.nftMintAddress ?? 'PawSol${widget.pet.id.replaceAll("-", "").substring(0, 16)}';
-
     try {
-      if (_paymentMethod == 'card_to_skr') {
-        // Step 1: Authorization
-        await Future.delayed(const Duration(milliseconds: 400));
-        if (mounted) {
-          setState(() => _processingStep = '🔄 Oráculo DEX: Cotizando \$$usdPrice USD a $_selectedSkrAmount \$SKR (${oracleController.formattedPriceUsd})...');
-        }
+      // Step 1: Connect specific Solana Wallet (Phantom / Solflare / Seeker / Dynamic)
+      await Future.delayed(const Duration(milliseconds: 400));
+      final walletResult = await _dynamicAuthService.connectSpecificWallet(_selectedWallet);
 
-        // Step 2: Dynamic On-Ramp
-        await Future.delayed(const Duration(milliseconds: 400));
-        if (mounted) {
-          setState(() => _processingStep = '⚡ Transfiriendo $_selectedSkrAmount \$SKR a la wallet Solana de @${widget.pet.name}...');
-        }
+      if (!walletResult.isSuccess && walletResult.errorMessage != null) {
+        throw Exception(walletResult.errorMessage);
+      }
 
-        final result = await _renderService.payWithCardConvertToSkr(
-          sponsorId: widget.userId,
-          petId: widget.pet.id,
-          amountUsd: usdPrice,
-          skrAmount: _selectedSkrAmount,
-          sponsorWallet: sponsorWallet,
-          petWallet: petWallet,
-          cardDetails: {
-            'holder': _cardHolderController.text.trim(),
-            'last4': _cardNumberController.text.trim().replaceAll(' ', '').substring(
-                  _cardNumberController.text.trim().replaceAll(' ', '').length > 4
-                      ? _cardNumberController.text.trim().replaceAll(' ', '').length - 4
-                      : 0,
-                ),
-          },
-        );
+      final payerWallet = walletResult.walletAddress ??
+          authController.currentProfile?.walletAddress ??
+          'sol_${widget.userId.substring(0, 12)}';
+      final petWallet = widget.pet.nftMintAddress ??
+          'PawSol${widget.pet.id.replaceAll("-", "").substring(0, 16)}';
 
-        final txHash = result['txHash'] ?? 'skr_onramp_${DateTime.now().millisecondsSinceEpoch}';
+      // Step 2: Request user approval / sign transfer
+      if (mounted) {
+        setState(() => _processingStep = '✍️ Esperando aprobación de transferencia en $_selectedWallet...');
+      }
+      await Future.delayed(const Duration(milliseconds: 600));
 
-        await _supabaseService.sponsorPet(
-          sponsorId: widget.userId,
-          petId: widget.pet.id,
-          amount: _selectedSkrAmount,
-          paymentMethod: 'card_to_skr',
-          txHash: txHash,
-        ).timeout(const Duration(seconds: 4), onTimeout: () {});
+      // Step 3: Send transfer to Pet Wallet on Solana
+      if (mounted) {
+        setState(() => _processingStep = '🚀 Transfiriendo $_selectedSkrAmount \$SKR a la wallet de @${widget.pet.name}...');
+      }
 
-        authController.addPawtScore(_selectedSkrAmount);
+      final txHash = 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
 
-        if (mounted) {
-          nav.pop();
-          messenger.showSnackBar(
-            SnackBar(
-              backgroundColor: AppTheme.emeraldGreen,
-              duration: const Duration(seconds: 5),
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '🎉 ¡Patrocinio Exitoso con Tarjeta!',
-                          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
-                        ),
-                        Text(
-                          'Pagas \$$usdPrice USD ➔ $_selectedSkrAmount \$SKR acreditados a @${widget.pet.name} vía Solana Dynamic.',
-                          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ),
+      // Register on Backend
+      await _renderService.payWithCardConvertToSkr(
+        sponsorId: widget.userId,
+        petId: widget.pet.id,
+        amountUsd: usdPrice,
+        skrAmount: _selectedSkrAmount,
+        sponsorWallet: payerWallet,
+        petWallet: petWallet,
+      );
+
+      // Register in Supabase
+      await _supabaseService.sponsorPet(
+        sponsorId: widget.userId,
+        petId: widget.pet.id,
+        amount: _selectedSkrAmount,
+        paymentMethod: 'solana_${_selectedWallet.toLowerCase()}',
+        txHash: txHash,
+      ).timeout(const Duration(seconds: 4), onTimeout: () {});
+
+      authController.addPawtScore(_selectedSkrAmount);
+
+      if (mounted) {
+        nav.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.emeraldGreen,
+            duration: const Duration(seconds: 5),
+            content: Row(
+              children: [
+                const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '⚡ ¡Transferencia Completada con $_selectedWallet!',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                      ),
+                      Text(
+                        '$_selectedSkrAmount \$SKR (~$solPrice SOL / \$$usdPrice USD) transferidos con éxito a @${widget.pet.name}.',
+                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        }
-      } else {
-        // Direct Solana Wallet payment
-        if (mounted) setState(() => _processingStep = '⚡ Firmando transacción on-chain en Solana (Dynamic.xyz)...');
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        final txHash = 'sol_direct_${DateTime.now().millisecondsSinceEpoch}';
-
-        await _supabaseService.sponsorPet(
-          sponsorId: widget.userId,
-          petId: widget.pet.id,
-          amount: _selectedSkrAmount,
-          paymentMethod: 'solana_direct',
-          txHash: txHash,
-        ).timeout(const Duration(seconds: 4), onTimeout: () {});
-
-        authController.addPawtScore(_selectedSkrAmount);
-
-        if (mounted) {
-          nav.pop();
-          messenger.showSnackBar(
-            SnackBar(
-              backgroundColor: AppTheme.emeraldGreen,
-              duration: const Duration(seconds: 4),
-              content: Text(
-                '⚡ ¡Transferencia de $_selectedSkrAmount \$SKR completada en Solana para @${widget.pet.name}!',
-                style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          );
-        }
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: Colors.redAccent,
-            content: Text('Error al procesar patrocinio: $e', style: GoogleFonts.fredoka()),
+            duration: const Duration(seconds: 4),
+            content: Text('⚠️ $e', style: GoogleFonts.fredoka()),
           ),
         );
       }
@@ -251,6 +165,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final oracleController = Provider.of<OracleController>(context);
     final userWallet = authController.currentProfile?.walletAddress ?? 'sol_${widget.userId.substring(0, 10)}...';
     final currentUsdPrice = _calculateUsdPrice(oracleController);
+    final currentSolPrice = (currentUsdPrice / 155.0).toStringAsFixed(5);
 
     return Container(
       constraints: BoxConstraints(
@@ -368,315 +283,120 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               ),
               const SizedBox(height: 16),
 
-              // Payment Method Selector
-              Text(
-                '2. Método de Pago:',
-                style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
+              // Select Solana Wallet Provider
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _paymentMethod = 'card_to_skr'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: _paymentMethod == 'card_to_skr'
-                              ? AppTheme.primaryTerracotta.withValues(alpha: 0.12)
-                              : AppTheme.surfaceWarm,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _paymentMethod == 'card_to_skr'
-                                ? AppTheme.primaryTerracotta
-                                : AppTheme.borderWarm,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.credit_card_rounded, color: AppTheme.primaryTerracotta, size: 22),
-                            const SizedBox(height: 3),
-                            Text(
-                              '💳 Tarjeta ➔ \$SKR',
-                              style: GoogleFonts.fredoka(
-                                color: AppTheme.primaryTerracotta,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              'On-Ramp Instantáneo',
-                              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 10),
-                            ),
-                          ],
-                        ),
-                      ),
+                  Text(
+                    '2. Selecciona tu Wallet de Solana:',
+                    style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderWarm,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '🔒 Tarjeta temporalmente inhabilitada',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 10, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _paymentMethod = 'solana_direct'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: _paymentMethod == 'solana_direct'
-                              ? AppTheme.emeraldGreen.withValues(alpha: 0.12)
-                              : AppTheme.surfaceWarm,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _paymentMethod == 'solana_direct'
-                                ? AppTheme.emeraldGreen
-                                : AppTheme.borderWarm,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 22),
-                            const SizedBox(height: 3),
-                            Text(
-                              '⚡ Wallet Solana',
-                              style: GoogleFonts.fredoka(
-                                color: AppTheme.emeraldGreen,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              'Dynamic / Phantom',
-                              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 10),
-                            ),
-                          ],
-                        ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Grid / List of Wallet Options
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      _buildWalletOption(
+                        id: 'Phantom',
+                        title: 'Phantom',
+                        subtitle: 'Extensión / Móvil',
+                        iconData: Icons.shield_rounded,
+                        color: const Color(0xFFAB9FF2),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      _buildWalletOption(
+                        id: 'Solflare',
+                        title: 'Solflare',
+                        subtitle: 'Web / Extensión',
+                        iconData: Icons.wb_sunny_rounded,
+                        color: const Color(0xFFFC8C03),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildWalletOption(
+                        id: 'Seeker',
+                        title: 'Solana Seeker',
+                        subtitle: 'Seed Vault Nativo 📱',
+                        iconData: Icons.phone_android_rounded,
+                        color: const Color(0xFF14F195),
+                        badge: 'Nativo Mobile',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildWalletOption(
+                        id: 'Dynamic',
+                        title: 'Dynamic SIWS',
+                        subtitle: 'Pawtbook Wallet',
+                        iconData: Icons.account_balance_wallet_rounded,
+                        color: AppTheme.emeraldGreen,
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 14),
 
-              // Card Form & Live Preview (When Card-to-SKR is selected)
-              if (_paymentMethod == 'card_to_skr') ...[
-                // Visual Card Mockup
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2C3E50), Color(0xFF1A1A2E)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 28,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: Colors.amberAccent,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.contactless_rounded, color: Colors.white70, size: 20),
-                            ],
-                          ),
-                          Text(
-                            'VISA / MASTERCARD',
-                            style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        _cardNumberController.text.isNotEmpty ? _cardNumberController.text : '•••• •••• •••• ••••',
-                        style: GoogleFonts.sourceCodePro(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('TITULAR', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 9)),
-                              Text(
-                                _cardHolderController.text.isNotEmpty ? _cardHolderController.text.toUpperCase() : 'TITULAR',
-                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('VENCE', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 9)),
-                              Text(
-                                _cardExpiryController.text.isNotEmpty ? _cardExpiryController.text : 'MM/AA',
-                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              // Live Oracle Conversion Box
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceWarm,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.borderWarm),
                 ),
-                const SizedBox(height: 12),
-
-                // Quick Auto-Fill Test Card Button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Text(
-                      '3. Datos de la Tarjeta:',
-                      style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.swap_horizontal_circle_rounded, color: AppTheme.emeraldGreen, size: 18),
+                            const SizedBox(width: 6),
+                            Text('Conversión en Vivo:', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: AppTheme.emeraldGreen,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$_selectedSkrAmount \$SKR ≈ \$$currentUsdPrice USD',
+                            style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      icon: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryTerracotta, size: 16),
-                      label: Text(
-                        'Usar Tarjeta de Prueba (4242)',
-                        style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: _fillTestCard,
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Monto aproximado en SOL:', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11)),
+                        Text('$currentSolPrice SOL', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-
-                // Card Number Input
-                TextField(
-                  controller: _cardNumberController,
-                  keyboardType: TextInputType.number,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Número de Tarjeta',
-                    hintText: '4242 4242 4242 4242',
-                    prefixIcon: const Icon(Icons.credit_card_outlined, color: AppTheme.primaryTerracotta),
-                    filled: true,
-                    fillColor: AppTheme.surfaceWarm,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Expiry Date & CVC in Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _cardExpiryController,
-                        keyboardType: TextInputType.datetime,
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          labelText: 'Vence (MM/AA)',
-                          hintText: '12/28',
-                          prefixIcon: const Icon(Icons.calendar_today_outlined, color: AppTheme.primaryTerracotta),
-                          filled: true,
-                          fillColor: AppTheme.surfaceWarm,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _cardCvcController,
-                        keyboardType: TextInputType.number,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'CVC / CVV',
-                          hintText: '777',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primaryTerracotta),
-                          filled: true,
-                          fillColor: AppTheme.surfaceWarm,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Cardholder Name Input
-                TextField(
-                  controller: _cardHolderController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Nombre del Titular',
-                    hintText: 'Tutor Pawtbook',
-                    prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryTerracotta),
-                    filled: true,
-                    fillColor: AppTheme.surfaceWarm,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Live Summary Conversion Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceWarm,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.borderWarm),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.swap_horizontal_circle_rounded, color: AppTheme.primaryTerracotta, size: 18),
-                          const SizedBox(width: 6),
-                          Text('Cotización Oráculo:', style: GoogleFonts.fredoka(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryTerracotta,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '\$${currentUsdPrice.toStringAsFixed(2)} USD ➔ $_selectedSkrAmount \$SKR',
-                          style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
 
               if (_isProcessing) ...[
                 const SizedBox(height: 14),
@@ -692,14 +412,14 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2.5),
+                        child: CircularProgressIndicator(color: AppTheme.emeraldGreen, strokeWidth: 2.5),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _processingStep,
                           style: GoogleFonts.fredoka(
-                            color: AppTheme.primaryTerracotta,
+                            color: AppTheme.emeraldGreen,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -715,13 +435,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               // Action Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 child: ElevatedButton(
-                  onPressed: _isProcessing ? null : () => _processSponsorship(authController, oracleController, langController),
+                  onPressed: _isProcessing ? null : () => _processWalletSponsorship(authController, oracleController, langController),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _paymentMethod == 'card_to_skr'
-                        ? AppTheme.primaryTerracotta
-                        : AppTheme.emeraldGreen,
+                    backgroundColor: AppTheme.emeraldGreen,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(22),
                     ),
@@ -736,18 +454,14 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              _paymentMethod == 'card_to_skr'
-                                  ? Icons.credit_card_rounded
-                                  : Icons.bolt_rounded,
+                            const Icon(
+                              Icons.bolt_rounded,
                               color: Colors.white,
-                              size: 18,
+                              size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _paymentMethod == 'card_to_skr'
-                                  ? 'Pagar \$${currentUsdPrice.toStringAsFixed(2)} USD ➔ Enviar $_selectedSkrAmount \$SKR'
-                                  : 'Transferir $_selectedSkrAmount \$SKR desde Wallet',
+                              'Pagar $_selectedSkrAmount \$SKR con $_selectedWallet',
                               style: GoogleFonts.fredoka(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -765,6 +479,79 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     );
   }
 
+  Widget _buildWalletOption({
+    required String id,
+    required String title,
+    required String subtitle,
+    required IconData iconData,
+    required Color color,
+    String? badge,
+  }) {
+    final isSelected = _selectedWallet == id;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedWallet = id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.12) : AppTheme.surfaceWarm,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? color : AppTheme.borderWarm,
+              width: isSelected ? 2 : 1.2,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(iconData, color: color, size: 20),
+                  if (badge != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: GoogleFonts.outfit(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: GoogleFonts.fredoka(
+                  color: isSelected ? color : AppTheme.textPrimaryDark,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAmountOption(int skrAmount, double usdPrice, String label) {
     final isSelected = _selectedSkrAmount == skrAmount;
     return Expanded(
@@ -773,16 +560,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
+            color: isSelected ? AppTheme.emeraldGreen : AppTheme.surfaceWarm,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppTheme.primaryTerracotta : AppTheme.borderWarm,
+              color: isSelected ? AppTheme.emeraldGreen : AppTheme.borderWarm,
               width: 1.5,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryTerracotta.withValues(alpha: 0.25),
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.25),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
