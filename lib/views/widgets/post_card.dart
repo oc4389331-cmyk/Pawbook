@@ -22,9 +22,13 @@ class PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<PostCard> {
+  bool _isLiked = false;
+  late int _likesCount;
+
   @override
   void initState() {
     super.initState();
+    _likesCount = widget.post.likesCount;
   }
 
   @override

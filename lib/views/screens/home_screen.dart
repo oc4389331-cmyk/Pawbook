@@ -724,58 +724,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // Floating Action Button (+ Video): Differentiates between Pet Creator Mode vs Human Tutor Mode
-      floatingActionButton: authController.isAuthenticated
-          ? (authController.isPetModeActive
-              ? FloatingActionButton.extended(
-                  key: const ValueKey('fab_pet_mode'),
-                  backgroundColor: AppTheme.primaryTerracotta,
-                  elevation: 8,
-                  icon: const Icon(Icons.videocam_rounded, color: Colors.white),
-                  label: Text(
-                    '+ Video (@${authController.activePet?.name ?? "Mascota"})',
-                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
-                  ),
-                  tooltip: 'Publicar video como @${authController.activePet?.name ?? "Mascota"}',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-                    );
-                  },
-                )
-              : (authController.hasPet
-                  ? FloatingActionButton.extended(
-                      key: const ValueKey('fab_human_mode_with_pet'),
-                      backgroundColor: AppTheme.warmBrown,
-                      elevation: 6,
-                      icon: const Icon(Icons.pets_rounded, color: AppTheme.accentOrange),
-                      label: Text(
-                        '🐾 Publicar como @${authController.activePet?.name ?? "Mascota"}',
-                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-                      ),
-                      tooltip: 'Modo Humano activo. Toca para publicar como tu mascota @${authController.activePet?.name}',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-                        );
-                      },
-                    )
-                  : FloatingActionButton.extended(
-                      key: const ValueKey('fab_create_pet'),
-                      backgroundColor: AppTheme.accentOrange,
-                      elevation: 6,
-                      icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
-                      label: Text(
-                        '🐶 Registrar Mascota',
-                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-                      ),
-                      tooltip: 'Registra a tu mascota creadora para subir videos',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CreatePetScreen()),
-                        );
-                      },
-                    )))
+      // Floating Action Button (+ Video): ONLY visible when in Pet Creator Mode (Hidden in Human Profile Mode)
+      floatingActionButton: (authController.isAuthenticated && authController.isPetModeActive)
+          ? FloatingActionButton.extended(
+              key: const ValueKey('fab_pet_mode'),
+              backgroundColor: AppTheme.primaryTerracotta,
+              elevation: 8,
+              icon: const Icon(Icons.videocam_rounded, color: Colors.white),
+              label: Text(
+                '+ Video (@${authController.activePet?.name ?? "Mascota"})',
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+              ),
+              tooltip: 'Publicar video como @${authController.activePet?.name ?? "Mascota"}',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                );
+              },
+            )
           : null,
 
       bottomNavigationBar: Container(
@@ -1663,54 +1629,56 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Pet Creator Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceWarm,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppTheme.borderWarm),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryTerracotta.withOpacity(0.06),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
-                  const SizedBox(height: 12),
-                  Text(
-                    langController.t('doYouHaveAPet'),
-                    style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    langController.t('registerPetPrompt'),
-                    style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add_rounded, color: Colors.white),
-                    label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryTerracotta,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            // Pet Creator Card (Only shown if user has NOT registered a pet yet - Max 1 pet per user)
+            if (!authController.hasPet) ...[
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceWarm,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppTheme.borderWarm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryTerracotta.withOpacity(0.06),
+                      blurRadius: 16,
+                      spreadRadius: 2,
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreatePetScreen()),
-                      );
-                    },
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.pets_rounded, size: 52, color: AppTheme.accentOrange),
+                    const SizedBox(height: 12),
+                    Text(
+                      langController.t('doYouHaveAPet'),
+                      style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      langController.t('registerPetPrompt'),
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add_rounded, color: Colors.white),
+                      label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryTerracotta,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CreatePetScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.redAccent,
