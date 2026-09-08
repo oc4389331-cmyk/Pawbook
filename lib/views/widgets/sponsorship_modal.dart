@@ -7,7 +7,6 @@ import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
-import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 
 class SponsorshipModal extends StatefulWidget {
@@ -65,6 +64,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     LanguageController langController,
   ) async {
     final usdPrice = _calculateUsdPrice(oracleController);
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+
     setState(() {
       _isProcessing = true;
       _processingStep = '💳 Procesando pago con tarjeta...';
@@ -76,25 +78,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     try {
       if (_paymentMethod == 'card_to_skr') {
         // Step 1: Process card
-        await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) setState(() => _processingStep = '🔄 Oráculo Pyth: Convirtiendo \$$usdPrice USD a $_selectedSkrAmount \$SKR (${oracleController.formattedPriceUsd})...');
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (mounted) {
+          setState(() => _processingStep = '🔄 Oráculo Pyth: Convirtiendo \$$usdPrice USD a $_selectedSkrAmount \$SKR (${oracleController.formattedPriceUsd})...');
+        }
 
         // Step 2: On-ramp conversion & transfer via Backend
-        await Future.delayed(const Duration(milliseconds: 700));
-        if (mounted) setState(() => _processingStep = '⚡ Transfiriendo $_selectedSkrAmount \$SKR a la wallet de @${widget.pet.name} (Dynamic.xyz)...');
-
-        // Try creating real Stripe checkout / on-ramp session
-        try {
-          final stripeSession = await _renderService.createStripeCheckoutSession(
-            userId: widget.userId,
-            petId: widget.pet.id,
-            pointsAmount: _selectedSkrAmount,
-            priceUsd: usdPrice,
-          );
-          if (stripeSession['url'] != null && stripeSession['mode'] != 'mock') {
-            UrlLauncherService.instance.openUrl(stripeSession['url']);
-          }
-        } catch (_) {}
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (mounted) {
+          setState(() => _processingStep = '⚡ Transfiriendo $_selectedSkrAmount \$SKR a la wallet de @${widget.pet.name} (Dynamic.xyz)...');
+        }
 
         final result = await _renderService.payWithCardConvertToSkr(
           sponsorId: widget.userId,
@@ -117,16 +110,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           amount: _selectedSkrAmount,
           paymentMethod: 'card_to_skr',
           txHash: txHash,
-        );
+        ).timeout(const Duration(seconds: 4), onTimeout: () {});
 
         authController.addPawtScore(_selectedSkrAmount);
 
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
+          nav.pop();
+          messenger.showSnackBar(
             SnackBar(
               backgroundColor: AppTheme.emeraldGreen,
-              duration: const Duration(seconds: 4),
+              duration: const Duration(seconds: 5),
               content: Row(
                 children: [
                   const Icon(Icons.check_circle_rounded, color: Colors.white),
@@ -145,7 +138,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       } else {
         // Direct Solana Wallet payment
         if (mounted) setState(() => _processingStep = '⚡ Firmando transacción on-chain en Solana (Dynamic.xyz)...');
-        await Future.delayed(const Duration(milliseconds: 800));
+        await Future.delayed(const Duration(milliseconds: 500));
 
         final txHash = 'sol_direct_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -155,15 +148,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           amount: _selectedSkrAmount,
           paymentMethod: 'solana_direct',
           txHash: txHash,
-        );
+        ).timeout(const Duration(seconds: 4), onTimeout: () {});
 
         authController.addPawtScore(_selectedSkrAmount);
 
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
+          nav.pop();
+          messenger.showSnackBar(
             SnackBar(
               backgroundColor: AppTheme.emeraldGreen,
+              duration: const Duration(seconds: 4),
               content: Text(
                 '⚡ ¡Transferencia de $_selectedSkrAmount \$SKR completada en Solana para @${widget.pet.name}!',
                 style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
@@ -175,12 +169,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     } catch (e) {
       if (mounted) {
         setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             backgroundColor: Colors.redAccent,
             content: Text('Error al procesar patrocinio: $e', style: GoogleFonts.fredoka()),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
     }
   }

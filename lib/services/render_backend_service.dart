@@ -348,7 +348,7 @@ class RenderBackendService {
           'petWallet': petWallet,
           'cardDetails': cardDetails,
         }),
-      );
+      ).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
