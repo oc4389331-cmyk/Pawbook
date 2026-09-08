@@ -312,16 +312,15 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
           child: Column(
             children: [
               // Pet Profile Avatar with mint badge
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
+              Listener(
+                onPointerUp: (_) {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
                   );
                 },
                 child: SizedBox(
                   width: 60,
-                  height: 70, // Extra height to cover the overlapping + icon
+                  height: 70,
                   child: Stack(
                     alignment: Alignment.topCenter,
                     clipBehavior: Clip.none,
@@ -463,24 +462,20 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
             children: [
               Row(
                 children: [
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        debugPrint('Tapped Name! Navigating to PetProfileScreen');
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Text(
-                          '@$petName',
-                          style: GoogleFonts.fredoka(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  Listener(
+                    onPointerUp: (_) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => PetProfileScreen(pet: widget.post.toPetModel())),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: Text(
+                        '@$petName',
+                        style: GoogleFonts.fredoka(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
