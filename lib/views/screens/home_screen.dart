@@ -337,74 +337,88 @@ class _HomeScreenState extends State<HomeScreen> {
                       border: Border(top: BorderSide(color: AppTheme.borderWarm, width: 1)),
                     ),
                     child: SafeArea(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppTheme.bgWarmCream,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: AppTheme.borderWarm),
-                              ),
-                              child: TextField(
-                                controller: commentController,
-                                style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
-                                decoration: InputDecoration(
-                                  hintText: authController.isAuthenticated
-                                      ? 'Añadir un comentario amable... 🐾'
-                                      : 'Inicia sesión para comentar... 🐾',
-                                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
-                              ),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                              onPressed: () async {
-                                if (!authController.isAuthenticated) {
-                                  Navigator.pop(ctx);
-                                  _showTikTokRegistrationWall(context, authController);
-                                  return;
-                                }
-
-                                final text = commentController.text.trim();
-                                if (text.isEmpty) return;
-
-                                if (ProfanityFilterService.hasProfanity(text)) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: AppTheme.primaryTerracotta,
-                                      content: Text(
-                                        '⚠️ ${langController.t("profanityWarning")}',
-                                        style: GoogleFonts.fredoka(color: Colors.white),
+                      child: authController.isAuthenticated
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.bgWarmCream,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(color: AppTheme.borderWarm),
+                                    ),
+                                    child: TextField(
+                                      controller: commentController,
+                                      style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
+                                      decoration: InputDecoration(
+                                        hintText: 'Añadir un comentario amable... 🐾',
+                                        hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                                        border: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                       ),
                                     ),
-                                  );
-                                  return;
-                                }
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                                    onPressed: () async {
+                                      final text = commentController.text.trim();
+                                      if (text.isEmpty) return;
 
-                                final sanitized = ProfanityFilterService.sanitize(text);
-                                commentController.clear();
-                                await supabaseService.addComment(currentUserId, post.id, sanitized);
-                                if (mounted) {
-                                  setState(() {});
-                                  setModalState(() {});
-                                }
-                              },
+                                      if (ProfanityFilterService.hasProfanity(text)) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: AppTheme.primaryTerracotta,
+                                            content: Text(
+                                              '⚠️ ${langController.t("profanityWarning")}',
+                                              style: GoogleFonts.fredoka(color: Colors.white),
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      final sanitized = ProfanityFilterService.sanitize(text);
+                                      commentController.clear();
+                                      await supabaseService.addComment(currentUserId, post.id, sanitized);
+                                      if (mounted) {
+                                        setState(() {});
+                                        setModalState(() {});
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
+                          : SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryTerracotta,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                  elevation: 2,
+                                ),
+                                icon: const Icon(Icons.lock_outline_rounded, size: 18),
+                                label: Text(
+                                  '🔑 Iniciar Sesión o Crear Cuenta para comentar 🐾',
+                                  style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _showTikTokRegistrationWall(context, authController);
+                                },
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
@@ -1049,7 +1063,11 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            _showCommentsModal(context, post, currentUserId, authController, langController);
+            if (!authController.isAuthenticated) {
+              _showTikTokRegistrationWall(context, authController);
+            } else {
+              _showCommentsModal(context, post, currentUserId, authController, langController);
+            }
           },
           child: Column(
             children: [
