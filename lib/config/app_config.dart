@@ -30,6 +30,10 @@ class AppConfig {
   // Sponsorship Platform Fee Percentage (10%)
   static const double sponsorshipPlatformFeePercent = 10.0;
 
+  // Sponsorship Payout / Claim Conditions (Min $100 USD & Mondays only)
+  static const double minClaimAmountUsd = 100.0;
+  static const int claimDayOfWeek = DateTime.monday; // 1 = Monday
+
   // App Identity
   static const String appName = 'Pawtbook';
   static const String appTagline = 'SocialFi for Pets on Solana';

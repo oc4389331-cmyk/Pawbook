@@ -113,11 +113,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         setState(() => _processingStep = '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
       }
 
-      // Execute transfer on Solana Network (Net to Pet, Fee to Treasury)
+      // Execute transfer to Platform Treasury Custody Wallet
       final txResult = await _dynamicAuthService.sendWalletTransfer(
         walletType: _selectedWallet,
-        recipientAddress: petWallet,
-        solAmount: netSol > 0 ? netSol : 0.001,
+        recipientAddress: AppConfig.marketplaceTreasuryWallet,
+        solAmount: totalSol > 0 ? totalSol : 0.001,
       );
 
       if (!txResult.isSuccess) {

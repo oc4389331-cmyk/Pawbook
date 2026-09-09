@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../models/post_model.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
+import '../widgets/claim_sponsorship_modal.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -508,6 +509,95 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ),
                     ),
                   ),
+
+                  // Claim Sponsorship Earnings Card (For Pet Owner)
+                  if (isOwner)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0D9488), Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF059669).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => ClaimSponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile?.id ?? ''),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.diamond_rounded, color: Colors.white, size: 22),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Retiro de Patrocinios (Claim)',
+                                            style: GoogleFonts.fredoka(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.25),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              'Lunes • >\$100',
+                                              style: GoogleFonts.fredoka(
+                                                color: Colors.white,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${widget.pet.totalSponsoredScore} \$SKR acumulados en Tesorería',
+                                        style: GoogleFonts.outfit(
+                                          color: Colors.white.withOpacity(0.88),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Solana Dynamic Wallet Card for this Pet
                   Container(
