@@ -651,6 +651,89 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  /// Update Pet Avatar in Cloudflare R2, delete previous image, and sync Supabase
+  Future<bool> updatePetAvatarR2({
+    required String petId,
+    required Uint8List imageBytes,
+    required String filename,
+  }) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final petIndex = _userPets.indexWhere((p) => p.id == petId);
+      final pet = petIndex >= 0 ? _userPets[petIndex] : (_activePet?.id == petId ? _activePet : null);
+      if (pet == null) {
+        _errorMessage = 'Mascota no encontrada en la cuenta actual';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
+      final oldAvatarUrl = pet.avatarUrl;
+
+      // 1. Request presigned upload URL for pet avatar
+      final uploadRes = await _renderBackendService.requestAvatarUploadUrl(
+        userId: 'pet_$petId',
+        filename: filename,
+      );
+
+      if (uploadRes['success'] != true) {
+        _errorMessage = 'No se pudo generar la autorización para subir la foto.';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
+      final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
+      final publicUrl = uploadRes['publicUrl'] as String;
+
+      // 2. Upload image to Cloudflare R2
+      final r2Service = R2StorageService();
+      final uploadedUrl = await r2Service.uploadMediaWithPresignedUrl(
+        presignedPutUrl: presignedPutUrl,
+        publicUrl: publicUrl,
+        bytes: imageBytes,
+        contentType: 'image/jpeg',
+      );
+
+      // 3. Delete previous avatar from Cloudflare R2 if it was an R2 URL
+      if (oldAvatarUrl.isNotEmpty && oldAvatarUrl != uploadedUrl) {
+        if (oldAvatarUrl.contains('pawbooklife.com') || oldAvatarUrl.contains('avatars/') || oldAvatarUrl.contains('r2')) {
+          try {
+            await _renderBackendService.deleteR2Object(mediaUrl: oldAvatarUrl);
+            debugPrint('[AuthController] 🗑️ Foto anterior de mascota eliminada de Cloudflare R2: $oldAvatarUrl');
+          } catch (e) {
+            debugPrint('[AuthController] Error al eliminar foto anterior de R2: $e');
+          }
+        }
+      }
+
+      // 4. Update pet in Supabase
+      final updatedPet = pet.copyWith(avatarUrl: uploadedUrl);
+      await _supabaseService.updatePet(updatedPet);
+      await _renderBackendService.updatePet(id: updatedPet.id, avatarUrl: uploadedUrl);
+
+      // 5. Update local state
+      if (petIndex >= 0) {
+        _userPets[petIndex] = updatedPet;
+      }
+      if (_activePet?.id == petId) {
+        _activePet = updatedPet;
+      }
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[AuthController] Error al actualizar foto de mascota: $e');
+      _errorMessage = 'No se pudo completar la actualización de la foto de perfil.';
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   void setActivePet(PetModel pet) {
     _activePet = pet;
     notifyListeners();

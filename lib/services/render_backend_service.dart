@@ -99,6 +99,35 @@ class RenderBackendService {
     }
   }
 
+  /// Update Pet details / avatar via backend
+  Future<Map<String, dynamic>> updatePet({
+    required String id,
+    String? name,
+    String? species,
+    String? breed,
+    String? bio,
+    String? avatarUrl,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/pet/update'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': id,
+          'name': name,
+          'species': species,
+          'breed': breed,
+          'bio': bio,
+          'avatarUrl': avatarUrl,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+    } catch (_) {}
+    return {'success': false};
+  }
+
   /// Updates User Favorite Species / Preferences for Algorithm
   Future<bool> updateUserPreferences({
     required String userId,

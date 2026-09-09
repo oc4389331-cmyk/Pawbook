@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
@@ -25,7 +26,77 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   bool _isVerifyingNft = false;
   String? _verifiedNftAddress;
   bool _isFollowing = false;
+  bool _isUploadingAvatar = false;
   Future<List<PostModel>>? _postsFuture;
+
+  Future<void> _pickAndChangePetAvatar(AuthController authController) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+
+    if (pickedFile == null) return;
+
+    setState(() => _isUploadingAvatar = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final bytes = await pickedFile.readAsBytes();
+      final filename = pickedFile.name.isNotEmpty ? pickedFile.name : 'avatar.jpg';
+
+      final success = await authController.updatePetAvatarR2(
+        petId: widget.pet.id,
+        imageBytes: bytes,
+        filename: filename,
+      );
+
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        if (success) {
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: AppTheme.emeraldGreen,
+              duration: const Duration(seconds: 3),
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '🎉 ¡Foto de perfil de ${widget.pet.name} actualizada con éxito!',
+                      style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.redAccent,
+              content: Text(
+                '❌ No se pudo actualizar la foto de perfil. Intenta de nuevo.',
+                style: GoogleFonts.fredoka(color: Colors.white),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text('❌ Error al procesar la imagen seleccionada.', style: GoogleFonts.fredoka(color: Colors.white)),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -187,15 +258,84 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppTheme.cardWarm,
-                    backgroundImage: NetworkImage(
-                      widget.pet.avatarUrl.isNotEmpty
-                          ? widget.pet.avatarUrl
-                          : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400',
-                    ),
-                  ),
+                  // Interactive Pet Avatar with Edit Badge for Owner
+                  Builder(builder: (_) {
+                    final currentPetAvatar = (isOwner && authController.activePet?.id == widget.pet.id)
+                        ? (authController.activePet!.avatarUrl.isNotEmpty ? authController.activePet!.avatarUrl : widget.pet.avatarUrl)
+                        : (authController.userPets.any((p) => p.id == widget.pet.id)
+                            ? (authController.userPets.firstWhere((p) => p.id == widget.pet.id).avatarUrl)
+                            : widget.pet.avatarUrl);
+
+                    return Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 54,
+                          backgroundColor: AppTheme.primaryTerracotta.withOpacity(0.15),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: AppTheme.cardWarm,
+                            backgroundImage: NetworkImage(
+                              currentPetAvatar.isNotEmpty
+                                  ? currentPetAvatar
+                                  : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400',
+                            ),
+                            child: _isUploadingAvatar
+                                ? Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.55),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 30,
+                                        height: 30,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                        if (isOwner)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _isUploadingAvatar ? null : () => _pickAndChangePetAvatar(authController),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.primaryTerracotta.withOpacity(0.4),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
                   const SizedBox(height: 12),
                   Text(
                     widget.pet.name,

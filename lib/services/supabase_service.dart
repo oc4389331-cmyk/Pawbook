@@ -237,6 +237,24 @@ class SupabaseService {
     return pet;
   }
 
+  Future<PetModel> updatePet(PetModel pet) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('pets')
+            .update(pet.toJson())
+            .eq('id', pet.id)
+            .select()
+            .single();
+        return PetModel.fromJson(res);
+      } catch (e) {
+        if (!_useMockFallback) rethrow;
+      }
+    }
+    _mockPets[pet.id] = pet;
+    return pet;
+  }
+
   // --- User Animal Preference Tracking & Recommendation Algorithm ---
   Future<void> recordUserInteraction({
     required String userId,

@@ -344,6 +344,46 @@ app.post('/api/profile/preferences', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 3D. UPDATE PET PROFILE DETAILS & AVATAR IN SUPABASE
+// --------------------------------------------------------------------------
+app.post('/api/pet/update', async (req, res) => {
+  const { id, name, species, breed, bio, avatarUrl } = req.body;
+  if (!id) {
+    return res.status(400).json({ success: false, error: 'Missing pet id' });
+  }
+
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (species !== undefined) updates.species = species;
+  if (breed !== undefined) updates.breed = breed;
+  if (bio !== undefined) updates.bio = bio;
+  if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
+
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('pets')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase pet update error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      return res.json({ success: true, pet: data });
+    } catch (e) {
+      console.error('Supabase pet update exception:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({ success: true, pet: { id, ...updates } });
+});
+
+// --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
 // --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {
