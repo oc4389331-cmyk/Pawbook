@@ -15,6 +15,7 @@ import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
 import '../widgets/sponsorship_modal.dart';
+import '../widgets/wallet_dashboard_modal.dart';
 import '../widgets/live_oracle_ticker.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
@@ -1445,12 +1446,98 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
 
-            const SizedBox(height: 6),
-            Text(
-              'Wallet: ${profile?.walletAddress ?? "Not connected"}',
-              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+            const SizedBox(height: 14),
+
+            // --- Interactive Solana & Dynamic Wallet Card ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF14F195), size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Mi Billetera Solana',
+                            style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9945FF).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF9945FF).withOpacity(0.4)),
+                        ),
+                        child: Text(
+                          'Dynamic SIWS ⚡',
+                          style: GoogleFonts.fredoka(color: const Color(0xFF9945FF), fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    profile?.walletAddress ?? "No conectada",
+                    style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF14F195),
+                            foregroundColor: const Color(0xFF0F172A),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.account_balance_wallet_outlined, size: 16),
+                          label: Text(
+                            'Ver Saldo y Retirar',
+                            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          onPressed: () {
+                            if (profile != null) {
+                              WalletDashboardModal.show(
+                                context,
+                                walletAddress: profile.walletAddress,
+                                userId: profile.id,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Edit Profile Button
             OutlinedButton.icon(

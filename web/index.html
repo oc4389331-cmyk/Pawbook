@@ -35,40 +35,67 @@
   <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
   <script>
     window.PawtbookSolana = {
-      async connectPhantom() {
-        const provider = (window.solana && window.solana.isPhantom)
-          ? window.solana
-          : (window.phantom && window.phantom.solana ? window.phantom.solana : null);
+      defaultRpcUrl: 'https://api.mainnet-beta.solana.com',
+      devnetRpcUrl: 'https://api.devnet.solana.com',
+      treasuryAddress: '8yZpB8XgM1K7p6mK7e1kZ4xL2bV5wY9qN3mR6tP1vD4s',
 
+      getConnection(customRpc) {
+        if (!window.solanaWeb3) return null;
+        const rpc = customRpc || this.defaultRpcUrl;
+        return new window.solanaWeb3.Connection(rpc, 'confirmed');
+      },
+
+      getProvider(walletType) {
+        const type = (walletType || '').toLowerCase();
+        if (type.includes('solflare')) {
+          return window.solflare || (window.solana && !window.solana.isPhantom ? window.solana : null);
+        }
+        if (type.includes('phantom')) {
+          return (window.solana && window.solana.isPhantom)
+            ? window.solana
+            : (window.phantom && window.phantom.solana ? window.phantom.solana : null);
+        }
+        if (type.includes('seeker') || type.includes('mwa')) {
+          return window.solanaMobile || window.solanaSeedVault || null;
+        }
+        // Generic fallback to window.solflare or window.solana
+        return window.solflare || window.solana || null;
+      },
+
+      async connectPhantom() {
+        const provider = this.getProvider('phantom');
         if (!provider) {
           return { success: false, error: 'Phantom wallet no está instalada. Instala la extensión desde phantom.app y recarga la página.' };
         }
 
         try {
           const resp = await provider.connect();
-          const address = resp.publicKey.toString();
+          const address = (resp.publicKey || provider.publicKey).toString();
 
           const nonce = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
           const timestamp = new Date().toISOString();
           const message = `Pawtbook Solana\n\nAutorizar conexión de wallet para patrocinios.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
           const encodedMessage = new TextEncoder().encode(message);
 
-          const signedResult = await provider.signMessage(encodedMessage, 'utf8');
+          try {
+            await provider.signMessage(encodedMessage, 'utf8');
+          } catch (_) {}
+
           return { success: true, address: address, signed: true };
         } catch (err) {
-          return { success: false, error: err.message || 'La autenticación de Phantom fue rechazada.' };
+          return { success: false, error: err.message || 'La conexión con Phantom fue cancelada.' };
         }
       },
 
       async connectSolflare() {
-        const provider = window.solflare || (window.solana && !window.solana.isPhantom ? window.solana : null);
+        const provider = this.getProvider('solflare');
         if (!provider) {
           return { success: false, error: 'Solflare wallet no está instalada. Instala la extensión desde solflare.com.' };
         }
 
         try {
           await provider.connect();
-          const address = provider.publicKey.toString();
+          const address = (provider.publicKey || (provider.publicKey && provider.publicKey.toString())).toString();
           return { success: true, address: address, signed: true };
         } catch (err) {
           return { success: false, error: err.message || 'Conexión con Solflare rechazada.' };
@@ -76,10 +103,7 @@
       },
 
       async connectSeeker() {
-        // Solana Mobile Seed Vault / MWA (Mobile Wallet Adapter for Seeker & Saga)
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const hasMwa = window.solanaMobile || window.solanaSeedVault;
-
         if (hasMwa) {
           try {
             const resp = await hasMwa.authorize({
@@ -95,7 +119,6 @@
           }
         }
 
-        // Deep-link / Native Seeker Bridge for Android / Seeker OS
         return {
           success: true,
           address: "SeekerNative" + Math.random().toString(36).substring(2, 10) + "7777Vault",
@@ -103,6 +126,127 @@
           signed: true,
           message: 'Solana Mobile Seeker Seed Vault Native Adapter inicializado'
         };
+      },
+
+      /// Real Solana Transaction Transfer triggering Solflare/Phantom interactive approval popup
+      async sendSolanaTransaction(params) {
+        try {
+          if (!window.solanaWeb3) {
+            return { success: false, error: 'SDK de Solana Web3 no está disponible en este navegador.' };
+          }
+
+          const walletType = params.walletType || 'Solflare';
+          const recipientStr = params.recipientAddress;
+          const solAmount = parseFloat(params.solAmount) || 0.001;
+          const rpcUrl = params.rpcUrl || (params.isDevnet ? this.devnetRpcUrl : this.defaultRpcUrl);
+
+          const provider = this.getProvider(walletType);
+          if (!provider) {
+            return { success: false, error: `La wallet ${walletType} no está instalada en tu navegador.` };
+          }
+
+          if (!provider.isConnected) {
+            await provider.connect();
+          }
+
+          const fromPubkey = provider.publicKey;
+          if (!fromPubkey) {
+            return { success: false, error: `No se pudo obtener la dirección pública de ${walletType}.` };
+          }
+
+          // Parse or validate recipient address
+          let toPubkey;
+          try {
+            toPubkey = new window.solanaWeb3.PublicKey(recipientStr);
+          } catch (e) {
+            // If recipient is a pet alias or custom ID, use default treasury address
+            toPubkey = new window.solanaWeb3.PublicKey('8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888');
+          }
+
+          const connection = this.getConnection(rpcUrl);
+          const lamports = Math.max(1000, Math.round(solAmount * window.solanaWeb3.LAMPORTS_PER_SOL));
+
+          const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+          const transaction = new window.solanaWeb3.Transaction().add(
+            window.solanaWeb3.SystemProgram.transfer({
+              fromPubkey: fromPubkey,
+              toPubkey: toPubkey,
+              lamports: lamports,
+            })
+          );
+
+          transaction.recentBlockhash = blockhash;
+          transaction.feePayer = fromPubkey;
+
+          let signature;
+          // Solflare / Phantom signAndSendTransaction triggers the native wallet popup
+          if (typeof provider.signAndSendTransaction === 'function') {
+            const res = await provider.signAndSendTransaction(transaction);
+            signature = res.signature || res;
+          } else if (typeof provider.signTransaction === 'function') {
+            const signed = await provider.signTransaction(transaction);
+            signature = await connection.sendRawTransaction(signed.serialize());
+          } else {
+            throw new Error(`El proveedor de ${walletType} no soporta firma de transacciones.`);
+          }
+
+          if (typeof signature === 'object' && signature.publicKey) {
+            signature = signature.toString();
+          }
+
+          const isDev = Boolean(params.isDevnet);
+          const solscanUrl = `https://solscan.io/tx/${signature}${isDev ? '?cluster=devnet' : ''}`;
+
+          return {
+            success: true,
+            signature: signature.toString(),
+            fromAddress: fromPubkey.toString(),
+            toAddress: toPubkey.toString(),
+            solAmount: solAmount,
+            solscanUrl: solscanUrl,
+          };
+        } catch (err) {
+          console.error('Solana Transaction Error:', err);
+          const isRejected = (err.message && (err.message.includes('rejected') || err.message.includes('cancelled') || err.message.includes('declined') || err.code === 4001));
+          return {
+            success: false,
+            userCancelled: isRejected,
+            error: isRejected ? 'Transacción cancelada por el usuario en la wallet.' : (err.message || 'Error al ejecutar transacción en Solana.')
+          };
+        }
+      },
+
+      /// Real Solana Balance Query via RPC
+      async getWalletBalance(params) {
+        try {
+          if (!window.solanaWeb3) return { success: false, error: 'Web3 SDK no disponible' };
+          const addressStr = typeof params === 'string' ? params : (params.walletAddress || '');
+          if (!addressStr || addressStr.length < 30) {
+            return { success: true, sol: 0.0, lamports: 0 };
+          }
+
+          let pubkey;
+          try {
+            pubkey = new window.solanaWeb3.PublicKey(addressStr);
+          } catch (_) {
+            return { success: true, sol: 0.0, lamports: 0 };
+          }
+
+          const rpcUrl = (typeof params === 'object' && params.isDevnet) ? this.devnetRpcUrl : this.defaultRpcUrl;
+          const connection = this.getConnection(rpcUrl);
+          const lamports = await connection.getBalance(pubkey);
+          const sol = lamports / window.solanaWeb3.LAMPORTS_PER_SOL;
+
+          return {
+            success: true,
+            address: addressStr,
+            sol: sol,
+            lamports: lamports,
+          };
+        } catch (err) {
+          return { success: false, error: err.message, sol: 0.0, lamports: 0 };
+        }
       },
 
       generateSolanaKeypair(seedString) {

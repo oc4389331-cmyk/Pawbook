@@ -1,3 +1,5 @@
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -75,18 +77,44 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           'sol_${widget.userId.substring(0, 12)}';
       final petWallet = widget.pet.dynamicWalletAddress;
 
-      // Step 2: Request user approval / sign transfer
+      // Step 2: Request user approval & sign transaction on Solflare / Phantom popup
       if (mounted) {
-        setState(() => _processingStep = '✍️ Esperando aprobación de transferencia en $_selectedWallet...');
-      }
-      await Future.delayed(const Duration(milliseconds: 600));
-
-      // Step 3: Send transfer to Pet Wallet on Solana
-      if (mounted) {
-        setState(() => _processingStep = '🚀 Transfiriendo $_selectedSkrAmount \$SKR a la wallet de @${widget.pet.name}...');
+        setState(() => _processingStep = '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
       }
 
-      final txHash = 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
+      final solValue = double.tryParse(solPrice) ?? 0.001;
+      final txResult = await _dynamicAuthService.sendWalletTransfer(
+        walletType: _selectedWallet,
+        recipientAddress: petWallet,
+        solAmount: solValue > 0 ? solValue : 0.001,
+      );
+
+      if (!txResult.isSuccess) {
+        if (txResult.userCancelled) {
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                backgroundColor: AppTheme.primaryTerracotta,
+                duration: const Duration(seconds: 4),
+                content: Text(
+                  'ℹ️ Cancelaste la transacción en $_selectedWallet. No se realizó ningún cargo.',
+                  style: GoogleFonts.fredoka(),
+                ),
+              ),
+            );
+          }
+          return;
+        }
+        throw Exception(txResult.errorMessage ?? 'Error desconocido al transferir con $_selectedWallet');
+      }
+
+      // Step 3: Transaction broadcasted successfully on Solana
+      if (mounted) {
+        setState(() => _processingStep = '🚀 Confirmando \$SKR en la blockchain de Solana...');
+      }
+
+      final txHash = txResult.signature ?? 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
+      final solscanUrl = txResult.solscanUrl;
 
       // Register on Backend
       await _renderService.payWithCardConvertToSkr(
@@ -94,7 +122,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         petId: widget.pet.id,
         amountUsd: usdPrice,
         skrAmount: _selectedSkrAmount,
-        sponsorWallet: payerWallet,
+        sponsorWallet: txResult.fromAddress ?? payerWallet,
         petWallet: petWallet,
       );
 
@@ -114,7 +142,18 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: AppTheme.emeraldGreen,
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 8),
+            action: (solscanUrl != null && kIsWeb)
+                ? SnackBarAction(
+                    label: 'SOLSCAN',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      try {
+                        js.context.callMethod('open', [solscanUrl, '_blank']);
+                      } catch (_) {}
+                    },
+                  )
+                : null,
             content: Row(
               children: [
                 const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
@@ -125,11 +164,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '⚡ ¡Transferencia Completada con $_selectedWallet!',
+                        '⚡ ¡Transacción Solana Confirmada en $_selectedWallet!',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        '$_selectedSkrAmount \$SKR (~$solPrice SOL / \$$usdPrice USD) transferidos con éxito a @${widget.pet.name}.',
+                        '$_selectedSkrAmount \$SKR (~$solPrice SOL / \$$usdPrice USD) enviados a @${widget.pet.name}.\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
                       ),
                     ],
@@ -145,7 +184,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 5),
             content: Text('⚠️ $e', style: GoogleFonts.fredoka()),
           ),
         );
@@ -162,7 +201,6 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final langController = Provider.of<LanguageController>(context);
     final authController = Provider.of<AuthController>(context);
     final oracleController = Provider.of<OracleController>(context);
-    final userWallet = authController.currentProfile?.walletAddress ?? 'sol_${widget.userId.substring(0, 10)}...';
     final currentUsdPrice = _calculateUsdPrice(oracleController);
     final currentSolPrice = (currentUsdPrice / 155.0).toStringAsFixed(5);
 
