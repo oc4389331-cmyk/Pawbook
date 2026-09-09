@@ -201,8 +201,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
     final claimableUsd = double.parse(oracleController.convertSkrToUsd(totalSkr).toStringAsFixed(2));
     final claimableSol = claimableUsd / 155.0;
 
-    final now = DateTime.now();
-    final isMonday = now.weekday == AppConfig.claimDayOfWeek;
+    final nowUtc = DateTime.now().toUtc();
+    final isMonday = nowUtc.weekday == AppConfig.claimDayOfWeek;
     final hasMinBalance = claimableUsd >= AppConfig.minClaimAmountUsd;
     final canClaim = isMonday && hasMinBalance;
 
@@ -437,7 +437,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '2. Días de retiro habilitados: Solo LUNES',
+                            '2. Retiros habilitados: Solo LUNES (00:00 UTC)',
                             style: GoogleFonts.fredoka(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -446,8 +446,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                           ),
                           Text(
                             isMonday
-                                ? '✓ Hoy es Lunes. ¡Retiros habilitados hoy!'
-                                : '✗ Hoy es ${_getDayName(now.weekday)}. Los retiros se procesan los días Lunes.',
+                                ? '✓ Lunes UTC activo (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC). ¡Retiros habilitados hoy!'
+                                : '✗ Hoy es ${_getDayName(nowUtc.weekday)} (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC). Se habilitan los Lunes a las 00:00 UTC.',
                             style: GoogleFonts.outfit(
                               fontSize: 11,
                               color: isMonday ? AppTheme.emeraldGreen : AppTheme.textMutedWarm,
