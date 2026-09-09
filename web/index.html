@@ -269,7 +269,12 @@
         } catch (e) {
           console.error('Error in solanaWeb3 keypair generation:', e);
         }
-        return { success: true, address: "PawSol" + Math.random().toString(36).substring(2, 15) + "1111111111111111" };
+        const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let fallbackAddr = '';
+        for (let i = 0; i < 44; i++) {
+          fallbackAddr += base58Alphabet.charAt(Math.floor(Math.random() * base58Alphabet.length));
+        }
+        return { success: true, address: fallbackAddr };
       }
     };
   </script>

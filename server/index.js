@@ -494,7 +494,7 @@ app.post('/api/sponsorship/solana-pay', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Missing petId or amountSol' });
   }
 
-  const recipientWallet = 'PawSol777VaultSolanaPayAddressPawtbook';
+  const recipientWallet = '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888';
   const solanaPayUrl = `solana:${recipientWallet}?amount=${amountSol}&label=Pawtbook%20Sponsorship&memo=Sponsor_Pet_${petId}`;
 
   if (supabaseAdmin && sponsorId) {
@@ -559,8 +559,8 @@ app.post('/api/sponsorship/card-to-skr', async (req, res) => {
     txHash,
     skrAmount,
     amountUsd: amountUsd || (skrAmount / 20.0),
-    sponsorWallet: sponsorWallet || 'DynamicSolanaWallet',
-    petWallet: petWallet || 'PawSolVaultPetAddress',
+    sponsorWallet: sponsorWallet || '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888',
+    petWallet: petWallet || '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888',
     message: `Payment of $${amountUsd || (skrAmount / 20.0)} USD converted to ${skrAmount} $SKR and transferred via Dynamic Solana Wallet.`
   });
 });

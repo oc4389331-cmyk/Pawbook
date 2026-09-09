@@ -27,14 +27,15 @@ class PetModel {
   String get dynamicWalletAddress {
     if (nftMintAddress != null &&
         nftMintAddress!.isNotEmpty &&
-        !nftMintAddress!.startsWith('SolMint')) {
+        !nftMintAddress!.startsWith('SolMint') &&
+        !nftMintAddress!.startsWith('PawSol')) {
       return nftMintAddress!;
     }
     const base58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
     final hash = ('pet_${name.toLowerCase()}_${id.replaceAll("-", "")}').hashCode.abs();
-    final sb = StringBuffer('PawSol');
+    final sb = StringBuffer();
     int cur = hash;
-    for (int i = 0; i < 38; i++) {
+    for (int i = 0; i < 44; i++) {
       cur = (cur * 1664525 + 1013904223) & 0x7FFFFFFF;
       sb.write(base58Chars[cur % base58Chars.length]);
     }

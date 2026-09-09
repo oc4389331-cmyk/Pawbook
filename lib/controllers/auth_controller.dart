@@ -477,13 +477,13 @@ class AuthController extends ChangeNotifier {
 
     try {
       final cleanEmail = email.trim();
-      final hash = cleanEmail.hashCode.abs().toRadixString(16);
-      final walletAddress = 'PawEmb${hash}SolanaWallet';
+      final authRes = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
+      final walletAddress = authRes.walletAddress ?? 'sol_${cleanEmail.hashCode.abs()}';
 
       await _processAuthenticatedUser(
         walletAddress: walletAddress,
         email: cleanEmail,
-        jwtToken: 'dyn_jwt_pwd_$hash',
+        jwtToken: authRes.jwtToken ?? 'dyn_jwt_pwd_${cleanEmail.hashCode.abs().toRadixString(16)}',
       );
 
       _setLoading(false);
@@ -504,13 +504,13 @@ class AuthController extends ChangeNotifier {
         final email = (ownerEmail != null && ownerEmail.trim().isNotEmpty)
             ? ownerEmail.trim()
             : 'tutor.${pet.name.toLowerCase()}@gmail.com';
-        final hash = email.hashCode.abs().toRadixString(16);
-        final walletAddress = 'PawGgl${hash}SolanaWallet';
+        final authRes = await _dynamicAuthService.authenticateWithGoogle(email: email);
+        final walletAddress = authRes.walletAddress ?? 'sol_${email.hashCode.abs()}';
 
         await _processAuthenticatedUser(
           walletAddress: walletAddress,
           email: email,
-          jwtToken: 'dyn_jwt_pet_${pet.name.toLowerCase()}_$hash',
+          jwtToken: authRes.jwtToken ?? 'dyn_jwt_pet_${pet.name.toLowerCase()}',
         );
       }
 

@@ -50,7 +50,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
     await Future.delayed(const Duration(milliseconds: 1200));
 
-    final walletAddress = authController.currentProfile?.walletAddress ?? 'PawSolanaWallet';
+    final walletAddress = authController.currentProfile?.walletAddress ?? '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888';
     final mockVerifiedNft = 'SolNFT_${widget.pet.name}_${walletAddress.substring(0, 6)}';
 
     setState(() {
