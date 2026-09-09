@@ -13,6 +13,7 @@ class MarketplaceScreen extends StatelessWidget {
 
   void _showCheckoutModal(BuildContext context, Map<String, dynamic> item, LanguageController langController, AuthController authController) {
     bool isProcessing = false;
+    String selectedWallet = 'Phantom';
     final walletAddress = authController.currentProfile?.walletAddress;
     final dynamicAuthService = DynamicAuthService();
     final recipientWallet = AppConfig.marketplaceTreasuryWallet;
@@ -177,7 +178,78 @@ class MarketplaceScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  // Wallet Selection
+                  Text(
+                    'Selecciona tu Billetera de Solana:',
+                    style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setModalState(() => selectedWallet = 'Phantom'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: selectedWallet == 'Phantom' ? AppTheme.emeraldGreen.withOpacity(0.15) : AppTheme.surfaceWarm,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: selectedWallet == 'Phantom' ? AppTheme.emeraldGreen : AppTheme.borderWarm,
+                                width: selectedWallet == 'Phantom' ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('👻 ', style: TextStyle(fontSize: 16)),
+                                Text(
+                                  'Phantom',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedWallet == 'Phantom' ? AppTheme.emeraldGreen : AppTheme.textPrimaryDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setModalState(() => selectedWallet = 'Solflare'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: selectedWallet == 'Solflare' ? AppTheme.accentOrange.withOpacity(0.15) : AppTheme.surfaceWarm,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: selectedWallet == 'Solflare' ? AppTheme.accentOrange : AppTheme.borderWarm,
+                                width: selectedWallet == 'Solflare' ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('🔥 ', style: TextStyle(fontSize: 16)),
+                                Text(
+                                  'Solflare',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedWallet == 'Solflare' ? AppTheme.accentOrange : AppTheme.textPrimaryDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
 
                   // Submit Payment Button
                   SizedBox(
@@ -190,7 +262,7 @@ class MarketplaceScreen extends StatelessWidget {
                               setModalState(() => isProcessing = true);
 
                               final res = await dynamicAuthService.sendWalletTransfer(
-                                walletType: 'Phantom',
+                                walletType: selectedWallet,
                                 recipientAddress: recipientWallet,
                                 solAmount: solAmount,
                               );
@@ -201,7 +273,7 @@ class MarketplaceScreen extends StatelessWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: AppTheme.emeraldGreen,
-                                    duration: const Duration(seconds: 4),
+                                    duration: const Duration(seconds: 5),
                                     content: Row(
                                       children: [
                                         const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
@@ -220,14 +292,19 @@ class MarketplaceScreen extends StatelessWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: AppTheme.primaryTerracotta,
-                                    content: Text('Pago cancelado en tu wallet.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                    duration: const Duration(seconds: 4),
+                                    content: Text('ℹ️ Pago cancelado en tu wallet. No se realizó ningún cobro.', style: GoogleFonts.fredoka(color: Colors.white)),
                                   ),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    backgroundColor: AppTheme.emeraldGreen,
-                                    content: Text('⚡ Pago procesado exitosamente hacia $recipientWallet.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                    backgroundColor: AppTheme.primaryTerracotta,
+                                    duration: const Duration(seconds: 5),
+                                    content: Text(
+                                      '⚠️ Error al procesar el pago: ${res.errorMessage ?? "No se pudo conectar con la wallet."}',
+                                      style: GoogleFonts.fredoka(color: Colors.white),
+                                    ),
                                   ),
                                 );
                               }

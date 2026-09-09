@@ -350,6 +350,11 @@ class DynamicAuthService {
               );
             }
           }
+        } else {
+          return SolanaTransactionResult(
+            isSuccess: false,
+            errorMessage: 'El puente de Solana Web3 (PawtbookSolana) no está disponible en este navegador.',
+          );
         }
       } catch (e) {
         debugPrint('Solana JS Bridge send error: $e');
@@ -360,15 +365,9 @@ class DynamicAuthService {
       }
     }
 
-    // Fallback simulation for offline/test environments
-    final mockSig = 'sol_tx_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
     return SolanaTransactionResult(
-      isSuccess: true,
-      signature: mockSig,
-      solscanUrl: 'https://solscan.io/tx/$mockSig',
-      fromAddress: _generateRealSolanaAddress('user_source'),
-      toAddress: recipientAddress,
-      solAmount: solAmount,
+      isSuccess: false,
+      errorMessage: 'La ejecución de transacciones on-chain requiere la versión web conectada a Phantom o Solflare.',
     );
   }
 
