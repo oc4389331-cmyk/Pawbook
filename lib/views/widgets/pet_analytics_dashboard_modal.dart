@@ -115,7 +115,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         ],
                       ),
                       Text(
-                        'Métricas Globales y por Video Individual (>=15s)',
+                        'Métricas Globales y por Video Individual',
                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                       ),
                     ],
@@ -302,12 +302,12 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         children: [
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Vistas (>=15s)',
+                              title: 'Vistas Totales',
                               value: '$displayViews',
                               subtitle: isGlobal ? 'Total acumulado' : 'Este video',
                               icon: Icons.remove_red_eye_rounded,
                               color: const Color(0xFF3B82F6),
-                              badge: 'Regla 15s',
+                              badge: 'Alcance',
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -351,7 +351,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                       ),
                       const SizedBox(height: 18),
 
-                      // 15s Watch Time Rule Info Banner
+                      // Engagement Info Banner
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -373,7 +373,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                 color: AppTheme.primaryTerracotta.withOpacity(0.15),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.verified_rounded, color: AppTheme.primaryTerracotta, size: 20),
+                              child: const Icon(Icons.insights_rounded, color: AppTheme.primaryTerracotta, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -381,7 +381,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '⏱️ Regla de Validación de Vistas (15 Segundos)',
+                                    '📊 Estadísticas en Tiempo Real',
                                     style: GoogleFonts.fredoka(
                                       color: AppTheme.primaryTerracotta,
                                       fontWeight: FontWeight.bold,
@@ -390,18 +390,18 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Para garantizar autenticidad y recompensas en Solana, una vista solo se cuenta si el video se reproduce durante un mínimo de 15 segundos.',
+                                    'Visualiza las reproducciones, reacciones de la comunidad y el tiempo total de retención para medir el impacto de tu mascota creadora.',
                                     style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12),
                                   ),
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       Text(
-                                        'Tasa de Retención: ',
+                                        'Tasa de Retención Promedio: ',
                                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                                       ),
                                       Text(
-                                        '${displayRetention.toStringAsFixed(1)}% calificada',
+                                        '${displayRetention.toStringAsFixed(1)}%',
                                         style: GoogleFonts.fredoka(
                                           color: AppTheme.emeraldGreen,
                                           fontSize: 12,
@@ -861,7 +861,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             spacing: 6,
                             runSpacing: 4,
                             children: [
-                              _buildMetricBadge('👁️ ${video.viewsCount} vistas (>=15s)', const Color(0xFF3B82F6)),
+                              _buildMetricBadge('👁️ ${video.viewsCount} vistas', const Color(0xFF3B82F6)),
                               _buildMetricBadge('❤️ ${video.likesCount}', const Color(0xFFEF4444)),
                               _buildMetricBadge('💬 ${video.commentsCount}', const Color(0xFF10B981)),
                               _buildMetricBadge('⏱️ ${video.formattedTotalWatchTime}', AppTheme.accentOrange),
@@ -889,7 +889,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
                         ),
                         Text(
-                          '${video.retentionRatePercentage.toStringAsFixed(1)}% calificada',
+                          '${video.retentionRatePercentage.toStringAsFixed(1)}%',
                           style: GoogleFonts.fredoka(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -1041,7 +1041,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   String _getChartTitle() {
     switch (_selectedChartTab) {
       case 0:
-        return '👁️ Vistas Calificadas (>=15s)';
+        return '👁️ Vistas Totales';
       case 1:
         return '❤️ Me Gustas Obtenidos';
       case 2:

@@ -473,7 +473,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
-                                            'Regla 15s',
+                                            'Global & Videos',
                                             style: GoogleFonts.fredoka(
                                               color: Colors.white,
                                               fontSize: 9,

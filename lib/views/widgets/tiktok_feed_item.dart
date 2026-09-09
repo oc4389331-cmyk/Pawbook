@@ -23,7 +23,6 @@ class TikTokFeedItem extends StatefulWidget {
 
 class _TikTokFeedItemState extends State<TikTokFeedItem> {
   final SupabaseService _supabaseService = SupabaseService();
-  Timer? _qualificationTimer;
   final Stopwatch _watchStopwatch = Stopwatch();
   bool _viewRecorded = false;
 
@@ -31,20 +30,18 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> {
   void initState() {
     super.initState();
     _watchStopwatch.start();
-    // Rule: A view is ONLY counted if the user watches the video for at least 15 seconds
-    _qualificationTimer = Timer(const Duration(seconds: 15), _handleQualifiedView);
+    _recordView();
   }
 
-  void _handleQualifiedView() {
-    if (!mounted || _viewRecorded) return;
+  void _recordView() {
+    if (_viewRecorded) return;
     _viewRecorded = true;
     _supabaseService.recordPostView(widget.post.id, userId: widget.currentUserId);
-    debugPrint('[TikTokFeedItem] 🎯 Vista calificada (>=15s) registrada para post: ${widget.post.id}');
+    debugPrint('[TikTokFeedItem] 👁️ Vista registrada para post: ${widget.post.id}');
   }
 
   @override
   void dispose() {
-    _qualificationTimer?.cancel();
     _watchStopwatch.stop();
     final elapsedSeconds = _watchStopwatch.elapsed.inSeconds;
     if (elapsedSeconds > 0) {
