@@ -294,11 +294,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          'Wallet Dynamic: ${widget.pet.dynamicWalletAddress}',
-                          style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_rounded, size: 12, color: AppTheme.emeraldGreen),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Creador Verificado en Solana 🐾',
+                              style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                       ],
                     ),
