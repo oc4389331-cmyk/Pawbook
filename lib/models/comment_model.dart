@@ -22,17 +22,37 @@ class CommentModel {
   bool get isReply => parentId != null && parentId!.isNotEmpty;
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    String content = json['content'] ?? '';
+    String? parentId = json['parent_id'];
+    String? replyToUsername = json['reply_to_username'];
+
+    // If parentId is not a separate column, extract from encoded prefix if present
+    if ((parentId == null || parentId.isEmpty) && content.startsWith('[[reply:')) {
+      final endTag = content.indexOf(']]');
+      if (endTag != -1) {
+        final meta = content.substring(8, endTag);
+        final parts = meta.split(':');
+        if (parts.isNotEmpty && parts[0].isNotEmpty) {
+          parentId = parts[0];
+          if (parts.length > 1 && parts[1].isNotEmpty) {
+            replyToUsername = parts[1];
+          }
+        }
+        content = content.substring(endTag + 2).trim();
+      }
+    }
+
     return CommentModel(
       id: json['id'] ?? '',
       postId: json['post_id'] ?? '',
       userId: json['user_id'] ?? '',
-      content: json['content'] ?? '',
+      content: content,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       username: json['username'] ?? json['profiles']?['username'],
-      parentId: json['parent_id'],
-      replyToUsername: json['reply_to_username'],
+      parentId: parentId,
+      replyToUsername: replyToUsername,
     );
   }
 

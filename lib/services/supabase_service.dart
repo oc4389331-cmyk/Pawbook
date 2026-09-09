@@ -700,11 +700,15 @@ class SupabaseService {
       } catch (e) {
         print('[Supabase] Note on addComment with parentId: $e');
         try {
+          final fallbackContent = (parentId != null && parentId.isNotEmpty)
+              ? '[[reply:$parentId:${replyToUsername ?? ""}]] ${comment.content}'
+              : comment.content;
+
           final standardJson = {
             'id': comment.id,
             'post_id': comment.postId,
             'user_id': comment.userId,
-            'content': comment.content,
+            'content': fallbackContent,
             'created_at': comment.createdAt.toIso8601String(),
           };
           final res = await _client!.from('comments').insert(standardJson).select().maybeSingle();

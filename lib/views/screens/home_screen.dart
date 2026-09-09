@@ -192,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final commentFocusNode = FocusNode();
     final supabaseService = SupabaseService();
     CommentModel? replyingToComment;
+    final Set<String> expandedCommentIds = {};
     Future<List<CommentModel>> commentsFuture = supabaseService.getCommentsForPost(post.id);
 
     showModalBottomSheet(
@@ -298,6 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             final parentComment = parentComments[idx];
                             final isParentCreator = checkIsCreator(parentComment);
                             final replies = allComments.where((c) => c.parentId == parentComment.id).toList();
+                            final isExpanded = expandedCommentIds.contains(parentComment.id);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 16),
@@ -419,9 +421,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ],
                                   ),
 
-                                  // --- Nested Threaded Replies ---
+                                  // --- Expand / Collapse Replies Button ---
                                   if (replies.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () {
+                                        setModalState(() {
+                                          if (isExpanded) {
+                                            expandedCommentIds.remove(parentComment.id);
+                                          } else {
+                                            expandedCommentIds.add(parentComment.id);
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 36, top: 6, bottom: 4),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 18,
+                                              height: 1.5,
+                                              color: AppTheme.primaryTerracotta.withOpacity(0.5),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Icon(
+                                              isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                              size: 16,
+                                              color: AppTheme.primaryTerracotta,
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              isExpanded
+                                                  ? 'Ocultar ${replies.length == 1 ? "1 respuesta" : "${replies.length} respuestas"}'
+                                                  : 'Ver ${replies.length == 1 ? "1 respuesta" : "${replies.length} respuestas"}',
+                                              style: GoogleFonts.fredoka(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primaryTerracotta,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+
+                                  // --- Nested Threaded Replies (Visible when expanded) ---
+                                  if (replies.isNotEmpty && isExpanded) ...[
+                                    const SizedBox(height: 6),
                                     Padding(
                                       padding: const EdgeInsets.only(left: 36),
                                       child: Column(
@@ -669,6 +717,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ? replyingToComment!.parentId // Keep nested under same root thread
                                           : replyingToComment?.id;
                                       final replyToUser = replyingToComment?.username;
+
+                                      if (parentId != null) {
+                                        expandedCommentIds.add(parentId);
+                                      }
 
                                       setModalState(() {
                                         replyingToComment = null;
