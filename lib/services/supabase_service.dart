@@ -731,14 +731,20 @@ class SupabaseService {
     return comment;
   }
 
-  // --- Sponsorship Operations (Dual Payment: Stripe / Solana Pay) ---
+  // --- Sponsorship Operations (10% Platform Fee & Web3 Solana Pay) ---
   Future<void> sponsorPet({
     required String sponsorId,
     required String petId,
     required int amount,
-    String paymentMethod = 'stripe',
+    String paymentMethod = 'solana_pay',
     String? txHash,
+    double feePercent = 10.0,
+    int? feeAmount,
+    int? netAmount,
   }) async {
+    final computedFee = feeAmount ?? (amount * (feePercent / 100)).round();
+    final computedNet = netAmount ?? (amount - computedFee);
+
     final sponsorship = SponsorshipModel(
       id: 'spn_${DateTime.now().millisecondsSinceEpoch}',
       sponsorId: sponsorId,
@@ -746,6 +752,9 @@ class SupabaseService {
       amount: amount,
       paymentMethod: paymentMethod,
       txHash: txHash,
+      feePercent: feePercent,
+      feeAmount: computedFee,
+      netAmount: computedNet,
       createdAt: DateTime.now(),
     );
 
@@ -754,7 +763,7 @@ class SupabaseService {
     if (_mockPets.containsKey(petId)) {
       final pet = _mockPets[petId]!;
       _mockPets[petId] = pet.copyWith(
-        totalSponsoredScore: pet.totalSponsoredScore + amount,
+        totalSponsoredScore: pet.totalSponsoredScore + computedNet,
       );
     }
 
@@ -763,9 +772,23 @@ class SupabaseService {
         await _client!.from('sponsorships').insert(sponsorship.toJson());
         await _client!.rpc('increment_pet_sponsorship', params: {
           'pet_id': petId,
-          'amount': amount,
+          'amount': computedNet,
         });
-      } catch (_) {}
+      } catch (_) {
+        try {
+          // Standard fallback if columns don't exist
+          final standardJson = {
+            'id': sponsorship.id,
+            'sponsor_id': sponsorship.sponsorId,
+            'pet_id': sponsorship.petId,
+            'amount': sponsorship.amount,
+            'payment_method': sponsorship.paymentMethod,
+            'tx_hash': sponsorship.txHash,
+            'created_at': sponsorship.createdAt.toIso8601String(),
+          };
+          await _client!.from('sponsorships').insert(standardJson);
+        } catch (_) {}
+      }
     }
   }
 

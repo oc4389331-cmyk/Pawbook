@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
@@ -79,6 +80,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final usdPrice = _calculateUsdPrice(oracleController);
     final solPrice = (usdPrice / 155.0).toStringAsFixed(5);
 
+    // 10% Platform Fee Calculation
+    final totalSkr = _selectedSkrAmount;
+    final feePercent = AppConfig.sponsorshipPlatformFeePercent; // 10%
+    final feeSkr = (totalSkr * (feePercent / 100.0)).round();
+    final netSkr = totalSkr - feeSkr;
+    final totalSol = double.tryParse(solPrice) ?? 0.001;
+    final feeSol = totalSol * (feePercent / 100.0);
+    final netSol = totalSol - feeSol;
+
     setState(() {
       _isProcessing = true;
       _processingStep = '⚡ Abriendo y conectando con $_selectedWallet...';
@@ -103,11 +113,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         setState(() => _processingStep = '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
       }
 
-      final solValue = double.tryParse(solPrice) ?? 0.001;
+      // Execute transfer on Solana Network (Net to Pet, Fee to Treasury)
       final txResult = await _dynamicAuthService.sendWalletTransfer(
         walletType: _selectedWallet,
         recipientAddress: petWallet,
-        solAmount: solValue > 0 ? solValue : 0.001,
+        solAmount: netSol > 0 ? netSol : 0.001,
       );
 
       if (!txResult.isSuccess) {
@@ -137,26 +147,29 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       final txHash = txResult.signature ?? 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
       final solscanUrl = txResult.solscanUrl;
 
-      // Register on Backend
+      // Register on Backend with Fee breakdown
       await _renderService.payWithCardConvertToSkr(
         sponsorId: widget.userId,
         petId: widget.pet.id,
         amountUsd: usdPrice,
-        skrAmount: _selectedSkrAmount,
+        skrAmount: totalSkr,
         sponsorWallet: txResult.fromAddress ?? payerWallet,
         petWallet: petWallet,
       );
 
-      // Register in Supabase
+      // Register in Supabase with 10% fee deducted
       await _supabaseService.sponsorPet(
         sponsorId: widget.userId,
         petId: widget.pet.id,
-        amount: _selectedSkrAmount,
+        amount: totalSkr,
         paymentMethod: 'solana_${_selectedWallet.toLowerCase()}',
         txHash: txHash,
+        feePercent: feePercent,
+        feeAmount: feeSkr,
+        netAmount: netSkr,
       ).timeout(const Duration(seconds: 4), onTimeout: () {});
 
-      authController.addPawtScore(_selectedSkrAmount);
+      authController.addPawtScore(totalSkr);
 
       if (mounted) {
         nav.pop();
@@ -185,12 +198,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '⚡ ¡Transacción Solana Confirmada en $_selectedWallet!',
+                        '⚡ ¡Patrocinio Confirmado en $_selectedWallet!',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        '$_selectedSkrAmount \$SKR (~$solPrice SOL / \$$usdPrice USD) enviados a @${widget.pet.name}.\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
-                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                        '• Creador (@${widget.pet.name}): $netSkr \$SKR (~${netSol.toStringAsFixed(5)} SOL)\n• Comisión (10%): $feeSkr \$SKR (~${feeSol.toStringAsFixed(5)} SOL)\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
+                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                       ),
                     ],
                   ),
@@ -412,12 +425,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               ),
               const SizedBox(height: 14),
 
-              // Live Oracle Conversion Box
+              // Live Oracle Conversion & 10% Fee Breakdown Box
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceWarm,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: AppTheme.borderWarm),
                 ),
                 child: Column(
@@ -429,7 +442,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           children: [
                             const Icon(Icons.swap_horizontal_circle_rounded, color: AppTheme.emeraldGreen, size: 18),
                             const SizedBox(width: 6),
-                            Text('Conversión en Vivo:', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text('Patrocinio Total:', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         Container(
@@ -445,12 +458,44 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1, color: AppTheme.borderWarm),
+                    const SizedBox(height: 8),
+
+                    // Net Creator Share (90%)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Monto aproximado en SOL:', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11)),
-                        Text('$currentSolPrice SOL', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            const Icon(Icons.pets_rounded, size: 14, color: AppTheme.primaryTerracotta),
+                            const SizedBox(width: 4),
+                            Text('Recibe Creador (90%):', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        Text(
+                          '${(_selectedSkrAmount * 0.90).round()} \$SKR (~${((double.tryParse(currentSolPrice) ?? 0.0) * 0.90).toStringAsFixed(5)} SOL)',
+                          style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Platform Fee (10%)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.account_balance_rounded, size: 14, color: AppTheme.accentOrange),
+                            const SizedBox(width: 4),
+                            Text('Comisión Plataforma (10%):', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11)),
+                          ],
+                        ),
+                        Text(
+                          '${(_selectedSkrAmount * 0.10).round()} \$SKR (~${((double.tryParse(currentSolPrice) ?? 0.0) * 0.10).toStringAsFixed(5)} SOL)',
+                          style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   ],

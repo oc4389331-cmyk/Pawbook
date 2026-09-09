@@ -24,8 +24,11 @@ class AppConfig {
     defaultValue: '84fa2357-6be3-4bc4-b90d-2082608d7889',
   );
 
-  // Solana Marketplace Treasury Wallet (Funds Receiver)
+  // Solana Marketplace & Platform Treasury Wallet (Funds Receiver)
   static const String marketplaceTreasuryWallet = '8xi1HGz65ojQgXPU5AQd3uE6FqyhgdThvF2f2w8w5XtF';
+
+  // Sponsorship Platform Fee Percentage (10%)
+  static const double sponsorshipPlatformFeePercent = 10.0;
 
   // App Identity
   static const String appName = 'Pawtbook';
