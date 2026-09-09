@@ -350,14 +350,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.borderWarm,
+                      color: AppTheme.emeraldGreen.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.3)),
                     ),
                     child: Text(
-                      '🔒 Tarjeta temporalmente inhabilitada',
-                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 10, fontWeight: FontWeight.w600),
+                      '⚡ Red Solana',
+                      style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
