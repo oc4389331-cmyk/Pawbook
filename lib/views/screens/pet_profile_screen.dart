@@ -12,6 +12,7 @@ import '../../models/post_model.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
 import 'login_screen.dart';
+import 'create_post_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
   final PetModel pet;
@@ -99,6 +100,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     }
   }
 
+  void _refreshPosts() {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final feed = Provider.of<FeedController>(context, listen: false);
+    setState(() {
+      _postsFuture = feed.getPostsForPet(widget.pet.id, currentUserId: auth.currentProfile?.id);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -111,9 +120,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           if (mounted) setState(() => _isFollowing = pets.any((p) => p.id == widget.pet.id));
         });
       }
-      setState(() {
-        _postsFuture = feed.getPostsForPet(widget.pet.id, currentUserId: auth.currentProfile?.id);
-      });
+      _refreshPosts();
     });
   }
 
@@ -721,10 +728,76 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
                 if (petPosts.isEmpty) {
                   return Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'Esta mascota aún no tiene publicaciones activas.',
-                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppTheme.borderWarm),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryTerracotta.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.video_camera_back_rounded, size: 36, color: AppTheme.primaryTerracotta),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            '¡@${widget.pet.name} aún no tiene publicaciones!',
+                            style: GoogleFonts.fredoka(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimaryDark,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            isOwner
+                                ? 'Sube el primer video o foto de ${widget.pet.name} para comenzar a interactuar con la comunidad y acumular vistas y likes.'
+                                : 'Esta mascota aún no ha compartido publicaciones.',
+                            style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (isOwner) ...[
+                            const SizedBox(height: 18),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryTerracotta,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                elevation: 2,
+                              ),
+                              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                              label: Text(
+                                'Subir Primer Video / Foto',
+                                style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                                );
+                                _refreshPosts();
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   );
                 }
