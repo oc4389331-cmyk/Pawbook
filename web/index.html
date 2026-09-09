@@ -35,11 +35,14 @@
   <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
   <script>
     window.PawtbookSolana = {
-      defaultRpcUrl: 'https://api.mainnet-beta.solana.com',
-      devnetRpcUrl: 'https://api.devnet.solana.com',
+      defaultRpcUrl: 'https://pawbook-358b.onrender.com/api/solana-rpc',
+      devnetRpcUrl: 'https://pawbook-358b.onrender.com/api/solana-rpc?cluster=devnet',
       treasuryAddress: '8xi1HGz65ojQgXPU5AQd3uE6FqyhgdThvF2f2w8w5XtF',
 
       getRpcUrl(isDevnet) {
+        if (typeof window !== 'undefined' && window.location && window.location.origin && !window.location.origin.includes('file://')) {
+          return `${window.location.origin}/api/solana-rpc${isDevnet ? '?cluster=devnet' : ''}`;
+        }
         return isDevnet ? this.devnetRpcUrl : this.defaultRpcUrl;
       },
 
