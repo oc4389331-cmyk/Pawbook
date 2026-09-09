@@ -24,6 +24,9 @@ class AppConfig {
     defaultValue: '84fa2357-6be3-4bc4-b90d-2082608d7889',
   );
 
+  // Solana Marketplace Treasury Wallet (Funds Receiver)
+  static const String marketplaceTreasuryWallet = '8xi1HGz65ojQgXPU5AQd3uE6FqyhgdThvF2f2w8w5XtF';
+
   // App Identity
   static const String appName = 'Pawtbook';
   static const String appTagline = 'SocialFi for Pets on Solana';

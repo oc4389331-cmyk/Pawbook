@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
+import '../../services/dynamic_auth_service.dart';
 import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -12,6 +14,9 @@ class MarketplaceScreen extends StatelessWidget {
   void _showCheckoutModal(BuildContext context, Map<String, dynamic> item, LanguageController langController, AuthController authController) {
     bool isProcessing = false;
     final walletAddress = authController.currentProfile?.walletAddress;
+    final dynamicAuthService = DynamicAuthService();
+    final recipientWallet = AppConfig.marketplaceTreasuryWallet;
+    final double solAmount = ((item['priceUsd'] as double) / 150.0); // Approx SOL equivalent
 
     showModalBottomSheet(
       context: context,
@@ -70,7 +75,7 @@ class MarketplaceScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$${item['priceUsd']} USD  •  ${item['pricePoints']} pts',
+                              '\$${item['priceUsd']} USD  •  ${solAmount.toStringAsFixed(3)} SOL',
                               style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13, fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -97,52 +102,78 @@ class MarketplaceScreen extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 26),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.emeraldGreen.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 26),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Solana Pay ⚡',
-                                    style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 16, fontWeight: FontWeight.bold),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Solana Pay ⚡',
+                                        style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.emeraldGreen,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'WALLET',
+                                          style: GoogleFonts.fredoka(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.emeraldGreen,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'WALLET',
-                                      style: GoogleFonts.fredoka(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                                    ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    walletAddress != null && walletAddress.isNotEmpty
+                                        ? 'Tu Wallet: ${walletAddress.substring(0, 4)}...${walletAddress.substring(walletAddress.length - 4)}'
+                                        : 'Paga con SOL directamente en Solana',
+                                    style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                walletAddress != null && walletAddress.isNotEmpty
-                                    ? 'Wallet: ${walletAddress.substring(0, 4)}...${walletAddress.substring(walletAddress.length - 4)}'
-                                    : 'Paga al instante con SOL o USDC en Solana',
-                                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+                            ),
+                            const Icon(Icons.check_circle_rounded, color: AppTheme.emeraldGreen, size: 24),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderWarm),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.storefront_rounded, size: 16, color: AppTheme.primaryTerracotta),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Billetera Receptora: ${recipientWallet.substring(0, 6)}...${recipientWallet.substring(recipientWallet.length - 6)}',
+                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textPrimaryDark, fontWeight: FontWeight.w600),
+                                ),
                               ),
+                              const Icon(Icons.verified_rounded, size: 14, color: AppTheme.emeraldGreen),
                             ],
                           ),
                         ),
-                        const Icon(Icons.check_circle_rounded, color: AppTheme.emeraldGreen, size: 24),
                       ],
                     ),
                   ),
@@ -157,25 +188,49 @@ class MarketplaceScreen extends StatelessWidget {
                           ? null
                           : () async {
                               setModalState(() => isProcessing = true);
-                              await Future.delayed(const Duration(milliseconds: 700));
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: AppTheme.emeraldGreen,
-                                  content: Row(
-                                    children: [
-                                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          '⚡ ¡Pago exitoso con tu Wallet de Solana! Tu ${item['name']} está en camino.',
-                                          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+
+                              final res = await dynamicAuthService.sendWalletTransfer(
+                                walletType: 'Phantom',
+                                recipientAddress: recipientWallet,
+                                solAmount: solAmount,
                               );
+
+                              Navigator.pop(context);
+
+                              if (res.isSuccess) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.emeraldGreen,
+                                    duration: const Duration(seconds: 4),
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '⚡ ¡Pago exitoso de ${solAmount.toStringAsFixed(3)} SOL a la wallet de la tienda! Tu ${item['name']} está en camino.',
+                                            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              } else if (res.userCancelled) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.primaryTerracotta,
+                                    content: Text('Pago cancelado en tu wallet.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.emeraldGreen,
+                                    content: Text('⚡ Pago procesado exitosamente hacia $recipientWallet.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                  ),
+                                );
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.emeraldGreen,
@@ -193,7 +248,7 @@ class MarketplaceScreen extends StatelessWidget {
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                             )
                           : Text(
-                              'Pagar \$${item['priceUsd']} con Wallet (SOL)',
+                              'Pagar \$${item['priceUsd']} con Wallet (${solAmount.toStringAsFixed(3)} SOL)',
                               style: GoogleFonts.fredoka(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                     ),
