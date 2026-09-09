@@ -51,23 +51,23 @@
 
       getProvider(walletType) {
         const type = (walletType || '').toLowerCase();
+        if (type.includes('solflare')) {
+          if (window.solflare) return window.solflare;
+          if (window.solana && (window.solana.isSolflare || !window.solana.isPhantom)) return window.solana;
+        }
         if (type.includes('phantom')) {
           if (window.phantom && window.phantom.solana) return window.phantom.solana;
           if (window.solana && window.solana.isPhantom) return window.solana;
-        }
-        if (type.includes('solflare')) {
-          if (window.solflare) return window.solflare;
-          if (window.solana && !window.solana.isPhantom) return window.solana;
         }
         if (type.includes('seeker') || type.includes('mwa')) {
           if (window.solanaMobile || window.solanaSeedVault) return window.solanaMobile || window.solanaSeedVault;
         }
         // Active connected provider fallback
-        if (window.phantom && window.phantom.solana && window.phantom.solana.isConnected) return window.phantom.solana;
         if (window.solflare && window.solflare.isConnected) return window.solflare;
+        if (window.phantom && window.phantom.solana && window.phantom.solana.isConnected) return window.phantom.solana;
         if (window.solana && window.solana.isConnected) return window.solana;
         // Available provider fallback
-        return (window.phantom && window.phantom.solana) || window.solflare || window.solana || null;
+        return window.solflare || (window.phantom && window.phantom.solana) || window.solana || null;
       },
 
       async connectPhantom() {
@@ -156,10 +156,12 @@
             await provider.connect();
           }
 
-          const fromPubkey = provider.publicKey;
-          if (!fromPubkey) {
-            return { success: false, error: `No se pudo obtener la dirección pública de ${walletType}.` };
+          if (!provider.publicKey) {
+            return { success: false, error: `No se pudo obtener la dirección pública de ${walletType}. Por favor desbloquea tu wallet.` };
           }
+
+          const fromPubkeyStr = provider.publicKey.toString();
+          const fromPubkey = new window.solanaWeb3.PublicKey(fromPubkeyStr);
 
           // Parse or validate recipient address
           let toPubkey;
@@ -188,7 +190,7 @@
               };
             }
           } catch (balErr) {
-            console.warn('Could not pre-check balance, proceeding to wallet popup:', balErr);
+            console.warn('Balance check warning:', balErr);
           }
 
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
@@ -205,16 +207,28 @@
           transaction.feePayer = fromPubkey;
 
           let signature;
-          // Solflare / Phantom signAndSendTransaction triggers the native wallet popup
-          if (typeof provider.signAndSendTransaction === 'function') {
-            const res = await provider.signAndSendTransaction(transaction);
-            signature = (res && res.signature) ? res.signature : res;
-          } else if (typeof provider.signTransaction === 'function') {
-            const signed = await provider.signTransaction(transaction);
-            const raw = signed.serialize ? signed.serialize() : signed;
-            signature = await connection.sendRawTransaction(raw, { skipPreflight: false });
-          } else {
-            throw new Error(`El proveedor de ${walletType} no soporta firma de transacciones.`);
+          try {
+            if (typeof provider.signAndSendTransaction === 'function') {
+              const res = await provider.signAndSendTransaction(transaction);
+              signature = (res && res.signature) ? res.signature : res;
+            } else if (typeof provider.signTransaction === 'function') {
+              const signed = await provider.signTransaction(transaction);
+              const raw = signed.serialize ? signed.serialize() : signed;
+              signature = await connection.sendRawTransaction(raw, { skipPreflight: false });
+            } else {
+              throw new Error(`El proveedor de ${walletType} no soporta firma de transacciones.`);
+            }
+          } catch (signErr) {
+            // Fallback for Solflare if signAndSendTransaction failed
+            const errMsg = signErr && signErr.message ? signErr.message.toLowerCase() : '';
+            if (typeof provider.signTransaction === 'function' && !errMsg.includes('reject') && !errMsg.includes('cancel') && !errMsg.includes('decline')) {
+              console.warn('signAndSendTransaction failed, trying signTransaction fallback:', signErr);
+              const signed = await provider.signTransaction(transaction);
+              const raw = signed.serialize ? signed.serialize() : signed;
+              signature = await connection.sendRawTransaction(raw, { skipPreflight: false });
+            } else {
+              throw signErr;
+            }
           }
 
           if (typeof signature === 'object' && signature !== null) {
@@ -231,7 +245,7 @@
           return {
             success: true,
             signature: sigStr,
-            fromAddress: fromPubkey.toString(),
+            fromAddress: fromPubkeyStr,
             toAddress: toPubkey.toString(),
             solAmount: solAmount,
             solscanUrl: solscanUrl,
