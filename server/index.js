@@ -861,6 +861,33 @@ app.post('/api/dynamic/provision', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 7. SOLANA RPC PROXY (Bypasses Solana public RPC CORS and 403 browser blocks)
+// --------------------------------------------------------------------------
+app.post('/api/solana-rpc', async (req, res) => {
+  try {
+    const isDevnet = req.query.cluster === 'devnet';
+    const targetRpc = isDevnet ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com';
+
+    const response = await fetch(targetRpc, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (err) {
+    console.error('Solana RPC Proxy Error:', err.message);
+    return res.status(500).json({
+      jsonrpc: '2.0',
+      error: { code: 500, message: err.message },
+      id: req.body?.id || 1
+    });
+  }
+});
+
+// --------------------------------------------------------------------------
 // 8. SPA FALLBACK ROUTE FOR FLUTTER WEB
 // --------------------------------------------------------------------------
 app.get('*', (req, res) => {
