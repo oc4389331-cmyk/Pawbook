@@ -32,6 +32,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   late Future<PetAnalyticsModel> _analyticsFuture;
   int _selectedChartTab = 0; // 0: Vistas, 1: Me Gustas, 2: Comentarios, 3: Tiempo de Vista
   String _selectedRange = '7D'; // '7D', '30D', 'Todo'
+  String? _selectedPostId; // null = Global (todos los videos), otherwise specific video ID
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      height: screenHeight * 0.88,
+      height: screenHeight * 0.90,
       decoration: const BoxDecoration(
         color: AppTheme.bgWarmCream,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -114,7 +115,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         ],
                       ),
                       Text(
-                        'Rendimiento, Retención (>=15s) e Interacción',
+                        'Métricas Globales y por Video Individual (>=15s)',
                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                       ),
                     ],
@@ -150,17 +151,118 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                 }
 
                 final data = snapshot.data!;
+                final isGlobal = _selectedPostId == null;
+                
+                // Find currently selected video item if any
+                VideoAnalyticsItem? currentVideo;
+                if (!isGlobal) {
+                  try {
+                    currentVideo = data.videoBreakdown.firstWhere((v) => v.postId == _selectedPostId);
+                  } catch (_) {
+                    currentVideo = data.videoBreakdown.isNotEmpty ? data.videoBreakdown.first : null;
+                  }
+                }
+
+                // Active metrics based on selection
+                final displayViews = isGlobal ? data.totalViews : (currentVideo?.viewsCount ?? 0);
+                final displayLikes = isGlobal ? data.totalLikes : (currentVideo?.likesCount ?? 0);
+                final displayComments = isGlobal ? data.totalComments : (currentVideo?.commentsCount ?? 0);
+                final displayWatchTime = isGlobal ? data.formattedTotalWatchTime : (currentVideo?.formattedTotalWatchTime ?? '0s');
+                final displayAvgTime = isGlobal ? data.formattedAvgWatchTime : (currentVideo?.formattedAvgWatchTime ?? '0s');
+                final displayRetention = isGlobal ? data.retentionRatePercentage : (currentVideo?.retentionRatePercentage ?? 0.0);
+                final displayHistory = isGlobal ? data.globalHistory : (currentVideo?.history ?? data.globalHistory);
+
                 return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Time Range Selector
+                      // Video Mode Selector Carousel (Global vs Individual Video)
+                      _buildVideoFilterSelector(data),
+                      const SizedBox(height: 16),
+
+                      // Selected View Banner
+                      if (!isGlobal && currentVideo != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentOrange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.accentOrange.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  color: AppTheme.surfaceWarm,
+                                  child: currentVideo.mediaUrl.isNotEmpty
+                                      ? Image.network(
+                                          currentVideo.mediaUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(Icons.movie_rounded, color: AppTheme.accentOrange),
+                                        )
+                                      : const Icon(Icons.movie_rounded, color: AppTheme.accentOrange),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.accentOrange,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '🎬 Métrica Individual',
+                                            style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      currentVideo.caption.isNotEmpty ? currentVideo.caption : 'Video #${currentVideo.postId.substring(max(0, currentVideo.postId.length - 4))}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimaryDark,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () => setState(() => _selectedPostId = null),
+                                icon: const Icon(Icons.public_rounded, size: 14, color: AppTheme.primaryTerracotta),
+                                label: Text('Ver Global', style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Section Title & Range Selector
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '📊 Resumen General',
+                            isGlobal ? '🌐 Resumen Global (${data.totalPosts} videos)' : '🎬 Rendimiento del Video',
                             style: GoogleFonts.fredoka(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -201,8 +303,8 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           Expanded(
                             child: _buildKpiCard(
                               title: 'Vistas (>=15s)',
-                              value: '${data.totalViews}',
-                              subtitle: 'Calificadas',
+                              value: '$displayViews',
+                              subtitle: isGlobal ? 'Total acumulado' : 'Este video',
                               icon: Icons.remove_red_eye_rounded,
                               color: const Color(0xFF3B82F6),
                               badge: 'Regla 15s',
@@ -212,8 +314,8 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           Expanded(
                             child: _buildKpiCard(
                               title: 'Me Gustas',
-                              value: '${data.totalLikes}',
-                              subtitle: 'Reacciones',
+                              value: '$displayLikes',
+                              subtitle: isGlobal ? 'En todos los videos' : 'Reacciones',
                               icon: Icons.favorite_rounded,
                               color: const Color(0xFFEF4444),
                               badge: 'Interacción',
@@ -227,8 +329,8 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           Expanded(
                             child: _buildKpiCard(
                               title: 'Comentarios',
-                              value: '${data.totalComments}',
-                              subtitle: 'Conversaciones',
+                              value: '$displayComments',
+                              subtitle: isGlobal ? 'Comunidad global' : 'En este video',
                               icon: Icons.chat_bubble_rounded,
                               color: const Color(0xFF10B981),
                               badge: 'Comunidad',
@@ -237,9 +339,9 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Tiempo Reproducido',
-                              value: data.formattedTotalWatchTime,
-                              subtitle: 'Prom: ${data.formattedAvgWatchTime}/vid',
+                              title: 'Tiempo de Vista',
+                              value: displayWatchTime,
+                              subtitle: isGlobal ? 'Prom: $displayAvgTime/vid' : 'Prom: $displayAvgTime',
                               icon: Icons.timer_rounded,
                               color: AppTheme.accentOrange,
                               badge: 'Retención',
@@ -247,7 +349,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
                       // 15s Watch Time Rule Info Banner
                       Container(
@@ -288,7 +390,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Para garantizar autenticidad y recompensas justas en Solana, una vista solo se contabiliza cuando el usuario reproduce el video por al menos 15 segundos.',
+                                    'Para garantizar autenticidad y recompensas en Solana, una vista solo se cuenta si el video se reproduce durante un mínimo de 15 segundos.',
                                     style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12),
                                   ),
                                   const SizedBox(height: 6),
@@ -299,7 +401,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                                       ),
                                       Text(
-                                        '${data.retentionRatePercentage}% de audiencia calificada',
+                                        '${displayRetention.toStringAsFixed(1)}% calificada',
                                         style: GoogleFonts.fredoka(
                                           color: AppTheme.emeraldGreen,
                                           fontSize: 12,
@@ -316,12 +418,12 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                       ),
                       const SizedBox(height: 20),
 
-                      // Chart Section
+                      // Chart Section Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '📈 Gráficas de Tendencia',
+                            isGlobal ? '📈 Tendencia Global (7 Días)' : '📈 Tendencia del Video (7 Días)',
                             style: GoogleFonts.fredoka(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -329,8 +431,8 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             ),
                           ),
                           Text(
-                            'Últimos 7 días',
-                            style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm),
+                            _selectedRange,
+                            style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -384,7 +486,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   ),
                                 ),
                                 Text(
-                                  'Total periodo: ${_getChartPeriodTotal(data)}',
+                                  'Total periodo: ${_getChartPeriodTotal(displayHistory)}',
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -396,7 +498,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             const SizedBox(height: 20),
                             SizedBox(
                               height: 180,
-                              child: _buildBarChart(data.weeklyHistory),
+                              child: _buildBarChart(displayHistory),
                             ),
                           ],
                         ),
@@ -405,7 +507,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
 
                       // Detailed Table / Day-by-Day Breakdown
                       Text(
-                        '📋 Detalle Día por Día',
+                        '📋 Historial por Día',
                         style: GoogleFonts.fredoka(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -435,7 +537,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                               ),
                             ),
                             const Divider(height: 1, color: AppTheme.borderWarm),
-                            ...data.weeklyHistory.map((point) {
+                            ...displayHistory.map((point) {
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 child: Row(
@@ -452,6 +554,55 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           ],
                         ),
                       ),
+                      const SizedBox(height: 24),
+
+                      // SECTION: Video-by-Video Breakdown List
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.video_library_rounded, color: AppTheme.primaryTerracotta, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                '🎬 Desglose por Video (${data.videoBreakdown.length})',
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimaryDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Toca para filtrar',
+                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (data.videoBreakdown.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppTheme.borderWarm),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Aún no hay videos publicados para este perro.',
+                              style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+                            ),
+                          ),
+                        )
+                      else
+                        ...data.videoBreakdown.map((video) {
+                          final isSelected = _selectedPostId == video.postId;
+                          return _buildVideoBreakdownCard(video, isSelected: isSelected);
+                        }),
+
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -460,6 +611,325 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Top Video Filter Selector: "🌐 Global" chip + individual video chips
+  Widget _buildVideoFilterSelector(PetAnalyticsModel data) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Global Option Chip
+          InkWell(
+            onTap: () => setState(() => _selectedPostId = null),
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _selectedPostId == null ? AppTheme.primaryTerracotta : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _selectedPostId == null ? AppTheme.primaryTerracotta : AppTheme.borderWarm,
+                  width: 1.5,
+                ),
+                boxShadow: _selectedPostId == null
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryTerracotta.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.public_rounded,
+                    size: 16,
+                    color: _selectedPostId == null ? Colors.white : AppTheme.primaryTerracotta,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '🌐 Todos los Videos (${data.totalPosts})',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _selectedPostId == null ? Colors.white : AppTheme.textPrimaryDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Individual Video Chips
+          ...data.videoBreakdown.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final video = entry.value;
+            final isSelected = _selectedPostId == video.postId;
+            final shortCaption = video.caption.isNotEmpty
+                ? (video.caption.length > 18 ? '${video.caption.substring(0, 18)}...' : video.caption)
+                : 'Video #${idx + 1}';
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _selectedPostId = video.postId),
+                borderRadius: BorderRadius.circular(20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.accentOrange : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.accentOrange : AppTheme.borderWarm,
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.accentOrange.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.movie_rounded,
+                        size: 14,
+                        color: isSelected ? Colors.white : AppTheme.accentOrange,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '🎬 $shortCaption',
+                        style: GoogleFonts.fredoka(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : AppTheme.textPrimaryDark,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.white.withOpacity(0.25) : AppTheme.surfaceWarm,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${video.viewsCount}v',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : AppTheme.primaryTerracotta,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // Individual Video Card in the Breakdown List
+  Widget _buildVideoBreakdownCard(VideoAnalyticsItem video, {required bool isSelected}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? AppTheme.accentOrange : AppTheme.borderWarm,
+          width: isSelected ? 2.0 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isSelected ? AppTheme.accentOrange.withOpacity(0.12) : Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _selectedPostId = isSelected ? null : video.postId),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Video Thumbnail
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            color: AppTheme.surfaceWarm,
+                            child: video.mediaUrl.isNotEmpty
+                                ? Image.network(
+                                    video.mediaUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Icon(Icons.movie_rounded, color: AppTheme.primaryTerracotta, size: 28),
+                                    ),
+                                  )
+                                : const Center(
+                                    child: Icon(Icons.movie_rounded, color: AppTheme.primaryTerracotta, size: 28),
+                                  ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Video Info & Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  video.caption.isNotEmpty ? video.caption : 'Publicación de video #Pawtbook',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimaryDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isSelected)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accentOrange,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Seleccionado',
+                                    style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Publicado el ${video.createdAt.day}/${video.createdAt.month}/${video.createdAt.year}',
+                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Badges Row for this Video
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              _buildMetricBadge('👁️ ${video.viewsCount} vistas (>=15s)', const Color(0xFF3B82F6)),
+                              _buildMetricBadge('❤️ ${video.likesCount}', const Color(0xFFEF4444)),
+                              _buildMetricBadge('💬 ${video.commentsCount}', const Color(0xFF10B981)),
+                              _buildMetricBadge('⏱️ ${video.formattedTotalWatchTime}', AppTheme.accentOrange),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: AppTheme.borderWarm),
+                const SizedBox(height: 8),
+
+                // Footer with Retention and Action Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 14, color: AppTheme.textMutedWarm),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Retención: ',
+                          style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
+                        ),
+                        Text(
+                          '${video.retentionRatePercentage.toStringAsFixed(1)}% calificada',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.emeraldGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isSelected ? '👈 Ver métricas arriba' : 'Ver gráfica de este video →',
+                      style: GoogleFonts.fredoka(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.fredoka(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
       ),
     );
   }
@@ -575,7 +1045,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
       case 1:
         return '❤️ Me Gustas Obtenidos';
       case 2:
-        return '💬 Comentarios en Publicaciones';
+        return '💬 Comentarios';
       case 3:
         return '⏱️ Minutos de Retención';
       default:
@@ -598,16 +1068,16 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
     }
   }
 
-  String _getChartPeriodTotal(PetAnalyticsModel data) {
+  String _getChartPeriodTotal(List<DailyMetricPoint> history) {
     switch (_selectedChartTab) {
       case 0:
-        return '${data.weeklyHistory.fold<int>(0, (s, p) => s + p.views)} vistas';
+        return '${history.fold<int>(0, (s, p) => s + p.views)} vistas';
       case 1:
-        return '${data.weeklyHistory.fold<int>(0, (s, p) => s + p.likes)} likes';
+        return '${history.fold<int>(0, (s, p) => s + p.likes)} likes';
       case 2:
-        return '${data.weeklyHistory.fold<int>(0, (s, p) => s + p.comments)} comentarios';
+        return '${history.fold<int>(0, (s, p) => s + p.comments)} comentarios';
       case 3:
-        final mins = data.weeklyHistory.fold<double>(0.0, (s, p) => s + p.watchMinutes);
+        final mins = history.fold<double>(0.0, (s, p) => s + p.watchMinutes);
         return '${mins.toStringAsFixed(1)} min';
       default:
         return '';

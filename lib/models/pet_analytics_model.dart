@@ -16,6 +16,47 @@ class DailyMetricPoint {
   });
 }
 
+class VideoAnalyticsItem {
+  final String postId;
+  final String caption;
+  final String mediaUrl;
+  final String mediaType;
+  final DateTime createdAt;
+  final int viewsCount;
+  final int likesCount;
+  final int commentsCount;
+  final int totalWatchSeconds;
+  final double avgWatchSeconds;
+  final double retentionRatePercentage;
+  final List<DailyMetricPoint> history;
+
+  VideoAnalyticsItem({
+    required this.postId,
+    required this.caption,
+    required this.mediaUrl,
+    required this.mediaType,
+    required this.createdAt,
+    required this.viewsCount,
+    required this.likesCount,
+    required this.commentsCount,
+    required this.totalWatchSeconds,
+    required this.avgWatchSeconds,
+    required this.retentionRatePercentage,
+    required this.history,
+  });
+
+  String get formattedTotalWatchTime {
+    if (totalWatchSeconds < 60) return '${totalWatchSeconds}s';
+    if (totalWatchSeconds < 3600) return '${(totalWatchSeconds / 60).toStringAsFixed(1)} min';
+    return '${(totalWatchSeconds / 3600).toStringAsFixed(1)} hrs';
+  }
+
+  String get formattedAvgWatchTime {
+    if (avgWatchSeconds < 60) return '${avgWatchSeconds.toStringAsFixed(1)}s';
+    return '${(avgWatchSeconds / 60).toStringAsFixed(1)} min';
+  }
+}
+
 class PetAnalyticsModel {
   final String petId;
   final String petName;
@@ -26,7 +67,8 @@ class PetAnalyticsModel {
   final int totalWatchSeconds;
   final double avgWatchSeconds;
   final double retentionRatePercentage; // % of viewers reaching >= 15 seconds
-  final List<DailyMetricPoint> weeklyHistory;
+  final List<DailyMetricPoint> globalHistory;
+  final List<VideoAnalyticsItem> videoBreakdown;
 
   PetAnalyticsModel({
     required this.petId,
@@ -38,7 +80,8 @@ class PetAnalyticsModel {
     required this.totalWatchSeconds,
     required this.avgWatchSeconds,
     required this.retentionRatePercentage,
-    required this.weeklyHistory,
+    required this.globalHistory,
+    required this.videoBreakdown,
   });
 
   String get formattedTotalWatchTime {
