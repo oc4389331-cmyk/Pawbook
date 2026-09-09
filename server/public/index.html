@@ -31,15 +31,21 @@
 
   <title>pawtbook</title>
   <link rel="manifest" href="manifest.json">
-  <!-- Buffer & Solana Web3.js SDK -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
+  <!-- Local Buffer Polyfill (Node buffer support for Solana Web3 in browsers) -->
+  <script src="buffer.min.js"></script>
   <script>
     if (typeof window !== 'undefined') {
-      if (typeof window.Buffer === 'undefined' && typeof buffer !== 'undefined') {
+      window.global = window;
+      window.process = window.process || { env: {} };
+      if (typeof buffer !== 'undefined' && buffer.Buffer) {
         window.Buffer = buffer.Buffer;
+        globalThis.Buffer = buffer.Buffer;
       }
     }
+  </script>
+  <!-- Local Solana Web3.js SDK -->
+  <script src="solanaWeb3.min.js"></script>
+  <script>
     window.PawtbookSolana = {
       defaultRpcUrl: 'https://pawbook-358b.onrender.com/api/solana-rpc',
       devnetRpcUrl: 'https://pawbook-358b.onrender.com/api/solana-rpc?cluster=devnet',
