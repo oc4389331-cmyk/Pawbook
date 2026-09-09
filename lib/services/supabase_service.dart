@@ -845,22 +845,34 @@ class SupabaseService {
   }
 
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {
-    if (!_useMockFallback && _client != null) {
+    List<PostModel> posts = [];
+
+    if (_client != null) {
       try {
-        final res = await _client!.from('posts').select('*, pets(*)').eq('pet_id', petId).order('created_at', ascending: false);
-        final posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
-        if (currentUserId != null && currentUserId.isNotEmpty) {
-          final likedRes = await _client!.from('post_likes').select('post_id').eq('user_id', currentUserId);
-          final likedIds = (likedRes as List).map((e) => e['post_id'] as String).toSet();
-          return posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
-        }
-        return posts;
+        final res = await _client!
+            .from('posts')
+            .select()
+            .eq('pet_id', petId)
+            .order('created_at', ascending: false);
+        posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
+      } catch (e) {
+        print('[Supabase] Note on getPostsForPet query: $e');
+      }
+    }
+
+    if (posts.isEmpty) {
+      posts = _mockPosts.where((p) => p.petId == petId).toList();
+    }
+
+    if (currentUserId != null && currentUserId.isNotEmpty && _client != null) {
+      try {
+        final likedRes = await _client!.from('post_likes').select('post_id').eq('user_id', currentUserId);
+        final likedIds = (likedRes as List).map((e) => e['post_id'] as String).toSet();
+        posts = posts.map((p) => p.copyWith(isLikedByCurrentUser: likedIds.contains(p.id))).toList();
       } catch (_) {}
     }
-    return _mockPosts.where((p) => p.petId == petId).map((p) {
-      final key = '${currentUserId}_${p.id}';
-      return p.copyWith(isLikedByCurrentUser: _mockLikedPostUserKeys.contains(key));
-    }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return posts..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 }
 
