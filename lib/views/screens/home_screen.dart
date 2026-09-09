@@ -1141,34 +1141,38 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 22),
-
-        // --- Sponsor Button ---
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            if (!authController.isAuthenticated) {
-              _showTikTokRegistrationWall(context, authController);
-            } else {
-              SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        // --- Sponsor Button (Only for other pets, not own pet) ---
+        if (!(authController.isAuthenticated && (
+          post.petId == authController.activePet?.id ||
+          authController.userPets.any((p) => p.id == post.petId)
+        ))) ...[
+          const SizedBox(height: 22),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!authController.isAuthenticated) {
+                _showTikTokRegistrationWall(context, authController);
+              } else {
+                SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: AppTheme.primaryTerracotta.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)],
               ),
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: AppTheme.primaryTerracotta.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)],
+              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
             ),
-            child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(langController.t('sponsor'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(langController.t('sponsor'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+        ],
       ],
     );
   }

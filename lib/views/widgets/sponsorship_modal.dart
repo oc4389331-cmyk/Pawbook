@@ -23,6 +23,27 @@ class SponsorshipModal extends StatefulWidget {
   });
 
   static void show(BuildContext context, {required PetModel pet, required String userId}) {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final isOwnPet = auth.isAuthenticated && (
+      pet.ownerId == auth.currentProfile?.id ||
+      pet.id == auth.activePet?.id ||
+      auth.userPets.any((p) => p.id == pet.id)
+    );
+
+    if (isOwnPet) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.primaryTerracotta,
+          duration: const Duration(seconds: 3),
+          content: Text(
+            '🐾 No puedes auto-patrocinar a tu propia mascota (${pet.name}). Los patrocinios son otorgados por otros tutores y miembros de la comunidad.',
+            style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

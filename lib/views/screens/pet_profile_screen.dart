@@ -76,7 +76,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final feedController = Provider.of<FeedController>(context);
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
-    final isOwner = authController.activePet?.id == widget.pet.id || authController.userPets.any((p) => p.id == widget.pet.id);
+    final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
+        authController.activePet?.id == widget.pet.id ||
+        authController.userPets.any((p) => p.id == widget.pet.id);
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -407,31 +409,32 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 18),
-
-                  // Sponsor Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryTerracotta,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  if (!isOwner) ...[
+                    const SizedBox(height: 18),
+                    // Sponsor Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryTerracotta,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                        ),
+                        icon: const Icon(Icons.volunteer_activism_rounded, color: Colors.white),
+                        label: Text(
+                          '${langController.t('sponsor')} ${widget.pet.name}',
+                          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        onPressed: () {
+                          SponsorshipModal.show(
+                            context,
+                            pet: widget.pet,
+                            userId: authController.currentProfile?.id ?? 'usr_demo',
+                          );
+                        },
                       ),
-                      icon: const Icon(Icons.volunteer_activism_rounded, color: Colors.white),
-                      label: Text(
-                        '${langController.t('sponsor')} ${widget.pet.name}',
-                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      onPressed: () {
-                        SponsorshipModal.show(
-                          context,
-                          pet: widget.pet,
-                          userId: authController.currentProfile?.id ?? 'usr_demo',
-                        );
-                      },
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 14),
 
                   // Logout Red Action Button
