@@ -45,6 +45,31 @@ class RenderBackendService {
     };
   }
 
+  /// Provision or sync user in Dynamic.xyz dashboard
+  Future<Map<String, dynamic>> provisionDynamicUser({
+    required String email,
+    String? username,
+    String? fullName,
+    String? walletAddress,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/dynamic/provision'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'username': username,
+          'fullName': fullName,
+          'walletAddress': walletAddress,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+    } catch (_) {}
+    return {'success': false};
+  }
+
   /// Update Profile via Backend (Bypasses Supabase RLS policies)
   Future<Map<String, dynamic>> updateProfile({
     required String id,

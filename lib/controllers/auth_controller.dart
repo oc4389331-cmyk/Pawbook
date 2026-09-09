@@ -454,6 +454,16 @@ class AuthController extends ChangeNotifier {
     }
     _currentProfile = profile;
 
+    // Provision / sync with Dynamic.xyz Cloud Dashboard
+    if (_currentProfile != null && _currentProfile!.email != null && _currentProfile!.email!.isNotEmpty) {
+      _renderBackendService.provisionDynamicUser(
+        email: _currentProfile!.email!,
+        username: _currentProfile!.username,
+        fullName: _currentProfile!.fullName,
+        walletAddress: _currentProfile!.walletAddress,
+      ).ignore();
+    }
+
     // 3. Query user pets and ensure Dynamic Solana Wallet Address is assigned
     final rawPets = await _supabaseService.getPetsForOwner(_currentProfile!.id);
     _userPets = rawPets.map((p) {

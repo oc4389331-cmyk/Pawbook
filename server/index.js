@@ -60,6 +60,74 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   console.log('⚠️ Running Supabase in mock mode (Missing SUPABASE_SERVICE_ROLE_KEY in .env)');
 }
 
+// Dynamic.xyz Credentials & Provisioning
+const DYNAMIC_ENVIRONMENT_ID = process.env.DYNAMIC_ENVIRONMENT_ID || '84fa2357-6be3-4bc4-b90d-2082608d7889';
+const DYNAMIC_API_KEY = process.env.DYNAMIC_API_KEY || 'dyn_jPqatSA82agdo2milUdc7CAW6dzlHASQVhgVv9DTbpwLT4TZjj0q3vwO';
+
+if (DYNAMIC_API_KEY) {
+  console.log('✅ Dynamic.xyz SDK/API initialized successfully for environment:', DYNAMIC_ENVIRONMENT_ID);
+} else {
+  console.log('⚠️ Running Dynamic in fallback mode (Missing DYNAMIC_API_KEY in .env)');
+}
+
+async function provisionDynamicUser({ email, username, fullName, walletAddress }) {
+  if (!DYNAMIC_API_KEY || !DYNAMIC_ENVIRONMENT_ID) return null;
+  try {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) return null;
+
+    // Check existing users in Dynamic
+    const listRes = await fetch(`https://app.dynamicauth.com/api/v0/environments/${DYNAMIC_ENVIRONMENT_ID}/users`, {
+      headers: { 'Authorization': `Bearer ${DYNAMIC_API_KEY}` }
+    });
+    const listData = await listRes.json();
+    let user = listData?.users?.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      const createRes = await fetch(`https://app.dynamicauth.com/api/v0/environments/${DYNAMIC_ENVIRONMENT_ID}/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${DYNAMIC_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: cleanEmail,
+          username: username || cleanEmail.split('@')[0],
+          firstName: (fullName || '').split(' ')[0] || (username || 'Pawbook User'),
+          lastName: (fullName || '').split(' ').slice(1).join(' ') || ''
+        })
+      });
+      const createData = await createRes.json();
+      user = createData.user;
+    }
+
+    if (user && user.id && walletAddress) {
+      // Check if wallet is already linked
+      const hasWallet = user.wallets && user.wallets.some(w => w.publicKey === walletAddress);
+      if (!hasWallet) {
+        await fetch(`https://app.dynamicauth.com/api/v0/environments/${DYNAMIC_ENVIRONMENT_ID}/users/${user.id}/wallets`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${DYNAMIC_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            publicWalletAddress: walletAddress,
+            walletName: 'solana',
+            walletProvider: 'custodialService',
+            chain: 'SOL'
+          })
+        });
+      }
+    }
+
+    return user;
+  } catch (err) {
+    console.error('Dynamic provisioning error:', err.message);
+    return null;
+  }
+}
+
 // --------------------------------------------------------------------------
 // 1. STRIPE WEBHOOK ROUTE (Must use raw body parser for signature verification)
 // --------------------------------------------------------------------------
@@ -759,10 +827,18 @@ app.get('/api/auth/check-email', async (req, res) => {
 });
 
 app.post('/api/auth/verify', async (req, res) => {
-  const { token, walletAddress, email } = req.body;
+  const { token, walletAddress, email, username, fullName } = req.body;
   if (email) {
     knownEmails.add(email.trim().toLowerCase());
   }
+
+  // Provision in Dynamic in background/realtime
+  if (email) {
+    provisionDynamicUser({ email, username, fullName, walletAddress }).catch(e => {
+      console.log('Dynamic auto-provision error:', e.message);
+    });
+  }
+
   return res.json({
     success: true,
     user: {
@@ -772,6 +848,16 @@ app.post('/api/auth/verify', async (req, res) => {
       pawtScore: 100
     }
   });
+});
+
+app.post('/api/dynamic/provision', async (req, res) => {
+  const { email, username, fullName, walletAddress } = req.body;
+  try {
+    const dynUser = await provisionDynamicUser({ email, username, fullName, walletAddress });
+    return res.json({ success: true, dynamicUser: dynUser });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // --------------------------------------------------------------------------
