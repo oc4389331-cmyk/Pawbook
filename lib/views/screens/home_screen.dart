@@ -190,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showCommentsModal(BuildContext context, PostModel post, String currentUserId, AuthController authController, LanguageController langController) {
     final commentController = TextEditingController();
     final supabaseService = SupabaseService();
+    CommentModel? replyingToComment;
 
     showModalBottomSheet(
       context: context,
@@ -198,8 +199,18 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (modalContext, setModalState) {
+            bool checkIsCreator(CommentModel c) {
+              return (
+                c.userId == post.petId ||
+                (c.username != null && post.petName != null && c.username!.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
+                (authController.isAuthenticated &&
+                 (post.petId == authController.activePet?.id || authController.userPets.any((p) => p.id == post.petId)) &&
+                 (c.userId == authController.currentProfile?.id || c.userId == authController.activePet?.id || authController.userPets.any((p) => p.id == c.userId) || (c.username != null && (c.username == authController.currentProfile?.username || c.username == authController.activePet?.name))))
+              );
+            }
+
             return Container(
-              height: MediaQuery.of(context).size.height * 0.72,
+              height: MediaQuery.of(context).size.height * 0.78,
               decoration: const BoxDecoration(
                 color: AppTheme.bgWarmCream,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -244,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(color: AppTheme.borderWarm, height: 1),
 
-                  // Comments List
+                  // Comments & Replies List
                   Expanded(
                     child: FutureBuilder<List<CommentModel>>(
                       future: supabaseService.getCommentsForPost(post.id),
@@ -254,8 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2),
                           );
                         }
-                        final comments = snapshot.data ?? [];
-                        if (comments.isEmpty) {
+                        final allComments = snapshot.data ?? [];
+                        if (allComments.isEmpty) {
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24.0),
@@ -275,100 +286,251 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         }
 
+                        // Separate parent comments and replies
+                        final parentComments = allComments.where((c) => c.parentId == null || c.parentId!.isEmpty).toList();
+
                         return ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          itemCount: comments.length,
+                          itemCount: parentComments.length,
                           itemBuilder: (context, idx) {
-                            final c = comments[idx];
-                            final isCreator = (
-                              c.userId == post.petId ||
-                              (c.username != null && post.petName != null && c.username!.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
-                              (authController.isAuthenticated &&
-                               (post.petId == authController.activePet?.id || authController.userPets.any((p) => p.id == post.petId)) &&
-                               (c.userId == authController.currentProfile?.id || c.userId == authController.activePet?.id || authController.userPets.any((p) => p.id == c.userId) || (c.username != null && (c.username == authController.currentProfile?.username || c.username == authController.activePet?.name))))
-                            );
+                            final parentComment = parentComments[idx];
+                            final isParentCreator = checkIsCreator(parentComment);
+                            final replies = allComments.where((c) => c.parentId == parentComment.id).toList();
 
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: Row(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: isCreator ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
-                                    child: Text(
-                                      (c.username != null && c.username!.isNotEmpty)
-                                          ? c.username![0].toUpperCase()
-                                          : 'P',
-                                      style: GoogleFonts.fredoka(
-                                        color: isCreator ? Colors.white : AppTheme.primaryTerracotta,
-                                        fontWeight: FontWeight.bold,
+                                  // --- Main Parent Comment ---
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: isParentCreator ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
+                                        child: Text(
+                                          (parentComment.username != null && parentComment.username!.isNotEmpty)
+                                              ? parentComment.username![0].toUpperCase()
+                                              : 'P',
+                                          style: GoogleFonts.fredoka(
+                                            color: isParentCreator ? Colors.white : AppTheme.primaryTerracotta,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  parentComment.username ?? '@usuario',
+                                                  style: GoogleFonts.fredoka(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                    color: AppTheme.primaryTerracotta,
+                                                  ),
+                                                ),
+                                                if (isParentCreator) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      gradient: const LinearGradient(
+                                                        colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: AppTheme.primaryTerracotta.withOpacity(0.35),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(0, 1),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(Icons.star_rounded, color: Colors.white, size: 11),
+                                                        const SizedBox(width: 2),
+                                                        Text(
+                                                          'Creador',
+                                                          style: GoogleFonts.fredoka(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                            letterSpacing: 0.2,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
                                             Text(
-                                              c.username ?? '@usuario',
-                                              style: GoogleFonts.fredoka(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 13,
-                                                color: AppTheme.primaryTerracotta,
+                                              parentComment.content,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 14,
+                                                color: AppTheme.textPrimaryDark,
                                               ),
                                             ),
-                                            if (isCreator) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  gradient: const LinearGradient(
-                                                    colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
-                                                  ),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: AppTheme.primaryTerracotta.withOpacity(0.35),
-                                                      blurRadius: 4,
-                                                      offset: const Offset(0, 1),
-                                                    ),
-                                                  ],
-                                                ),
+                                            const SizedBox(height: 4),
+                                            // Action: Responder
+                                            InkWell(
+                                              onTap: () {
+                                                setModalState(() {
+                                                  replyingToComment = parentComment;
+                                                });
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 2),
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    const Icon(Icons.star_rounded, color: Colors.white, size: 11),
-                                                    const SizedBox(width: 2),
+                                                    const Icon(Icons.reply_rounded, size: 13, color: AppTheme.textMutedWarm),
+                                                    const SizedBox(width: 4),
                                                     Text(
-                                                      'Creador',
+                                                      'Responder',
                                                       style: GoogleFonts.fredoka(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
+                                                        fontSize: 11,
                                                         fontWeight: FontWeight.bold,
-                                                        letterSpacing: 0.2,
+                                                        color: AppTheme.textMutedWarm,
                                                       ),
                                                     ),
                                                   ],
                                                 ),
                                               ),
-                                            ],
+                                            ),
                                           ],
                                         ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          c.content,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 14,
-                                            color: AppTheme.textPrimaryDark,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
+
+                                  // --- Nested Threaded Replies ---
+                                  if (replies.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Column(
+                                        children: replies.map((reply) {
+                                          final isReplyCreator = checkIsCreator(reply);
+                                          return Container(
+                                            margin: const EdgeInsets.only(bottom: 8),
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(color: AppTheme.borderWarm.withOpacity(0.8)),
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 14,
+                                                  backgroundColor: isReplyCreator ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
+                                                  child: Text(
+                                                    (reply.username != null && reply.username!.isNotEmpty)
+                                                        ? reply.username![0].toUpperCase()
+                                                        : 'P',
+                                                    style: GoogleFonts.fredoka(
+                                                      color: isReplyCreator ? Colors.white : AppTheme.primaryTerracotta,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Flexible(
+                                                            child: Text(
+                                                              reply.username ?? '@usuario',
+                                                              style: GoogleFonts.fredoka(
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 12,
+                                                                color: AppTheme.primaryTerracotta,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                          if (isReplyCreator) ...[
+                                                            const SizedBox(width: 4),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                              decoration: BoxDecoration(
+                                                                gradient: const LinearGradient(
+                                                                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                                                                ),
+                                                                borderRadius: BorderRadius.circular(6),
+                                                              ),
+                                                              child: Text(
+                                                                '⭐ Creador',
+                                                                style: GoogleFonts.fredoka(
+                                                                  color: Colors.white,
+                                                                  fontSize: 9,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          if (reply.replyToUsername != null && reply.replyToUsername!.isNotEmpty) ...[
+                                                            const SizedBox(width: 4),
+                                                            Text(
+                                                              '↳ @${reply.replyToUsername}',
+                                                              style: GoogleFonts.outfit(
+                                                                fontSize: 11,
+                                                                fontWeight: FontWeight.w600,
+                                                                color: AppTheme.accentOrange,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ],
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        reply.content,
+                                                        style: GoogleFonts.outfit(
+                                                          fontSize: 13,
+                                                          color: AppTheme.textPrimaryDark,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      InkWell(
+                                                        onTap: () {
+                                                          setModalState(() {
+                                                            replyingToComment = reply;
+                                                          });
+                                                        },
+                                                        child: Text(
+                                                          'Responder',
+                                                          style: GoogleFonts.fredoka(
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: AppTheme.textMutedWarm,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             );
@@ -377,6 +539,49 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
+
+                  // Replying To Banner Indicator
+                  if (replyingToComment != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryTerracotta.withOpacity(0.08),
+                        border: const Border(
+                          top: BorderSide(color: AppTheme.borderWarm),
+                          bottom: BorderSide(color: AppTheme.borderWarm),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.reply_rounded, color: AppTheme.primaryTerracotta, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Respondiendo a @${replyingToComment!.username ?? "usuario"}',
+                              style: GoogleFonts.fredoka(
+                                color: AppTheme.primaryTerracotta,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => setModalState(() => replyingToComment = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.borderWarm),
+                              ),
+                              child: const Icon(Icons.close_rounded, size: 12, color: AppTheme.textMutedWarm),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Bottom Comment Input Box
                   Container(
@@ -400,7 +605,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       controller: commentController,
                                       style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
                                       decoration: InputDecoration(
-                                        hintText: 'Añadir un comentario amable... 🐾',
+                                        hintText: replyingToComment != null
+                                            ? 'Escribe tu respuesta a @${replyingToComment!.username ?? "usuario"}... 🐾'
+                                            : 'Añadir un comentario amable... 🐾',
                                         hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                                         border: InputBorder.none,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -440,7 +647,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                       final activeCommenterName = authController.isPetModeActive
                                           ? (authController.activePet?.name ?? authController.currentProfile?.username ?? 'Tutor')
                                           : (authController.currentProfile?.username ?? authController.currentProfile?.fullName ?? 'Tutor');
-                                      await supabaseService.addComment(currentUserId, post.id, sanitized, username: activeCommenterName);
+
+                                      // Handle parentId if replying to a comment
+                                      final parentId = replyingToComment?.parentId != null && replyingToComment!.parentId!.isNotEmpty
+                                          ? replyingToComment!.parentId // Keep nested under same root thread
+                                          : replyingToComment?.id;
+                                      final replyToUser = replyingToComment?.username;
+
+                                      setModalState(() {
+                                        replyingToComment = null;
+                                      });
+
+                                      await supabaseService.addComment(
+                                        currentUserId,
+                                        post.id,
+                                        sanitized,
+                                        username: activeCommenterName,
+                                        parentId: parentId,
+                                        replyToUsername: replyToUser,
+                                      );
+
                                       if (mounted) {
                                         setState(() {});
                                         setModalState(() {});

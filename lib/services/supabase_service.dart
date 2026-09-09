@@ -626,7 +626,7 @@ class SupabaseService {
     );
   }
 
-  // --- Comments Operations ---
+  // --- Comments Operations (with Nested Replies / Threads) ---
   Future<List<CommentModel>> getCommentsForPost(String postId) async {
     if (_client != null) {
       try {
@@ -634,16 +634,32 @@ class SupabaseService {
             .from('comments')
             .select('*, profiles(username)')
             .eq('post_id', postId)
-            .order('created_at', ascending: false);
+            .order('created_at', ascending: true);
         return (res as List).map((e) => CommentModel.fromJson(e)).toList();
-      } catch (_) {}
+      } catch (_) {
+        try {
+          final res2 = await _client!
+              .from('comments')
+              .select()
+              .eq('post_id', postId)
+              .order('created_at', ascending: true);
+          return (res2 as List).map((e) => CommentModel.fromJson(e)).toList();
+        } catch (_) {}
+      }
     }
 
     return _mockComments.where((c) => c.postId == postId).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
-  Future<CommentModel> addComment(String userId, String postId, String content, {String? username}) async {
+  Future<CommentModel> addComment(
+    String userId,
+    String postId,
+    String content, {
+    String? username,
+    String? parentId,
+    String? replyToUsername,
+  }) async {
     final comment = CommentModel(
       id: 'cmt_${DateTime.now().millisecondsSinceEpoch}',
       postId: postId,
@@ -651,6 +667,8 @@ class SupabaseService {
       content: content,
       createdAt: DateTime.now(),
       username: username ?? 'paw_user',
+      parentId: parentId,
+      replyToUsername: replyToUsername,
     );
 
     if (_client != null) {
@@ -658,7 +676,7 @@ class SupabaseService {
         final res = await _client!.from('comments').insert(comment.toJson()).select().single();
         try {
           await _client!.rpc('increment_comments', params: {'post_id': postId});
-        } catch (_) {} // Ignore if RPC doesn't exist yet
+        } catch (_) {}
         
         // Update local cache for instant UI feedback
         final idx = _mockPosts.indexWhere((p) => p.id == postId);
@@ -668,10 +686,30 @@ class SupabaseService {
           );
         }
         return CommentModel.fromJson(res);
-      } catch (_) {}
+      } catch (e) {
+        // If parent_id doesn't exist as a column in Supabase yet, try inserting standard fields
+        try {
+          final standardJson = {
+            'id': comment.id,
+            'post_id': comment.postId,
+            'user_id': comment.userId,
+            'content': comment.content,
+            'created_at': comment.createdAt.toIso8601String(),
+          };
+          final res = await _client!.from('comments').insert(standardJson).select().single();
+          try {
+            await _client!.rpc('increment_comments', params: {'post_id': postId});
+          } catch (_) {}
+          return CommentModel.fromJson(res).copyWith(
+            parentId: parentId,
+            replyToUsername: replyToUsername,
+            username: username,
+          );
+        } catch (_) {}
+      }
     }
 
-    _mockComments.insert(0, comment);
+    _mockComments.add(comment);
     final idx = _mockPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       _mockPosts[idx] = _mockPosts[idx].copyWith(
