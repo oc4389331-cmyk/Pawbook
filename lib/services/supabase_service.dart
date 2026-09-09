@@ -513,14 +513,14 @@ class SupabaseService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  Future<CommentModel> addComment(String userId, String postId, String content) async {
+  Future<CommentModel> addComment(String userId, String postId, String content, {String? username}) async {
     final comment = CommentModel(
       id: 'cmt_${DateTime.now().millisecondsSinceEpoch}',
       postId: postId,
       userId: userId,
       content: content,
       createdAt: DateTime.now(),
-      username: 'paw_user',
+      username: username ?? 'paw_user',
     );
 
     if (_client != null) {

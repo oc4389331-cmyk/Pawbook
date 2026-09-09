@@ -280,6 +280,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemCount: comments.length,
                           itemBuilder: (context, idx) {
                             final c = comments[idx];
+                            final isCreator = (
+                              c.userId == post.petId ||
+                              (c.username != null && post.petName != null && c.username!.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
+                              (authController.isAuthenticated &&
+                               (post.petId == authController.activePet?.id || authController.userPets.any((p) => p.id == post.petId)) &&
+                               (c.userId == authController.currentProfile?.id || c.userId == authController.activePet?.id || authController.userPets.any((p) => p.id == c.userId) || (c.username != null && (c.username == authController.currentProfile?.username || c.username == authController.activePet?.name))))
+                            );
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 14),
                               child: Row(
@@ -287,13 +295,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 18,
-                                    backgroundColor: AppTheme.surfaceWarm,
+                                    backgroundColor: isCreator ? AppTheme.primaryTerracotta : AppTheme.surfaceWarm,
                                     child: Text(
                                       (c.username != null && c.username!.isNotEmpty)
                                           ? c.username![0].toUpperCase()
                                           : 'P',
                                       style: GoogleFonts.fredoka(
-                                        color: AppTheme.primaryTerracotta,
+                                        color: isCreator ? Colors.white : AppTheme.primaryTerracotta,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -303,13 +311,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          c.username ?? '@usuario',
-                                          style: GoogleFonts.fredoka(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: AppTheme.primaryTerracotta,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              c.username ?? '@usuario',
+                                              style: GoogleFonts.fredoka(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: AppTheme.primaryTerracotta,
+                                              ),
+                                            ),
+                                            if (isCreator) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  gradient: const LinearGradient(
+                                                    colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: AppTheme.primaryTerracotta.withOpacity(0.35),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(0, 1),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.star_rounded, color: Colors.white, size: 11),
+                                                    const SizedBox(width: 2),
+                                                    Text(
+                                                      'Creador',
+                                                      style: GoogleFonts.fredoka(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        letterSpacing: 0.2,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
@@ -390,7 +437,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                                       final sanitized = ProfanityFilterService.sanitize(text);
                                       commentController.clear();
-                                      await supabaseService.addComment(currentUserId, post.id, sanitized);
+                                      final activeCommenterName = authController.isPetModeActive
+                                          ? (authController.activePet?.name ?? authController.currentProfile?.username ?? 'Tutor')
+                                          : (authController.currentProfile?.username ?? authController.currentProfile?.fullName ?? 'Tutor');
+                                      await supabaseService.addComment(currentUserId, post.id, sanitized, username: activeCommenterName);
                                       if (mounted) {
                                         setState(() {});
                                         setModalState(() {});
