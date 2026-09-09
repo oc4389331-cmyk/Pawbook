@@ -628,6 +628,7 @@ class SupabaseService {
 
   // --- Comments Operations (with Nested Replies / Threads) ---
   Future<List<CommentModel>> getCommentsForPost(String postId) async {
+    List<CommentModel> list = [];
     if (_client != null) {
       try {
         final res = await _client!
@@ -635,7 +636,7 @@ class SupabaseService {
             .select('*, profiles(username)')
             .eq('post_id', postId)
             .order('created_at', ascending: true);
-        return (res as List).map((e) => CommentModel.fromJson(e)).toList();
+        list = (res as List).map((e) => CommentModel.fromJson(e)).toList();
       } catch (_) {
         try {
           final res2 = await _client!
@@ -643,13 +644,22 @@ class SupabaseService {
               .select()
               .eq('post_id', postId)
               .order('created_at', ascending: true);
-          return (res2 as List).map((e) => CommentModel.fromJson(e)).toList();
+          list = (res2 as List).map((e) => CommentModel.fromJson(e)).toList();
         } catch (_) {}
       }
     }
 
-    return _mockComments.where((c) => c.postId == postId).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    // Merge with local comments for instant UI feedback
+    final localList = _mockComments.where((c) => c.postId == postId).toList();
+    final allIds = list.map((c) => c.id).toSet();
+    for (final loc in localList) {
+      if (!allIds.contains(loc.id)) {
+        list.add(loc);
+      }
+    }
+
+    list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return list;
   }
 
   Future<CommentModel> addComment(
@@ -671,23 +681,24 @@ class SupabaseService {
       replyToUsername: replyToUsername,
     );
 
+    // Update local cache immediately for instant UI feedback
+    _mockComments.add(comment);
+    final idx = _mockPosts.indexWhere((p) => p.id == postId);
+    if (idx != -1) {
+      _mockPosts[idx] = _mockPosts[idx].copyWith(
+        commentsCount: _mockPosts[idx].commentsCount + 1,
+      );
+    }
+
     if (_client != null) {
       try {
-        final res = await _client!.from('comments').insert(comment.toJson()).select().single();
+        final res = await _client!.from('comments').insert(comment.toJson()).select().maybeSingle();
         try {
           await _client!.rpc('increment_comments', params: {'post_id': postId});
         } catch (_) {}
-        
-        // Update local cache for instant UI feedback
-        final idx = _mockPosts.indexWhere((p) => p.id == postId);
-        if (idx != -1) {
-          _mockPosts[idx] = _mockPosts[idx].copyWith(
-            commentsCount: _mockPosts[idx].commentsCount + 1,
-          );
-        }
-        return CommentModel.fromJson(res);
+        if (res != null) return CommentModel.fromJson(res);
       } catch (e) {
-        // If parent_id doesn't exist as a column in Supabase yet, try inserting standard fields
+        print('[Supabase] Note on addComment with parentId: $e');
         try {
           final standardJson = {
             'id': comment.id,
@@ -696,25 +707,21 @@ class SupabaseService {
             'content': comment.content,
             'created_at': comment.createdAt.toIso8601String(),
           };
-          final res = await _client!.from('comments').insert(standardJson).select().single();
+          final res = await _client!.from('comments').insert(standardJson).select().maybeSingle();
           try {
             await _client!.rpc('increment_comments', params: {'post_id': postId});
           } catch (_) {}
-          return CommentModel.fromJson(res).copyWith(
-            parentId: parentId,
-            replyToUsername: replyToUsername,
-            username: username,
-          );
-        } catch (_) {}
+          if (res != null) {
+            return CommentModel.fromJson(res).copyWith(
+              parentId: parentId,
+              replyToUsername: replyToUsername,
+              username: username,
+            );
+          }
+        } catch (e2) {
+          print('[Supabase] Note on fallback addComment: $e2');
+        }
       }
-    }
-
-    _mockComments.add(comment);
-    final idx = _mockPosts.indexWhere((p) => p.id == postId);
-    if (idx != -1) {
-      _mockPosts[idx] = _mockPosts[idx].copyWith(
-        commentsCount: _mockPosts[idx].commentsCount + 1,
-      );
     }
 
     return comment;

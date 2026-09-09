@@ -189,8 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showCommentsModal(BuildContext context, PostModel post, String currentUserId, AuthController authController, LanguageController langController) {
     final commentController = TextEditingController();
+    final commentFocusNode = FocusNode();
     final supabaseService = SupabaseService();
     CommentModel? replyingToComment;
+    Future<List<CommentModel>> commentsFuture = supabaseService.getCommentsForPost(post.id);
 
     showModalBottomSheet(
       context: context,
@@ -258,9 +260,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Comments & Replies List
                   Expanded(
                     child: FutureBuilder<List<CommentModel>>(
-                      future: supabaseService.getCommentsForPost(post.id),
+                      future: commentsFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                           return const Center(
                             child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2),
                           );
@@ -386,20 +388,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 setModalState(() {
                                                   replyingToComment = parentComment;
                                                 });
+                                                Future.delayed(const Duration(milliseconds: 60), () {
+                                                  if (commentFocusNode.canRequestFocus) {
+                                                    commentFocusNode.requestFocus();
+                                                  }
+                                                });
                                               },
                                               child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    const Icon(Icons.reply_rounded, size: 13, color: AppTheme.textMutedWarm),
+                                                    const Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryTerracotta),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       'Responder',
                                                       style: GoogleFonts.fredoka(
-                                                        fontSize: 11,
+                                                        fontSize: 12,
                                                         fontWeight: FontWeight.bold,
-                                                        color: AppTheme.textMutedWarm,
+                                                        color: AppTheme.primaryTerracotta,
                                                       ),
                                                     ),
                                                   ],
@@ -511,13 +518,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                                           setModalState(() {
                                                             replyingToComment = reply;
                                                           });
+                                                          Future.delayed(const Duration(milliseconds: 60), () {
+                                                            if (commentFocusNode.canRequestFocus) {
+                                                              commentFocusNode.requestFocus();
+                                                            }
+                                                          });
                                                         },
-                                                        child: Text(
-                                                          'Responder',
-                                                          style: GoogleFonts.fredoka(
-                                                            fontSize: 10,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: AppTheme.textMutedWarm,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                                          child: Text(
+                                                            'Responder',
+                                                            style: GoogleFonts.fredoka(
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: AppTheme.primaryTerracotta,
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
@@ -603,6 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     child: TextField(
                                       controller: commentController,
+                                      focusNode: commentFocusNode,
                                       style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
                                       decoration: InputDecoration(
                                         hintText: replyingToComment != null
@@ -667,10 +683,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         replyToUsername: replyToUser,
                                       );
 
-                                      if (mounted) {
-                                        setState(() {});
-                                        setModalState(() {});
-                                      }
+                                      setModalState(() {
+                                        commentsFuture = supabaseService.getCommentsForPost(post.id);
+                                      });
                                     },
                                   ),
                                 ),
