@@ -93267,22 +93267,22 @@ case 6:if(!g)l=i==null||!J.e(h,i)
 else l=!1
 if(l){q=new A.kE(!1,null,null,null,"\u274c El c\xf3digo de verificaci\xf3n de 6 d\xedgitos ingresado no es v\xe1lido o ha expirado.")
 s=1
-break}q=new A.kE(!0,n.uN("email_solana_"+A.j(j)),j,"dyn_jwt_otp_"+B.k.jL(Math.abs(J.C(j)),16),null)
+break}q=new A.kE(!0,n.uN("dynamic_solana_"+A.j(j)),j,"dyn_jwt_otp_"+B.k.jL(Math.abs(J.C(j)),16),null)
 s=1
 break
 case 1:return A.p(q,r)
 case 2:return A.o(o.at(-1),r)}})
 return A.q($async$Et,r)},
 Ji(a){return this.anN(a)},
-anN(a){var s=0,r=A.r(t.cu),q,p=this,o,n,m
+anN(a){var s=0,r=A.r(t.cu),q,p=this,o,n,m,l
 var $async$Ji=A.t(function(b,c){if(b===1)return A.o(c,r)
-while(true)switch(s){case 0:o=A.cL(u.W,!0,!1)
-n=B.c.bp(a)
-m=n.length!==0
-if(m)if(!o.b.test(n)){q=new A.kE(!1,null,null,null,'El correo "'+n+'" no es v\xe1lido. Debe tener el formato completo (ejemplo: usuario@gmail.com)')
+while(true)switch(s){case 0:n=A.cL(u.W,!0,!1)
+m=B.c.bp(a)
+l=m.length!==0
+if(l)if(!n.b.test(m)){q=new A.kE(!1,null,null,null,'El correo "'+m+'" no es v\xe1lido. Debe tener el formato completo (ejemplo: usuario@gmail.com)')
 s=1
-break}n=m?n:"user.pawtbook@gmail.com"
-q=new A.kE(!0,p.uN("google_solana_"+n),n,"dyn_jwt_google_"+B.k.jL(Math.abs(B.c.gC(n)),16),null)
+break}o=l?m.toLowerCase():"user.pawtbook@gmail.com"
+q=new A.kE(!0,p.uN("dynamic_solana_"+o),o,"dyn_jwt_google_"+B.k.jL(Math.abs(B.c.gC(o)),16),null)
 s=1
 break
 case 1:return A.p(q,r)}})

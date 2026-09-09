@@ -219,7 +219,7 @@ class DynamicAuthService {
     }
 
     // Generate real Base58 Solana Embedded Wallet Address
-    final solanaEmbeddedWallet = _generateRealSolanaAddress('email_solana_$cleanEmail');
+    final solanaEmbeddedWallet = _generateRealSolanaAddress('dynamic_solana_$cleanEmail');
 
     return DynamicAuthResult(
       isSuccess: true,
@@ -256,11 +256,11 @@ class DynamicAuthService {
     }
 
     final targetEmail = (email != null && email.trim().isNotEmpty)
-        ? email.trim()
+        ? email.trim().toLowerCase()
         : 'user.pawtbook@gmail.com';
 
     // Generate real Base58 Solana Embedded Wallet Address for Google Sign-In
-    final googleSolanaWallet = _generateRealSolanaAddress('google_solana_$targetEmail');
+    final googleSolanaWallet = _generateRealSolanaAddress('dynamic_solana_$targetEmail');
 
     return DynamicAuthResult(
       isSuccess: true,
