@@ -1,14 +1,45 @@
 import 'package:flutter/material.dart';
 import '../models/bandana_product_model.dart';
+import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 
 class MarketplaceController extends ChangeNotifier {
+  final SupabaseService _supabaseService;
   final List<BandanaProductModel> _products = [];
+  bool _isLoading = false;
 
   List<BandanaProductModel> get products => List.unmodifiable(_products);
+  bool get isLoading => _isLoading;
 
-  MarketplaceController() {
-    _initDefaultProducts();
+  MarketplaceController({SupabaseService? supabaseService})
+      : _supabaseService = supabaseService ?? SupabaseService() {
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final supaProducts = await _supabaseService.fetchMarketplaceProducts();
+      if (supaProducts.isNotEmpty) {
+        _products.clear();
+        _products.addAll(supaProducts);
+      } else {
+        _initDefaultProducts();
+        // Save initial default products to Supabase in background
+        for (final p in _products) {
+          _supabaseService.saveMarketplaceProduct(p);
+        }
+      }
+    } catch (_) {
+      if (_products.isEmpty) {
+        _initDefaultProducts();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void _initDefaultProducts() {
@@ -85,12 +116,18 @@ class MarketplaceController extends ChangeNotifier {
     final newStock = product.stock - quantity;
     _products[idx] = product.copyWith(stock: newStock);
     notifyListeners();
+
+    // Async sync with Supabase
+    _supabaseService.updateMarketplaceProductStock(productId, newStock);
     return true;
   }
 
   void addProduct(BandanaProductModel newProduct) {
     _products.insert(0, newProduct);
     notifyListeners();
+
+    // Persist to Supabase
+    _supabaseService.saveMarketplaceProduct(newProduct);
   }
 
   void updateProduct(BandanaProductModel updatedProduct) {
@@ -98,6 +135,7 @@ class MarketplaceController extends ChangeNotifier {
     if (idx != -1) {
       _products[idx] = updatedProduct;
       notifyListeners();
+      _supabaseService.saveMarketplaceProduct(updatedProduct);
     }
   }
 
@@ -107,6 +145,7 @@ class MarketplaceController extends ChangeNotifier {
       final safeStock = newStock < 0 ? 0 : newStock;
       _products[idx] = _products[idx].copyWith(stock: safeStock);
       notifyListeners();
+      _supabaseService.updateMarketplaceProductStock(productId, safeStock);
     }
   }
 
@@ -114,14 +153,17 @@ class MarketplaceController extends ChangeNotifier {
     final idx = _products.indexWhere((p) => p.id == productId);
     if (idx != -1) {
       final current = _products[idx].stock;
-      _products[idx] = _products[idx].copyWith(stock: current + amount);
+      final newStock = current + amount;
+      _products[idx] = _products[idx].copyWith(stock: newStock);
       notifyListeners();
+      _supabaseService.updateMarketplaceProductStock(productId, newStock);
     }
   }
 
   void deleteProduct(String productId) {
     _products.removeWhere((p) => p.id == productId);
     notifyListeners();
+    _supabaseService.deleteMarketplaceProduct(productId);
   }
 
   void resetToDefaults() {

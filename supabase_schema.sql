@@ -230,3 +230,41 @@ ALTER TABLE public.admin_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admin Settings Read Access" ON public.admin_settings;
 CREATE POLICY "Admin Settings Read Access" ON public.admin_settings FOR SELECT USING (true);
 
+-- 11. Marketplace Bandanas & Merch Products Table
+CREATE TABLE IF NOT EXISTS public.marketplace_products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    price_usd NUMERIC(10, 2) NOT NULL DEFAULT 14.99,
+    price_points INT NOT NULL DEFAULT 200,
+    image_url TEXT NOT NULL,
+    stock INT NOT NULL DEFAULT 2,
+    tag TEXT DEFAULT 'Nuevo',
+    color_value BIGINT DEFAULT 4288235007,
+    description TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Seed default initial bandanas (Stock: 2 each)
+INSERT INTO public.marketplace_products (id, name, price_usd, price_points, image_url, stock, tag, color_value, description)
+VALUES 
+('bdn_solana', 'Solana Cyber Bandana ⚡', 12.99, 250, 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600', 2, 'Solana Exclusive', 4288235007, 'Bandana cyberpunk de edición limitada inspirada en el ecosistema Solana.'),
+('bdn_golden', 'Pawtbook Gold Edition 👑', 24.99, 500, 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600', 2, 'Best Seller', 4293424177, 'Bandana premium de alta costura para mascotas con detalles dorados.'),
+('bdn_neon', 'Neon Paw Glow Bandana 🌟', 9.99, 180, 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600', 2, 'Limited Edition', 4294940954, 'Colores vibrantes fluorescentes con visibilidad nocturna reflectante.'),
+('bdn_ocean', 'Ocean Beach Walker 🌊', 10.99, 200, 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600', 2, 'Summer Collection', 4280206180, 'Bandana transpirable resistente al agua ideal para días de playa.')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.marketplace_products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Products Read Access" ON public.marketplace_products;
+CREATE POLICY "Public Products Read Access" ON public.marketplace_products FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Products Insert Access" ON public.marketplace_products;
+CREATE POLICY "Public Products Insert Access" ON public.marketplace_products FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Products Update Access" ON public.marketplace_products;
+CREATE POLICY "Public Products Update Access" ON public.marketplace_products FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public Products Delete Access" ON public.marketplace_products;
+CREATE POLICY "Public Products Delete Access" ON public.marketplace_products FOR DELETE USING (true);
+
+

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_model.dart';
 import '../models/pet_model.dart';
@@ -7,6 +8,7 @@ import '../models/comment_model.dart';
 import '../models/sponsorship_model.dart';
 import '../models/reward_order_model.dart';
 import '../models/pet_analytics_model.dart';
+import '../models/bandana_product_model.dart';
 import 'render_backend_service.dart';
 
 class SupabaseService {
@@ -946,6 +948,67 @@ class SupabaseService {
 
     return posts..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
+
+  // ==========================================
+  // MARKETPLACE PRODUCTS & BANDANAS CRUD
+  // ==========================================
+
+  Future<List<BandanaProductModel>> fetchMarketplaceProducts() async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('marketplace_products')
+            .select()
+            .order('created_at', ascending: false);
+        if (res is List && res.isNotEmpty) {
+          return res.map((e) => BandanaProductModel.fromJson(e)).toList();
+        }
+      } catch (e) {
+        debugPrint('[Supabase] Note on fetchMarketplaceProducts: $e');
+      }
+    }
+    return [];
+  }
+
+  Future<bool> saveMarketplaceProduct(BandanaProductModel product) async {
+    if (_client != null) {
+      try {
+        await _client!.from('marketplace_products').upsert(product.toJson());
+        return true;
+      } catch (e) {
+        debugPrint('[Supabase] Error saving product: $e');
+      }
+    }
+    return false;
+  }
+
+  Future<bool> updateMarketplaceProductStock(String productId, int newStock) async {
+    if (_client != null) {
+      try {
+        await _client!
+            .from('marketplace_products')
+            .update({'stock': newStock, 'updated_at': DateTime.now().toIso8601String()})
+            .eq('id', productId);
+        return true;
+      } catch (e) {
+        debugPrint('[Supabase] Error updating product stock: $e');
+      }
+    }
+    return false;
+  }
+
+  Future<bool> deleteMarketplaceProduct(String productId) async {
+    if (_client != null) {
+      try {
+        await _client!.from('marketplace_products').delete().eq('id', productId);
+        return true;
+      } catch (e) {
+        debugPrint('[Supabase] Error deleting product: $e');
+      }
+    }
+    return false;
+  }
 }
+
 
 

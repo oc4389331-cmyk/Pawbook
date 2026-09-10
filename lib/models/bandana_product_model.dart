@@ -55,12 +55,18 @@ class BandanaProductModel {
     return BandanaProductModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
-      priceUsd: (json['priceUsd'] is num) ? (json['priceUsd'] as num).toDouble() : 0.0,
-      pricePoints: (json['pricePoints'] is num) ? (json['pricePoints'] as num).toInt() : 0,
-      imageUrl: json['imageUrl'] ?? '',
+      priceUsd: (json['price_usd'] is num)
+          ? (json['price_usd'] as num).toDouble()
+          : (json['priceUsd'] is num ? (json['priceUsd'] as num).toDouble() : 0.0),
+      pricePoints: (json['price_points'] is num)
+          ? (json['price_points'] as num).toInt()
+          : (json['pricePoints'] is num ? (json['pricePoints'] as num).toInt() : 0),
+      imageUrl: json['image_url'] ?? json['imageUrl'] ?? '',
       stock: (json['stock'] is num) ? (json['stock'] as num).toInt() : 2,
       tag: json['tag'] ?? 'Exclusivo',
-      colorValue: (json['colorValue'] is int) ? json['colorValue'] : 0xFF9945FF,
+      colorValue: (json['color_value'] is int)
+          ? json['color_value']
+          : (json['colorValue'] is int ? json['colorValue'] : 0xFF9945FF),
       description: json['description'] ?? '',
     );
   }
@@ -69,12 +75,12 @@ class BandanaProductModel {
     return {
       'id': id,
       'name': name,
-      'priceUsd': priceUsd,
-      'pricePoints': pricePoints,
-      'imageUrl': imageUrl,
+      'price_usd': priceUsd,
+      'price_points': pricePoints,
+      'image_url': imageUrl,
       'stock': stock,
       'tag': tag,
-      'colorValue': colorValue,
+      'color_value': colorValue,
       'description': description,
     };
   }

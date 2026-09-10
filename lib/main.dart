@@ -62,7 +62,7 @@ void main() async {
           create: (_) => OracleController(backendUrl: renderBackendService.baseUrl),
         ),
         ChangeNotifierProvider(
-          create: (_) => MarketplaceController(),
+          create: (_) => MarketplaceController(supabaseService: supabaseService),
         ),
       ],
       child: const PawtbookApp(),

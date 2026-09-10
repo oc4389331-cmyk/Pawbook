@@ -4,10 +4,14 @@ import 'package:provider/provider.dart';
 import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import '../../controllers/marketplace_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../models/bandana_product_model.dart';
 import '../../services/dynamic_auth_service.dart';
+import '../../services/r2_storage_service.dart';
+import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
 
 class MarketplaceScreen extends StatelessWidget {
@@ -802,6 +806,7 @@ class MarketplaceScreen extends StatelessWidget {
     final stockCtrl = TextEditingController(text: '2');
     final tagCtrl = TextEditingController(text: 'Nueva Colección');
     String selectedImageUrl = 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600';
+    bool isUploadingToR2 = false;
 
     final List<String> presetImages = [
       'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600',
@@ -811,6 +816,71 @@ class MarketplaceScreen extends StatelessWidget {
       'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=600',
     ];
 
+    Future<void> pickAndUploadBandanaPhoto(ImageSource source, StateSetter setAdminState) async {
+      try {
+        final picker = ImagePicker();
+        final pickedFile = await picker.pickImage(
+          source: source,
+          imageQuality: 90,
+          maxWidth: 1080,
+          maxHeight: 1080,
+        );
+        if (pickedFile == null) return;
+
+        setAdminState(() => isUploadingToR2 = true);
+        final bytes = await pickedFile.readAsBytes();
+        final ext = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
+        final filename = 'bandana_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+        final renderBackend = RenderBackendService();
+        final r2Storage = R2StorageService();
+
+        final uploadRes = await renderBackend.requestUploadUrl(
+          petId: 'bandana_admin_${const Uuid().v4().substring(0, 8)}',
+          mediaType: 'image',
+          filename: filename,
+        );
+
+        if (uploadRes['success'] == true) {
+          final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
+          final publicUrl = uploadRes['publicUrl'] as String;
+
+          final finalUrl = await r2Storage.uploadMediaWithPresignedUrl(
+            presignedPutUrl: presignedPutUrl,
+            publicUrl: publicUrl,
+            bytes: bytes,
+            contentType: 'image/jpeg',
+          );
+
+          setAdminState(() {
+            selectedImageUrl = finalUrl;
+            isUploadingToR2 = false;
+          });
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppTheme.emeraldGreen,
+                content: Text('☁️ ¡Foto de bandana guardada exitosamente en Cloudflare R2!', style: GoogleFonts.fredoka(color: Colors.white)),
+              ),
+            );
+          }
+        } else {
+          setAdminState(() => isUploadingToR2 = false);
+        }
+      } catch (e) {
+        setAdminState(() => isUploadingToR2 = false);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppTheme.primaryTerracotta,
+              content: Text('Error al subir a Cloudflare R2: $e', style: GoogleFonts.fredoka(color: Colors.white)),
+            ),
+          );
+        }
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -818,8 +888,10 @@ class MarketplaceScreen extends StatelessWidget {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setAdminState) {
+            final isR2Url = selectedImageUrl.startsWith('https://media.pawbooklife.com');
+
             return Container(
-              height: MediaQuery.of(context).size.height * 0.88,
+              height: MediaQuery.of(context).size.height * 0.90,
               decoration: const BoxDecoration(
                 color: AppTheme.bgWarmCream,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -889,8 +961,8 @@ class MarketplaceScreen extends StatelessWidget {
                               const Icon(Icons.add_photo_alternate_rounded, color: AppTheme.primaryTerracotta, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                'Añadir Nueva Bandana',
-                                style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                                'Añadir Nueva Bandana (Cloudflare & Supabase)',
+                                style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                               ),
                             ],
                           ),
@@ -960,14 +1032,121 @@ class MarketplaceScreen extends StatelessWidget {
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
 
-                          Text('Selecciona o ingresa Foto:', style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold)),
+                          // DIMENSION SPECIFICATION CARD
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgWarmCream,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.accentOrange.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.aspect_ratio_rounded, color: AppTheme.accentOrange, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '📐 Dimensiones Recomendadas para la Foto:',
+                                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primaryTerracotta),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '• Óptima: 1080 x 1080 px (Relación 1:1 Cuadrada)\n• Mínima: 800 x 800 px\n• Formatos: JPG, PNG o WebP (Máx. 2 MB)',
+                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm, height: 1.4),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // IMAGE UPLOAD & PREVIEW SECTION
+                          Text('Foto de la Bandana (Cloudflare R2):', style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
 
-                          // Image Preset Selector
+                          Row(
+                            children: [
+                              // Preview box
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      width: 72,
+                                      height: 72,
+                                      color: AppTheme.surfaceWarm,
+                                      child: isUploadingToR2
+                                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.primaryTerracotta))
+                                          : Image.network(
+                                              selectedImageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.pets, color: AppTheme.primaryTerracotta)),
+                                            ),
+                                    ),
+                                  ),
+                                  if (isR2Url)
+                                    Positioned(
+                                      bottom: 4,
+                                      right: 4,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
+                                        child: const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 12),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 36,
+                                      child: ElevatedButton.icon(
+                                        onPressed: isUploadingToR2 ? null : () => pickAndUploadBandanaPhoto(ImageSource.gallery, setAdminState),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.emeraldGreen,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        icon: const Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 16),
+                                        label: Text(
+                                          isUploadingToR2 ? 'Subiendo...' : 'Subir a Cloudflare R2',
+                                          style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 32,
+                                      child: OutlinedButton.icon(
+                                        onPressed: isUploadingToR2 ? null : () => pickAndUploadBandanaPhoto(ImageSource.camera, setAdminState),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(color: AppTheme.borderWarm),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        icon: const Icon(Icons.camera_alt_rounded, size: 14, color: AppTheme.textMutedWarm),
+                                        label: Text('Tomar Foto', style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.textPrimaryDark)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Preset Images
+                          Text('O elige una de las fotos predefinidas:', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm)),
+                          const SizedBox(height: 6),
                           SizedBox(
-                            height: 60,
+                            height: 50,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: presetImages.length,
@@ -977,74 +1156,76 @@ class MarketplaceScreen extends StatelessWidget {
                                 return GestureDetector(
                                   onTap: () => setAdminState(() => selectedImageUrl = img),
                                   child: Container(
-                                    margin: const EdgeInsets.only(right: 10),
+                                    margin: const EdgeInsets.only(right: 8),
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: isSelected ? AppTheme.emeraldGreen : AppTheme.borderWarm,
-                                        width: isSelected ? 3 : 1,
+                                        width: isSelected ? 2.5 : 1,
                                       ),
                                     ),
                                     child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(img, width: 56, height: 56, fit: BoxFit.cover),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(img, width: 48, height: 48, fit: BoxFit.cover),
                                     ),
                                   ),
                                 );
                               },
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
 
                           SizedBox(
                             width: double.infinity,
-                            height: 46,
+                            height: 48,
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                final name = nameCtrl.text.trim();
-                                if (name.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: AppTheme.primaryTerracotta,
-                                      content: Text('Por favor ingresa un nombre para la bandana', style: GoogleFonts.fredoka()),
-                                    ),
-                                  );
-                                  return;
-                                }
+                              onPressed: isUploadingToR2
+                                  ? null
+                                  : () {
+                                      final name = nameCtrl.text.trim();
+                                      if (name.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: AppTheme.primaryTerracotta,
+                                            content: Text('Por favor ingresa un nombre para la bandana', style: GoogleFonts.fredoka()),
+                                          ),
+                                        );
+                                        return;
+                                      }
 
-                                final double usd = double.tryParse(priceUsdCtrl.text) ?? 14.99;
-                                final int pts = int.tryParse(pricePtsCtrl.text) ?? 200;
-                                final int stock = int.tryParse(stockCtrl.text) ?? 2;
-                                final tag = tagCtrl.text.trim().isEmpty ? 'Nuevo' : tagCtrl.text.trim();
+                                      final double usd = double.tryParse(priceUsdCtrl.text) ?? 14.99;
+                                      final int pts = int.tryParse(pricePtsCtrl.text) ?? 200;
+                                      final int stock = int.tryParse(stockCtrl.text) ?? 2;
+                                      final tag = tagCtrl.text.trim().isEmpty ? 'Nuevo' : tagCtrl.text.trim();
 
-                                final newProduct = BandanaProductModel(
-                                  id: 'bdn_${DateTime.now().millisecondsSinceEpoch}',
-                                  name: name,
-                                  priceUsd: usd,
-                                  pricePoints: pts,
-                                  imageUrl: selectedImageUrl,
-                                  stock: stock,
-                                  tag: tag,
-                                  colorValue: AppTheme.accentOrange.value,
-                                );
+                                      final newProduct = BandanaProductModel(
+                                        id: 'bdn_${DateTime.now().millisecondsSinceEpoch}',
+                                        name: name,
+                                        priceUsd: usd,
+                                        pricePoints: pts,
+                                        imageUrl: selectedImageUrl,
+                                        stock: stock,
+                                        tag: tag,
+                                        colorValue: AppTheme.accentOrange.value,
+                                      );
 
-                                marketplaceController.addProduct(newProduct);
-                                nameCtrl.clear();
-                                setAdminState(() {});
+                                      marketplaceController.addProduct(newProduct);
+                                      nameCtrl.clear();
+                                      setAdminState(() {});
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: AppTheme.emeraldGreen,
-                                    content: Text('✅ ¡Bandana "$name" agregada con éxito!', style: GoogleFonts.fredoka()),
-                                  ),
-                                );
-                              },
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppTheme.emeraldGreen,
+                                          content: Text('✅ ¡Bandana "$name" guardada en Supabase y publicada!', style: GoogleFonts.fredoka(color: Colors.white)),
+                                        ),
+                                      );
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.emeraldGreen,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
-                              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                              label: Text('Publicar Bandana en Tienda', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+                              icon: const Icon(Icons.cloud_done_rounded, color: Colors.white),
+                              label: Text('Guardar en Supabase y Publicar', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                             ),
                           ),
                         ],
