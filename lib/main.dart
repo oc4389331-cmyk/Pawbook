@@ -11,6 +11,7 @@ import 'services/supabase_service.dart';
 import 'services/r2_storage_service.dart';
 import 'services/render_backend_service.dart';
 import 'services/dynamic_auth_service.dart';
+import 'controllers/marketplace_controller.dart';
 import 'theme/app_theme.dart';
 import 'views/screens/home_screen.dart';
 
@@ -59,6 +60,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => OracleController(backendUrl: renderBackendService.baseUrl),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MarketplaceController(),
         ),
       ],
       child: const PawtbookApp(),

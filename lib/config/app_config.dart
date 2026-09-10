@@ -34,7 +34,12 @@ class AppConfig {
   static const double minClaimAmountUsd = 100.0;
   static const int claimDayOfWeek = DateTime.monday; // 1 = Monday (00:00 UTC - 23:59 UTC)
 
+  // Admin Credentials Configuration
+  static const String adminEmail = 'wernesto66@gmail.com';
+  static const String adminPassword = 'Laravelt12050829';
+
   // App Identity
   static const String appName = 'Pawtbook';
   static const String appTagline = 'SocialFi for Pets on Solana';
 }
+

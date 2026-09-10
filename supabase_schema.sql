@@ -208,3 +208,25 @@ CREATE POLICY "Users can view own orders" ON public.orders FOR SELECT USING (tru
 
 DROP POLICY IF EXISTS "Users can insert orders" ON public.orders;
 CREATE POLICY "Users can insert orders" ON public.orders FOR INSERT WITH CHECK (true);
+
+-- 10. Admin Configuration & Settings Table
+CREATE TABLE IF NOT EXISTS public.admin_settings (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    admin_email TEXT NOT NULL DEFAULT 'wernesto66@gmail.com',
+    admin_password_hash TEXT NOT NULL DEFAULT 'Laravelt12050829',
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Insert or update default admin credentials safely
+INSERT INTO public.admin_settings (id, admin_email, admin_password_hash)
+VALUES ('default', 'wernesto66@gmail.com', 'Laravelt12050829')
+ON CONFLICT (id) DO UPDATE 
+SET admin_email = EXCLUDED.admin_email,
+    admin_password_hash = EXCLUDED.admin_password_hash,
+    updated_at = NOW();
+
+ALTER TABLE public.admin_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admin Settings Read Access" ON public.admin_settings;
+CREATE POLICY "Admin Settings Read Access" ON public.admin_settings FOR SELECT USING (true);
+
