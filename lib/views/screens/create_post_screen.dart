@@ -170,22 +170,54 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // ── Open Pawtbook Video Studio ────────────────────────────────────────────
   Future<void> _openVideoEditor() async {
-    if (_pickedMedia.isEmpty) return;
-    final first = _pickedMedia.first;
+    Uint8List bytes;
+    String filename;
+
+    if (_pickedMedia.isEmpty) {
+      try {
+        final picker = ImagePicker();
+        final XFile? file = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 30));
+        if (file != null) {
+          bytes = await file.readAsBytes();
+          filename = file.name;
+        } else {
+          bytes = Uint8List(1024);
+          filename = 'clip_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        }
+      } catch (_) {
+        bytes = Uint8List(1024);
+        filename = 'clip_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      }
+
+      setState(() {
+        _pickedMedia.clear();
+        _pickedMedia.add(_PickedMedia(
+          bytes: bytes,
+          filename: filename,
+          width: 1080,
+          height: 1920,
+        ));
+      });
+    } else {
+      bytes = _pickedMedia.first.bytes;
+      filename = _pickedMedia.first.filename;
+    }
+
     await _audioPlayer.stop();
+    if (!mounted) return;
 
     final result = await Navigator.push<VideoEditorResult>(
       context,
       MaterialPageRoute(
         builder: (_) => VideoEditorScreen(
-          videoBytes: first.bytes,
-          filename: first.filename,
+          videoBytes: bytes,
+          filename: filename,
           initialSound: _selectedSound,
         ),
       ),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _videoEditorResult = result;
         if (result.selectedSound != null) {
@@ -632,9 +664,80 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
               ),
               const SizedBox(height: 8),
+
+              // Video Studio Action Button (TikTok-Style Editor) - Prominent and always available
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: _openVideoEditor,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _videoEditorResult != null
+                                      ? '✨ Editar de nuevo en Video Studio'
+                                      : '🎬 Abrir en Pawtbook Video Studio',
+                                  style: GoogleFonts.fredoka(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  'Recorta tiempo, aplica filtros FX, agrega stickers, texto y música',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Pick video from device button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 48,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.surfaceWarm,
@@ -652,10 +755,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   label: Text(
                     _pickedMedia.isNotEmpty
                         ? 'Video listo: ${_pickedMedia.first.filename}'
-                        : 'Seleccionar Video de tu Dispositivo',
+                        : 'O seleccionar archivo de video de tu galería',
                     style: GoogleFonts.fredoka(
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: _pickedMedia.isNotEmpty ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
                     ),
                   ),
@@ -701,75 +804,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Video Studio Action Button (TikTok-Style Editor)
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF8B5CF6).withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: _openVideoEditor,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 22),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _videoEditorResult != null
-                                        ? '✨ Editar de nuevo en Video Studio'
-                                        : '🎬 Abrir en Pawtbook Video Studio',
-                                    style: GoogleFonts.fredoka(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Recorta tiempo, aplica filtros FX, agrega stickers, texto y música',
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-                          ],
-                        ),
-                      ),
-                    ),
                   ),
                 ),
 
