@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/sound_track_model.dart';
+import '../../services/video_metadata_service.dart';
 
 // ── Overlay Item Model (Stickers, Emojis, Text) ──────────────────────────────
 enum OverlayType { sticker, emoji, text }
@@ -182,6 +183,13 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   RangeValues _trimRange = const RangeValues(0.0, 15.0);
   bool _isPlaying = true;
 
+  // Video Info & Aspect Ratio
+  VideoInfo? _videoInfo;
+  double _aspectRatio = 9 / 16;
+  String _aspectRatioMode = '9:16'; // '9:16', '16:9', '1:1'
+  BoxFit _videoFit = BoxFit.contain;
+  late final String _viewKey;
+
   // Filters
   int _selectedFilterIndex = 0;
 
@@ -196,7 +204,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   // Active Tool Panel
-  String _activeTool = 'none'; // 'none', 'trim', 'filter', 'stickers', 'text', 'audio'
+  String _activeTool = 'none'; // 'none', 'ratio', 'trim', 'filter', 'stickers', 'text', 'audio'
 
   // Scrub animation
   late AnimationController _playheadController;
@@ -204,6 +212,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
+    _viewKey = 'studio_vid_${DateTime.now().millisecondsSinceEpoch}_${widget.filename.hashCode.abs()}';
     _selectedSound = widget.initialSound;
 
     _playheadController = AnimationController(
@@ -211,9 +220,36 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
       duration: Duration(milliseconds: (_trimRange.end - _trimRange.start).toInt() * 1000),
     )..repeat();
 
+    _loadVideoMetadata();
+
     if (_selectedSound != null) {
       _initAudio();
     }
+  }
+
+  Future<void> _loadVideoMetadata() async {
+    try {
+      final info = await VideoMetadataService.instance.extractMetadata(widget.videoBytes);
+      if (mounted) {
+        setState(() {
+          _videoInfo = info;
+          if (info.durationSeconds > 0) {
+            _totalVideoDuration = info.durationSeconds;
+            _trimRange = RangeValues(0.0, _totalVideoDuration.clamp(3.0, 30.0));
+          }
+          if (info.isLandscape) {
+            _aspectRatio = 16 / 9;
+            _aspectRatioMode = '16:9';
+          } else if (info.isSquare) {
+            _aspectRatio = 1.0;
+            _aspectRatioMode = '1:1';
+          } else {
+            _aspectRatio = 9 / 16;
+            _aspectRatioMode = '9:16';
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _initAudio() async {
@@ -380,7 +416,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
             // 1. Center Video Canvas Preview with Applied Filter & Overlays
             Center(
               child: AspectRatio(
-                aspectRatio: 9 / 16,
+                aspectRatio: _aspectRatio,
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
@@ -507,6 +543,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
               top: 80,
               child: Column(
                 children: [
+                  _buildStudioToolButton(icon: Icons.aspect_ratio_rounded, label: _aspectRatioMode, toolId: 'ratio'),
+                  const SizedBox(height: 12),
                   _buildStudioToolButton(icon: Icons.content_cut_rounded, label: 'Cortar', toolId: 'trim'),
                   const SizedBox(height: 12),
                   _buildStudioToolButton(icon: Icons.filter_vintage_rounded, label: 'Filtros', toolId: 'filter'),
@@ -546,28 +584,16 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
 
   Widget _buildVideoCanvasContent() {
     return Container(
-      color: const Color(0xFF18181B),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryTerracotta.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.play_circle_fill_rounded, size: 64, color: AppTheme.primaryTerracotta),
-            ),
-            const SizedBox(height: 12),
-            Text(widget.filename, style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 4),
-            Text(
-              '${(_trimRange.end - _trimRange.start).toStringAsFixed(1)}s de video',
-              style: GoogleFonts.outfit(color: AppTheme.accentOrange, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+      color: Colors.black,
+      child: VideoMetadataService.instance.buildVideoPlayerView(
+        bytes: widget.videoBytes,
+        viewKey: _viewKey,
+        objectUrl: _videoInfo?.objectUrl,
+        autoPlay: true,
+        loop: true,
+        muted: _originalVolume == 0.0,
+        volume: _originalVolume,
+        fit: _videoFit,
       ),
     );
   }
@@ -653,7 +679,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
 
   // ── Bottom Active Tool Drawers ─────────────────────────────────────────────
   Widget _buildActiveToolBottomPanel() {
-    if (_activeTool == 'trim') {
+    if (_activeTool == 'ratio') {
+      return _buildRatioPanel();
+    } else if (_activeTool == 'trim') {
       return _buildTrimPanel();
     } else if (_activeTool == 'filter') {
       return _buildFilterPanel();
@@ -663,6 +691,106 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
       return _buildAudioPanel();
     }
     return const SizedBox.shrink();
+  }
+
+  Widget _buildRatioPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF18181B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('📐 Formato & Adaptación de Video', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                onPressed: () => setState(() => _activeTool = 'none'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildRatioOption('📱 Vertical (TikTok)', '9:16', 9 / 16),
+              const SizedBox(width: 8),
+              _buildRatioOption('🖥️ Horizontal (Cine)', '16:9', 16 / 9),
+              const SizedBox(width: 8),
+              _buildRatioOption('⏹️ Cuadrado (Post)', '1:1', 1.0),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text('Modo de encuadre:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+              const Spacer(),
+              ChoiceChip(
+                label: Text('Ajustar (Sin cortes)', style: GoogleFonts.fredoka(fontSize: 11)),
+                selected: _videoFit == BoxFit.contain,
+                selectedColor: AppTheme.primaryTerracotta,
+                onSelected: (s) => setState(() => _videoFit = BoxFit.contain),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text('Rellenar', style: GoogleFonts.fredoka(fontSize: 11)),
+                selected: _videoFit == BoxFit.cover,
+                selectedColor: AppTheme.accentOrange,
+                onSelected: (s) => setState(() => _videoFit = BoxFit.cover),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatioOption(String title, String mode, double ratio) {
+    final isSelected = _aspectRatioMode == mode;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _aspectRatio = ratio;
+            _aspectRatioMode = mode;
+          });
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primaryTerracotta.withOpacity(0.25) : Colors.black45,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryTerracotta : Colors.white24,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.fredoka(
+                  color: isSelected ? AppTheme.accentOrange : Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                mode,
+                style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildTrimPanel() {

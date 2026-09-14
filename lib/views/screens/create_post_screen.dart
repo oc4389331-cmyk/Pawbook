@@ -12,6 +12,7 @@ import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
 import 'create_pet_screen.dart';
 import 'video_editor_screen.dart';
+import '../../services/video_metadata_service.dart';
 
 import '../../models/sound_track_model.dart';
 
@@ -152,16 +153,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       if (file != null) {
         final bytes = await file.readAsBytes();
+        final info = await VideoMetadataService.instance.extractMetadata(bytes);
         setState(() {
           _pickedMedia.clear();
           _videoEditorResult = null;
           _pickedMedia.add(_PickedMedia(
             bytes: bytes,
             filename: file.name,
-            width: 1080,
-            height: 1920,
+            width: info.width,
+            height: info.height,
           ));
         });
+
+        // Automatically open Video Studio for the user after picking video
+        await _openVideoEditor();
       }
     } catch (e) {
       _showSnack('Error al seleccionar video: $e', isError: true);
@@ -180,24 +185,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         if (file != null) {
           bytes = await file.readAsBytes();
           filename = file.name;
+          final info = await VideoMetadataService.instance.extractMetadata(bytes);
+          setState(() {
+            _pickedMedia.clear();
+            _pickedMedia.add(_PickedMedia(
+              bytes: bytes,
+              filename: filename,
+              width: info.width,
+              height: info.height,
+            ));
+          });
         } else {
-          bytes = Uint8List(1024);
-          filename = 'clip_${DateTime.now().millisecondsSinceEpoch}.mp4';
+          return;
         }
-      } catch (_) {
-        bytes = Uint8List(1024);
-        filename = 'clip_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      } catch (e) {
+        _showSnack('Error al seleccionar video: $e', isError: true);
+        return;
       }
-
-      setState(() {
-        _pickedMedia.clear();
-        _pickedMedia.add(_PickedMedia(
-          bytes: bytes,
-          filename: filename,
-          width: 1080,
-          height: 1920,
-        ));
-      });
     } else {
       bytes = _pickedMedia.first.bytes;
       filename = _pickedMedia.first.filename;
@@ -777,44 +781,110 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               if (_pickedMedia.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _videoEditorResult != null ? AppTheme.accentOrange : Colors.white12,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(Icons.play_circle_fill_rounded, size: 64, color: AppTheme.primaryTerracotta),
-                      Positioned(
-                        bottom: 10,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
+                Builder(
+                  builder: (context) {
+                    final media = _pickedMedia.first;
+                    final isLandscape = media.width != null && media.height != null && media.width! > media.height!;
+                    final isSquare = media.width != null && media.height != null && media.width! == media.height!;
+                    final aspectRatio = isLandscape ? 16 / 9 : (isSquare ? 1.0 : 9 / 16);
+                    final ratioLabel = isLandscape
+                        ? '🖥️ Horizontal ${media.width} × ${media.height} px (16:9)'
+                        : isSquare
+                            ? '⏹️ Cuadrado ${media.width} × ${media.height} px (1:1)'
+                            : '📱 Vertical ${media.width ?? 1080} × ${media.height ?? 1920} px (9:16)';
+
+                    return Container(
+                      constraints: const BoxConstraints(maxHeight: 280),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _videoEditorResult != null ? AppTheme.accentOrange : Colors.white12,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: AspectRatio(
+                          aspectRatio: aspectRatio,
+                          child: Stack(
+                            fit: StackFit.expand,
                             children: [
-                              const Icon(Icons.aspect_ratio_rounded, color: AppTheme.solanaGreen, size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Formato vertical 1080 × 1920 px (9:16)',
-                                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11),
+                              // Real interactive Video Player View
+                              VideoMetadataService.instance.buildVideoPlayerView(
+                                bytes: media.bytes,
+                                viewKey: 'create_post_vid_${media.filename.hashCode.abs()}',
+                                autoPlay: true,
+                                loop: true,
+                                muted: true,
+                                fit: BoxFit.contain,
+                              ),
+
+                              // Tap overlay to open Studio
+                              Positioned.fill(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _openVideoEditor,
+                                    child: Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white30),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.auto_fix_high_rounded, color: AppTheme.accentOrange, size: 18),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Toca para editar en Studio 🎬',
+                                              style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Bottom Aspect Ratio Badge
+                              Positioned(
+                                bottom: 10,
+                                left: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.75),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isLandscape ? Icons.crop_16_9_rounded : (isSquare ? Icons.crop_square_rounded : Icons.crop_portrait_rounded),
+                                        color: AppTheme.solanaGreen,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        ratioLabel,
+                                        style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
 
                 // Applied Studio Edits Badge
