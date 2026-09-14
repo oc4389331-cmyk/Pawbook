@@ -220,9 +220,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (result != null && mounted) {
       setState(() {
         _videoEditorResult = result;
-        if (result.selectedSound != null) {
-          _selectedSound = result.selectedSound;
-        }
+        _selectedSound = result.selectedSound;
       });
       _showSnack('✨ Video editado en Studio: Filtro ${result.filterName} • ${result.overlays.length} stickers');
     }
@@ -243,8 +241,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  void _selectSound(SoundTrack track) {
-    setState(() => _selectedSound = track);
+  Future<void> _selectSound(SoundTrack track) async {
+    if (_selectedSound?.id == track.id) {
+      await _clearSound();
+    } else {
+      setState(() {
+        _selectedSound = track;
+        if (_videoEditorResult != null) {
+          _videoEditorResult = _videoEditorResult!.copyWith(selectedSound: track);
+        }
+      });
+    }
   }
 
   Future<void> _clearSound() async {
@@ -253,6 +260,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       _selectedSound = null;
       _playingId = null;
       _isAudioPlaying = false;
+      if (_videoEditorResult != null) {
+        _videoEditorResult = _videoEditorResult!.copyWith(clearSound: true);
+      }
     });
   }
 

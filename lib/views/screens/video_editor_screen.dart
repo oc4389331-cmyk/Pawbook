@@ -133,6 +133,31 @@ class VideoEditorResult {
   });
 
   double get duration => endSeconds - startSeconds;
+
+  VideoEditorResult copyWith({
+    Uint8List? videoBytes,
+    String? filename,
+    double? startSeconds,
+    double? endSeconds,
+    String? filterName,
+    List<VideoOverlayItem>? overlays,
+    SoundTrack? selectedSound,
+    bool clearSound = false,
+    double? originalVolume,
+    double? musicVolume,
+  }) {
+    return VideoEditorResult(
+      videoBytes: videoBytes ?? this.videoBytes,
+      filename: filename ?? this.filename,
+      startSeconds: startSeconds ?? this.startSeconds,
+      endSeconds: endSeconds ?? this.endSeconds,
+      filterName: filterName ?? this.filterName,
+      overlays: overlays ?? this.overlays,
+      selectedSound: clearSound ? null : (selectedSound ?? this.selectedSound),
+      originalVolume: originalVolume ?? this.originalVolume,
+      musicVolume: musicVolume ?? this.musicVolume,
+    );
+  }
 }
 
 class VideoEditorScreen extends StatefulWidget {
@@ -801,6 +826,11 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     );
   }
 
+  Future<void> _clearSound() async {
+    await _audioPlayer.stop();
+    setState(() => _selectedSound = null);
+  }
+
   Widget _buildAudioPanel() {
     return Container(
       height: 280,
@@ -816,9 +846,24 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('🎵 Mezclador de Audio & Música', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white70, size: 16),
-                onPressed: () => setState(() => _activeTool = 'none'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_selectedSound != null)
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: _clearSound,
+                      icon: const Icon(Icons.close_rounded, size: 14, color: Colors.redAccent),
+                      label: Text('Quitar sonido', style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 11)),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70, size: 16),
+                    onPressed: () => setState(() => _activeTool = 'none'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -876,9 +921,15 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       ? const Icon(Icons.check_circle_rounded, color: AppTheme.accentOrange, size: 18)
                       : null,
                   onTap: () async {
-                    setState(() => _selectedSound = track);
-                    await _audioPlayer.stop();
-                    await _audioPlayer.play(UrlSource(track.url));
+                    if (isSelected) {
+                      await _clearSound();
+                    } else {
+                      setState(() => _selectedSound = track);
+                      await _audioPlayer.stop();
+                      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+                      await _audioPlayer.setVolume(_musicVolume);
+                      await _audioPlayer.play(UrlSource(track.url));
+                    }
                   },
                 );
               },
