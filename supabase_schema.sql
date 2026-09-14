@@ -51,20 +51,28 @@ CREATE TABLE IF NOT EXISTS public.posts (
     id TEXT PRIMARY KEY,
     pet_id TEXT NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
     media_url TEXT NOT NULL,
+    media_urls TEXT[] DEFAULT '{}',
     media_type TEXT DEFAULT 'video' NOT NULL,
     caption TEXT DEFAULT '',
     likes_count INT DEFAULT 0 NOT NULL,
     views_count INT DEFAULT 0 NOT NULL,
+    comments_count INT DEFAULT 0 NOT NULL,
     tags TEXT[] DEFAULT '{}',
     status post_status_type DEFAULT 'pending_review' NOT NULL,
     report_count INT DEFAULT 0 NOT NULL,
     moderation_reason TEXT,
+    sound_url TEXT,
+    sound_title TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- Safely add columns if upgrading existing database
 ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS views_count INT DEFAULT 0 NOT NULL;
 ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS media_urls TEXT[] DEFAULT '{}';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS sound_url TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS sound_title TEXT;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS comments_count INT DEFAULT 0 NOT NULL;
 
 -- 5. Post Likes Table (Prevents duplicates & feeds recommendation algorithm)
 CREATE TABLE IF NOT EXISTS public.post_likes (

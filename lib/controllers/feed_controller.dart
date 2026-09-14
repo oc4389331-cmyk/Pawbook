@@ -73,6 +73,10 @@ class FeedController extends ChangeNotifier {
     required String filename,
     required String mediaType,
     required String caption,
+    List<List<int>>? extraMediaBytes,
+    List<String>? extraFilenames,
+    String? soundUrl,
+    String? soundTitle,
     String? forceModerationDecision,
   }) async {
     // 1. Role Check: Only Pet Creators can publish
@@ -82,7 +86,7 @@ class FeedController extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      // 2. Obtain R2 Presigned Upload URL from Backend API
+      // 2. Obtain R2 Presigned Upload URL from Backend API for primary media
       final uploadRes = await _renderBackendService.requestUploadUrl(
         petId: pet.id,
         mediaType: mediaType,
@@ -104,16 +108,50 @@ class FeedController extends ChangeNotifier {
         contentType: mediaType == 'video' ? 'video/mp4' : 'image/jpeg',
       );
 
+      final List<String> allUploadedUrls = [uploadedUrl];
+
+      // Upload any additional images
+      if (extraMediaBytes != null && extraMediaBytes.isNotEmpty) {
+        for (int i = 0; i < extraMediaBytes.length; i++) {
+          final extraName = (extraFilenames != null && i < extraFilenames.length)
+              ? extraFilenames[i]
+              : 'extra_${i + 1}.jpg';
+          try {
+            final extraRes = await _renderBackendService.requestUploadUrl(
+              petId: pet.id,
+              mediaType: 'image',
+              filename: extraName,
+            );
+            if (extraRes['success'] == true) {
+              final extraPutUrl = extraRes['presignedPutUrl'] as String;
+              final extraPublicUrl = extraRes['publicUrl'] as String;
+              final extraUploaded = await _r2StorageService.uploadMediaWithPresignedUrl(
+                presignedPutUrl: extraPutUrl,
+                publicUrl: extraPublicUrl,
+                bytes: extraMediaBytes[i],
+                contentType: 'image/jpeg',
+              );
+              allUploadedUrls.add(extraUploaded);
+            }
+          } catch (e) {
+            print('Error uploading extra image $i: $e');
+          }
+        }
+      }
+
       // 4. Create Post record with status = pending_review
       final postId = 'post_' + const Uuid().v4().substring(0, 8);
       final newPost = PostModel(
         id: postId,
         petId: pet.id,
         mediaUrl: uploadedUrl,
+        mediaUrls: allUploadedUrls,
         mediaType: mediaType,
         caption: caption,
         status: PostStatus.pendingReview,
         createdAt: DateTime.now(),
+        soundUrl: soundUrl,
+        soundTitle: soundTitle,
         petName: pet.name,
         petAvatarUrl: pet.avatarUrl,
         nftMintAddress: pet.nftMintAddress,
@@ -137,7 +175,7 @@ class FeedController extends ChangeNotifier {
         return activePost;
       } else {
         await _supabaseService.updatePostStatus(postId, PostStatus.rejected);
-        throw Exception('MODERATION_REJECTED: ');
+        throw Exception('MODERATION_REJECTED');
       }
     } finally {
       _setLoading(false);

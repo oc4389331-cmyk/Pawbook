@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/auth_controller.dart';
 import '../../models/pet_model.dart';
 import '../../models/pet_analytics_model.dart';
 import '../../services/supabase_service.dart';
@@ -42,7 +44,57 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
 
   @override
   Widget build(BuildContext context) {
+    final authController = Provider.of<AuthController>(context);
+    final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
+        authController.activePet?.id == widget.pet.id ||
+        authController.userPets.any((p) => p.id == widget.pet.id);
+
     final screenHeight = MediaQuery.of(context).size.height;
+
+    if (!isOwner) {
+      return Container(
+        height: screenHeight * 0.45,
+        decoration: const BoxDecoration(
+          color: AppTheme.bgWarmCream,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_rounded, size: 48, color: Colors.redAccent),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Estadísticas Privadas',
+              style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Las métricas y estadísticas detalladas de video de @${widget.pet.name} son privadas y exclusivas para su tutor creador.',
+              style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTerracotta,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Entendido', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       height: screenHeight * 0.90,

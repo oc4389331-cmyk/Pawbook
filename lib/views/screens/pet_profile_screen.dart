@@ -422,93 +422,94 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     const SizedBox(height: 18),
                   ],
 
-                  // Creator Analytics & Metrics Card Button
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2563EB).withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                  // Creator Analytics & Metrics Card Button (Exclusivo para el tutor/dueño de la mascota)
+                  if (isOwner)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
                         borderRadius: BorderRadius.circular(20),
-                        onTap: () => PetAnalyticsDashboardModal.show(context, pet: widget.pet),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => PetAnalyticsDashboardModal.show(context, pet: widget.pet),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.insights_rounded, color: Colors.white, size: 22),
                                 ),
-                                child: const Icon(Icons.insights_rounded, color: Colors.white, size: 22),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Métricas & Estadísticas',
-                                          style: GoogleFonts.fredoka(
-                                            color: Colors.white,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.25),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            'Global & Videos',
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Métricas & Estadísticas',
                                             style: GoogleFonts.fredoka(
                                               color: Colors.white,
-                                              fontSize: 9,
+                                              fontSize: 15,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Gráficas de Vistas, Likes, Comentarios y Retención',
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white.withOpacity(0.88),
-                                        fontSize: 11,
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.25),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              'Global & Videos',
+                                              style: GoogleFonts.fredoka(
+                                                color: Colors.white,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Gráficas de Vistas, Likes, Comentarios y Retención',
+                                        style: GoogleFonts.outfit(
+                                          color: Colors.white.withOpacity(0.88),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-                            ],
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
                   // Claim Sponsorship Earnings Card (For Pet Owner)
                   if (isOwner)
@@ -761,33 +762,34 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 14),
-
-                  // Logout Red Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  // Logout Red Action Button (Solo para el dueño/tutor)
+                  if (isOwner) ...[
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: Text(
+                          langController.t('logOut'),
+                          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () async {
+                          await authController.logout();
+                          if (context.mounted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          }
+                        },
                       ),
-                      icon: const Icon(Icons.logout_rounded, size: 18),
-                      label: Text(
-                        langController.t('logOut'),
-                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () async {
-                        await authController.logout();
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          );
-                        }
-                      },
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

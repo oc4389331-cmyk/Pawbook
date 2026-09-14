@@ -4,6 +4,7 @@ class PostModel {
   final String id;
   final String petId;
   final String mediaUrl;
+  final List<String> mediaUrls; // Multi-image support (up to 5)
   final String mediaType;
   final String caption;
   final int likesCount;
@@ -13,6 +14,8 @@ class PostModel {
   final PostStatus status;
   final int reportCount;
   final DateTime createdAt;
+  final String? soundUrl;   // Royalty-free audio URL
+  final String? soundTitle; // Song display name
 
   // Joined metadata & local state for UI convenience
   final String? petName;
@@ -21,10 +24,21 @@ class PostModel {
   final String? nftMintAddress;
   final bool isLikedByCurrentUser;
 
+  /// All display URLs: combines mediaUrls (if set) with fallback to mediaUrl
+  List<String> get allMediaUrls {
+    if (mediaUrls.isNotEmpty) return mediaUrls;
+    if (mediaUrl.isNotEmpty) return [mediaUrl];
+    return [];
+  }
+
+  bool get hasMultipleImages => allMediaUrls.length > 1;
+  bool get hasSound => soundUrl != null && soundUrl!.isNotEmpty;
+
   PostModel({
     required this.id,
     required this.petId,
     required this.mediaUrl,
+    this.mediaUrls = const [],
     this.mediaType = 'video',
     this.caption = '',
     this.likesCount = 0,
@@ -34,6 +48,8 @@ class PostModel {
     this.status = PostStatus.active,
     this.reportCount = 0,
     required this.createdAt,
+    this.soundUrl,
+    this.soundTitle,
     this.petName,
     this.petAvatarUrl,
     this.petSpecies,
@@ -56,10 +72,17 @@ class PostModel {
       parsedTags = rawTags.map((e) => e.toString()).toList();
     }
 
+    final rawMediaUrls = json['media_urls'];
+    List<String> parsedMediaUrls = [];
+    if (rawMediaUrls is List) {
+      parsedMediaUrls = rawMediaUrls.map((e) => e.toString()).toList();
+    }
+
     return PostModel(
       id: json['id'] ?? '',
       petId: json['pet_id'] ?? '',
       mediaUrl: json['media_url'] ?? '',
+      mediaUrls: parsedMediaUrls,
       mediaType: json['media_type'] ?? 'video',
       caption: json['caption'] ?? '',
       likesCount: (json['likes_count'] ?? 0) as int,
@@ -71,6 +94,8 @@ class PostModel {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      soundUrl: json['sound_url'],
+      soundTitle: json['sound_title'],
       petName: json['pet_name'] ?? json['pets']?['name'],
       petAvatarUrl: json['pet_avatar_url'] ?? json['pets']?['avatar_url'],
       petSpecies: json['pet_species'] ?? json['pets']?['species'] ?? 'Dog',
@@ -88,6 +113,7 @@ class PostModel {
       'id': id,
       'pet_id': petId,
       'media_url': mediaUrl,
+      'media_urls': mediaUrls,
       'media_type': mediaType,
       'caption': caption,
       'likes_count': likesCount,
@@ -95,6 +121,8 @@ class PostModel {
       'tags': tags,
       'status': statusStr,
       'report_count': reportCount,
+      'sound_url': soundUrl,
+      'sound_title': soundTitle,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -103,6 +131,7 @@ class PostModel {
     String? id,
     String? petId,
     String? mediaUrl,
+    List<String>? mediaUrls,
     String? mediaType,
     String? caption,
     int? likesCount,
@@ -112,6 +141,8 @@ class PostModel {
     PostStatus? status,
     int? reportCount,
     DateTime? createdAt,
+    String? soundUrl,
+    String? soundTitle,
     String? petName,
     String? petAvatarUrl,
     String? petSpecies,
@@ -122,6 +153,7 @@ class PostModel {
       id: id ?? this.id,
       petId: petId ?? this.petId,
       mediaUrl: mediaUrl ?? this.mediaUrl,
+      mediaUrls: mediaUrls ?? this.mediaUrls,
       mediaType: mediaType ?? this.mediaType,
       caption: caption ?? this.caption,
       likesCount: likesCount ?? this.likesCount,
@@ -131,6 +163,8 @@ class PostModel {
       status: status ?? this.status,
       reportCount: reportCount ?? this.reportCount,
       createdAt: createdAt ?? this.createdAt,
+      soundUrl: soundUrl ?? this.soundUrl,
+      soundTitle: soundTitle ?? this.soundTitle,
       petName: petName ?? this.petName,
       petAvatarUrl: petAvatarUrl ?? this.petAvatarUrl,
       petSpecies: petSpecies ?? this.petSpecies,

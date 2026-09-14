@@ -1192,6 +1192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return TikTokFeedItem(
                   post: post,
                   currentUserId: currentUserId,
+                  isCurrentPage: _currentFeedPage == index,
                   onLikeToggled: () {
                     if (!authController.isAuthenticated) {
                       _showTikTokRegistrationWall(context, authController);
@@ -1562,6 +1563,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 8),
         Text(post.caption, style: GoogleFonts.outfit(color: Colors.white, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+        if (post.hasSound) ...[
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.music_note_rounded, color: AppTheme.accentOrange, size: 14),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  post.soundTitle ?? 'Audio Original',
+                  style: GoogleFonts.fredoka(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
         if (post.tags.isNotEmpty) ...[
           const SizedBox(height: 6),
           Wrap(
