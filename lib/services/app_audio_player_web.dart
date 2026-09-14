@@ -32,9 +32,14 @@ class AppAudioPlayerWeb implements AppAudioPlayer {
   Future<void> play(String url, {bool loop = false, double volume = 1.0}) async {
     try {
       _ensureAudio();
-      _audio!.src = url;
+      _audio!.crossOrigin = 'anonymous';
+      _audio!.preload = 'auto';
+      if (_audio!.src != url) {
+        _audio!.src = url;
+      }
       _audio!.loop = loop;
       _audio!.volume = volume.clamp(0.0, 1.0);
+      _audio!.currentTime = 0;
       await _audio!.play();
     } catch (_) {}
   }

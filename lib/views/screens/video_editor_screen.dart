@@ -109,6 +109,13 @@ const List<VideoFilterPreset> videoFilterPresets = [
   ),
 ];
 
+const List<String> petStickersCatalog = [
+  '🐾', '👑', '😎', '🦴', '🐶', '🐱', '💖', '⚡', '🔥', '🏆',
+  '✨', '🏖️', '🐕', '🐈', '🧶', '🍖', '🎀', '🕶️', '🌟', '🎉',
+  '🥇', '🐕‍🦺', '🐩', '🦜', '🥳', '😻', '❤️', '🎈', '🤩', '🎯',
+  '🌈', '🍦', '🍕', '🍰',
+];
+
 // ── Studio Result Output ─────────────────────────────────────────────────────
 class VideoEditorResult {
   final Uint8List videoBytes;
@@ -614,29 +621,70 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
         onTap: () {
           setState(() => _selectedOverlayId = item.id);
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: item.backgroundColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppTheme.accentOrange : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: item.type == OverlayType.text
-              ? Text(
-                  item.content,
-                  style: GoogleFonts.fredoka(
-                    color: item.textColor,
-                    fontSize: 18 * item.scale,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
-              : Text(
-                  item.content,
-                  style: TextStyle(fontSize: 32 * item.scale),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: item.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? AppTheme.accentOrange : Colors.white24,
+                  width: isSelected ? 2 : 1,
                 ),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: AppTheme.accentOrange.withOpacity(0.4),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: item.type == OverlayType.text
+                  ? Text(
+                      item.content,
+                      style: GoogleFonts.fredoka(
+                        color: item.textColor,
+                        fontSize: 18 * item.scale,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : Text(
+                      item.content,
+                      style: TextStyle(fontSize: 32 * item.scale),
+                    ),
+            ),
+
+            // Top-right 'X' delete button directly on the overlay
+            Positioned(
+              top: -8,
+              right: -8,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _overlays.removeWhere((o) => o.id == item.id);
+                    if (_selectedOverlayId == item.id) {
+                      _selectedOverlayId = null;
+                    }
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black54, blurRadius: 4),
+                    ],
+                  ),
+                  child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -714,11 +762,11 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildRatioOption('📱 Vertical (TikTok)', '9:16', 9 / 16),
+              _buildRatioOption('📱 Vertical', '9:16', 9 / 16),
               const SizedBox(width: 8),
-              _buildRatioOption('🖥️ Horizontal (Cine)', '16:9', 16 / 9),
+              _buildRatioOption('🖥️ Horizontal', '16:9', 16 / 9),
               const SizedBox(width: 8),
-              _buildRatioOption('⏹️ Cuadrado (Post)', '1:1', 1.0),
+              _buildRatioOption('⏹️ Cuadrado', '1:1', 1.0),
             ],
           ),
           const SizedBox(height: 14),
@@ -897,11 +945,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   }
 
   Widget _buildStickersPanel() {
-    final petStickers = ['🐾', '👑', '😎', '🦴', '🐶', '🐱', '💖', '⚡', '🔥', '🏆', '✨', '🏖️', '🐕', '🐈', '🧶', '🍖', '🎀', '🕶️', '🌟', '🎉'];
-
     return Container(
-      height: 160,
-      padding: const EdgeInsets.all(14),
+      height: 220,
+      padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: Color(0xFF18181B),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -912,35 +958,35 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('🐾 Stickers y Emojis para Mascotas', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text('😀 Stickers & Emojis para Mascotas', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70, size: 16),
                 onPressed: () => setState(() => _activeTool = 'none'),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
+                crossAxisCount: 6,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
               ),
-              itemCount: petStickers.length,
+              itemCount: petStickersCatalog.length,
               itemBuilder: (context, i) {
-                final emoji = petStickers[i];
+                final sticker = petStickersCatalog[i];
                 return GestureDetector(
-                  onTap: () {
-                    _addOverlay(OverlayType.emoji, emoji);
-                    setState(() => _activeTool = 'none');
-                  },
+                  onTap: () => _addOverlay(OverlayType.sticker, sticker),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white12),
                     ),
-                    child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
+                    child: Center(
+                      child: Text(sticker, style: const TextStyle(fontSize: 24)),
+                    ),
                   ),
                 );
               },
@@ -1031,10 +1077,31 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           const SizedBox(height: 6),
           Expanded(
             child: ListView.separated(
-              itemCount: royaltyFreeSoundsCatalog.length,
+              itemCount: royaltyFreeSoundsCatalog.length + 1,
               separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
               itemBuilder: (context, i) {
-                final track = royaltyFreeSoundsCatalog[i];
+                if (i == 0) {
+                  final isNoSound = _selectedSound == null;
+                  return ListTile(
+                    dense: true,
+                    leading: const Text('🚫', style: TextStyle(fontSize: 20)),
+                    title: Text(
+                      'Sin Música (Audio Original)',
+                      style: GoogleFonts.fredoka(
+                        color: isNoSound ? AppTheme.accentOrange : Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text('Usar solo el audio del video', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
+                    trailing: isNoSound
+                        ? const Icon(Icons.check_circle_rounded, color: AppTheme.accentOrange, size: 18)
+                        : null,
+                    onTap: _clearSound,
+                  );
+                }
+
+                final track = royaltyFreeSoundsCatalog[i - 1];
                 final isSelected = _selectedSound?.id == track.id;
 
                 return ListTile(

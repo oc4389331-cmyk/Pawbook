@@ -98,9 +98,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   // ── Decode Image Dimensions in px ──────────────────────────────────────────
   Future<Map<String, int>> _getImageDimensions(Uint8List bytes) async {
     try {
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      return {'width': frame.image.width, 'height': frame.image.height};
+      final decoded = await decodeImageFromList(bytes);
+      return {'width': decoded.width, 'height': decoded.height};
     } catch (_) {
       return {'width': 0, 'height': 0};
     }
@@ -116,10 +115,25 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
 
       final picker = ImagePicker();
-      final List<XFile> files = await picker.pickMultiImage(
-        imageQuality: 90,
-        limit: remaining,
-      );
+      List<XFile> files = [];
+
+      try {
+        files = await picker.pickMultiImage();
+      } catch (_) {
+        // Fallback to single image picker on platforms where pickMultiImage fails
+        final single = await picker.pickImage(source: ImageSource.gallery);
+        if (single != null) {
+          files = [single];
+        }
+      }
+
+      if (files.isEmpty) {
+        // Additional fallback: prompt single image if pickMultiImage returned empty
+        final single = await picker.pickImage(source: ImageSource.gallery);
+        if (single != null) {
+          files = [single];
+        }
+      }
 
       if (files.isEmpty) return;
 
