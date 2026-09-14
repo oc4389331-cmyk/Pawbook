@@ -175,17 +175,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // ── Open Pawtbook Video Studio ────────────────────────────────────────────
   Future<void> _openVideoEditor() async {
-    Uint8List bytes;
-    String filename;
+    try {
+      Uint8List bytes;
+      String filename;
 
-    if (_pickedMedia.isEmpty) {
-      try {
+      if (_pickedMedia.isEmpty) {
         final picker = ImagePicker();
-        final XFile? file = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 30));
-        if (file != null) {
-          bytes = await file.readAsBytes();
-          filename = file.name;
-          final info = await VideoMetadataService.instance.extractMetadata(bytes);
+        final XFile? file = await picker.pickVideo(
+          source: ImageSource.gallery,
+          maxDuration: const Duration(seconds: 30),
+        );
+        if (file == null) return;
+        bytes = await file.readAsBytes();
+        filename = file.name;
+        final info = await VideoMetadataService.instance.extractMetadata(bytes);
+        if (mounted) {
           setState(() {
             _pickedMedia.clear();
             _pickedMedia.add(_PickedMedia(
@@ -195,38 +199,35 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               height: info.height,
             ));
           });
-        } else {
-          return;
         }
-      } catch (e) {
-        _showSnack('Error al seleccionar video: $e', isError: true);
-        return;
+      } else {
+        bytes = _pickedMedia.first.bytes;
+        filename = _pickedMedia.first.filename;
       }
-    } else {
-      bytes = _pickedMedia.first.bytes;
-      filename = _pickedMedia.first.filename;
-    }
 
-    await _audioPlayer.stop();
-    if (!mounted) return;
+      await _audioPlayer.stop();
+      if (!mounted) return;
 
-    final result = await Navigator.push<VideoEditorResult>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => VideoEditorScreen(
-          videoBytes: bytes,
-          filename: filename,
-          initialSound: _selectedSound,
+      final result = await Navigator.of(context).push<VideoEditorResult>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => VideoEditorScreen(
+            videoBytes: bytes,
+            filename: filename,
+            initialSound: _selectedSound,
+          ),
         ),
-      ),
-    );
+      );
 
-    if (result != null && mounted) {
-      setState(() {
-        _videoEditorResult = result;
-        _selectedSound = result.selectedSound;
-      });
-      _showSnack('✨ Video editado en Studio: Filtro ${result.filterName} • ${result.overlays.length} stickers');
+      if (result != null && mounted) {
+        setState(() {
+          _videoEditorResult = result;
+          _selectedSound = result.selectedSound;
+        });
+        _showSnack('✨ Video editado en Studio: Filtro ${result.filterName} • ${result.overlays.length} stickers');
+      }
+    } catch (e) {
+      _showSnack('Error al abrir Studio: $e', isError: true);
     }
   }
 
@@ -885,6 +886,27 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                     );
                   },
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
+                    ),
+                    icon: const Icon(Icons.auto_fix_high_rounded, size: 20),
+                    label: Text(
+                      _videoEditorResult != null
+                          ? '✨ Volver a editar en Video Studio'
+                          : '🎬 Entrar a Pawtbook Video Studio',
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    onPressed: _openVideoEditor,
+                  ),
                 ),
 
                 // Applied Studio Edits Badge

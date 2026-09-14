@@ -94,6 +94,9 @@ class VideoMetadataWeb implements VideoMetadataService {
           ..style.height = '100%'
           ..style.objectFit = fit == BoxFit.cover ? 'cover' : 'contain'
           ..style.backgroundColor = 'transparent'
+          ..style.pointerEvents = 'none'
+          ..style.border = 'none'
+          ..style.outline = 'none'
           ..setAttribute('playsinline', 'true')
           ..setAttribute('webkit-playsinline', 'true');
 
