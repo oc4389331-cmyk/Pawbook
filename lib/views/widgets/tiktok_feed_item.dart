@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/post_model.dart';
 import '../../models/pet_model.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import '../../services/app_audio_player.dart';
 
 class TikTokFeedItem extends StatefulWidget {
   final PostModel post;
@@ -35,7 +35,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
   final PageController _imagePageController = PageController();
 
   // Audio player & rotating music disc animation
-  AudioPlayer? _audioPlayer;
+  AppAudioPlayer? _audioPlayer;
   bool _isPlayingSound = false;
   bool _isMuted = false;
   late AnimationController _discAnimationController;
@@ -64,12 +64,10 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
 
   Future<void> _initAudioPlayer() async {
     try {
-      _audioPlayer = AudioPlayer();
-      await _audioPlayer!.setReleaseMode(ReleaseMode.loop);
+      _audioPlayer = AppAudioPlayer();
 
-      _audioPlayer!.onPlayerStateChanged.listen((state) {
+      _audioPlayer!.onPlayingChanged.listen((playing) {
         if (!mounted) return;
-        final playing = state == PlayerState.playing;
         setState(() => _isPlayingSound = playing);
         if (playing) {
           if (!_discAnimationController.isAnimating) {
@@ -81,7 +79,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
       });
 
       if (widget.isCurrentPage && !_isMuted && widget.post.soundUrl != null) {
-        await _audioPlayer!.play(UrlSource(widget.post.soundUrl!));
+        await _audioPlayer!.play(widget.post.soundUrl!, loop: true);
       }
     } catch (e) {
       debugPrint('[TikTokFeedItem] Audio player init error: $e');
@@ -94,7 +92,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
     if (widget.post.hasSound && _audioPlayer != null) {
       if (widget.isCurrentPage && !_isMuted) {
         if (!_isPlayingSound && widget.post.soundUrl != null) {
-          _audioPlayer!.play(UrlSource(widget.post.soundUrl!));
+          _audioPlayer!.play(widget.post.soundUrl!, loop: true);
         }
       } else {
         if (_isPlayingSound) {
@@ -110,7 +108,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
       if (_isMuted) {
         _audioPlayer!.pause();
       } else if (widget.isCurrentPage && widget.post.soundUrl != null) {
-        _audioPlayer!.play(UrlSource(widget.post.soundUrl!));
+        _audioPlayer!.play(widget.post.soundUrl!, loop: true);
       }
     }
   }
@@ -124,7 +122,6 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
     }
     _imagePageController.dispose();
     _discAnimationController.dispose();
-    _audioPlayer?.stop();
     _audioPlayer?.dispose();
     super.dispose();
   }

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +12,7 @@ import '../../theme/app_theme.dart';
 import 'create_pet_screen.dart';
 import 'video_editor_screen.dart';
 import '../../services/video_metadata_service.dart';
+import '../../services/app_audio_player.dart';
 
 import '../../models/sound_track_model.dart';
 
@@ -60,7 +60,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // Sound / music selection
   SoundTrack? _selectedSound;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AppAudioPlayer _audioPlayer = AppAudioPlayer();
   String? _playingId;
   bool _isAudioPlaying = false;
 
@@ -72,13 +72,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       _selectedPet = authController.activePet ?? authController.userPets.first;
     }
 
-    _audioPlayer.onPlayerStateChanged.listen((state) {
+    _audioPlayer.onPlayingChanged.listen((isPlaying) {
       if (mounted) {
-        setState(() => _isAudioPlaying = state == PlayerState.playing);
+        setState(() => _isAudioPlaying = isPlaying);
       }
     });
 
-    _audioPlayer.onPlayerComplete.listen((_) {
+    _audioPlayer.onComplete.listen((_) {
       if (mounted) {
         setState(() {
           _isAudioPlaying = false;
@@ -91,7 +91,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void dispose() {
     _captionController.dispose();
-    _audioPlayer.stop();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -240,8 +239,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (_playingId == track.id && _isAudioPlaying) {
       await _audioPlayer.pause();
     } else {
-      await _audioPlayer.stop();
-      await _audioPlayer.play(UrlSource(track.url));
+      await _audioPlayer.play(track.url);
       setState(() => _playingId = track.id);
     }
   }

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/sound_track_model.dart';
 import '../../services/video_metadata_service.dart';
+import '../../services/app_audio_player.dart';
 
 // ── Overlay Item Model (Stickers, Emojis, Text) ──────────────────────────────
 enum OverlayType { sticker, emoji, text }
@@ -201,7 +201,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   SoundTrack? _selectedSound;
   double _originalVolume = 1.0;
   double _musicVolume = 0.8;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AppAudioPlayer _audioPlayer = AppAudioPlayer();
 
   // Active Tool Panel
   String _activeTool = 'none'; // 'none', 'ratio', 'trim', 'filter', 'stickers', 'text', 'audio'
@@ -254,10 +254,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
 
   Future<void> _initAudio() async {
     try {
-      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer.setVolume(_musicVolume);
       if (_selectedSound != null) {
-        await _audioPlayer.play(UrlSource(_selectedSound!.url));
+        await _audioPlayer.play(_selectedSound!.url, loop: true, volume: _musicVolume);
       }
     } catch (_) {}
   }
@@ -265,7 +263,6 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   @override
   void dispose() {
     _playheadController.dispose();
-    _audioPlayer.stop();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -1053,10 +1050,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       await _clearSound();
                     } else {
                       setState(() => _selectedSound = track);
-                      await _audioPlayer.stop();
-                      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-                      await _audioPlayer.setVolume(_musicVolume);
-                      await _audioPlayer.play(UrlSource(track.url));
+                      await _audioPlayer.play(track.url, loop: true, volume: _musicVolume);
                     }
                   },
                 );
