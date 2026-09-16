@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildTermsAndConditionsCheckbox() {
+  Widget _buildTermsAndConditionsCheckbox(LanguageController langController) {
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -131,14 +131,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text(
-                  'Acepto los ',
-                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimaryDark),
-                ),
+                if (langController.t('termsAcceptPrefix').isNotEmpty)
+                  Text(
+                    langController.t('termsAcceptPrefix'),
+                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimaryDark),
+                  ),
                 GestureDetector(
                   onTap: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
                   child: Text(
-                    'Términos y Condiciones de Uso 🐾',
+                    langController.t('termsAcceptLink'),
                     style: GoogleFonts.fredoka(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -494,7 +495,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                         ),
-                        if (_isSignUp) _buildTermsAndConditionsCheckbox(),
+                        if (_isSignUp) _buildTermsAndConditionsCheckbox(langController),
                         const SizedBox(height: 14),
 
                         // Botón: Enviar código (distinto color y texto según modo)
@@ -538,11 +539,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         SnackBar(
                                           backgroundColor: AppTheme.primaryTerracotta,
                                           content: Text(
-                                            'Por favor acepta los Términos y Condiciones de uso para crear tu cuenta.',
+                                            langController.t('termsRequiredNotice'),
                                             style: GoogleFonts.fredoka(color: Colors.white),
                                           ),
                                           action: SnackBarAction(
-                                            label: 'Ver Términos',
+                                            label: langController.t('viewTerms'),
                                             textColor: Colors.white,
                                             onPressed: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
                                           ),

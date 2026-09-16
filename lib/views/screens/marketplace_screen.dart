@@ -29,7 +29,7 @@ class MarketplaceScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('⚠️ Esta bandana está agotada.', style: GoogleFonts.fredoka(color: Colors.white)),
+          content: Text(langController.t('soldOutNotice'), style: GoogleFonts.fredoka(color: Colors.white)),
         ),
       );
       return;
@@ -114,7 +114,7 @@ class MarketplaceScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '\$${item.priceUsd.toStringAsFixed(2)} USD c/u',
+                                '\$${item.priceUsd.toStringAsFixed(2)} USD',
                                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 2),
@@ -125,7 +125,7 @@ class MarketplaceScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '📦 Stock disponible: ${item.stock}',
+                                  '📦 ${langController.t("stockAvailable")}: ${item.stock}',
                                   style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -151,11 +151,11 @@ class MarketplaceScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Cantidad a comprar:',
+                                langController.t('quantityToBuy'),
                                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                'Máximo: ${item.stock} ${item.stock == 1 ? "unidad" : "unidades"}',
+                                '${langController.t("maxUnits")}: ${item.stock} ${item.stock == 1 ? langController.t("unit") : langController.t("units")}',
                                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
                               ),
                             ],
@@ -203,7 +203,7 @@ class MarketplaceScreen extends StatelessWidget {
 
                     // TOKEN / CRYPTO SELECTION (SOL vs $SKR)
                     Text(
-                      'Selecciona Token de Pago (Solana):',
+                      langController.t('selectPaymentToken'),
                       style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
@@ -304,7 +304,7 @@ class MarketplaceScreen extends StatelessWidget {
 
                     // Wallet Selection
                     Text(
-                      'Selecciona tu Billetera de Solana:',
+                      langController.t('selectSolanaWallet'),
                       style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
@@ -387,7 +387,7 @@ class MarketplaceScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Total ($selectedQuantity ${selectedQuantity == 1 ? "unidad" : "unidades"}):',
+                            '${langController.t("orderTotal")} ($selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")}):',
                             style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark),
                           ),
                           Text(
@@ -450,7 +450,7 @@ class MarketplaceScreen extends StatelessWidget {
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                '⚡ ¡Pago exitoso de $tokenPaidStr ($selectedQuantity ${selectedQuantity == 1 ? "unidad" : "unidades"})! Tu ${item.name} está en camino.',
+                                                '${langController.t("paySuccessMsg")} ($tokenPaidStr • $selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")})',
                                                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
                                               ),
                                             ),
@@ -465,7 +465,7 @@ class MarketplaceScreen extends StatelessWidget {
                                       SnackBar(
                                         backgroundColor: AppTheme.primaryTerracotta,
                                         duration: const Duration(seconds: 4),
-                                        content: Text('ℹ️ Pago cancelado en tu wallet. No se realizó ningún cobro.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                        content: Text(langController.t('payCancelledMsg'), style: GoogleFonts.fredoka(color: Colors.white)),
                                       ),
                                     );
                                   }
@@ -476,7 +476,7 @@ class MarketplaceScreen extends StatelessWidget {
                                         backgroundColor: AppTheme.primaryTerracotta,
                                         duration: const Duration(seconds: 5),
                                         content: Text(
-                                          '⚠️ Error al procesar el pago: ${res.errorMessage ?? "No se pudo conectar con la wallet."}',
+                                          '${langController.t("payErrorMsg")} ${res.errorMessage ?? ""}',
                                           style: GoogleFonts.fredoka(color: Colors.white),
                                         ),
                                       ),
@@ -501,8 +501,8 @@ class MarketplaceScreen extends StatelessWidget {
                               )
                             : Text(
                                 selectedToken == 'SKR'
-                                    ? 'Pagar \$${totalUsd.toStringAsFixed(2)} con \$SKR (${totalSkr.toStringAsFixed(0)} \$SKR)'
-                                    : 'Pagar \$${totalUsd.toStringAsFixed(2)} con SOL (${totalSol.toStringAsFixed(3)} SOL)',
+                                    ? '${langController.t("payWithSkr")} (\$${totalUsd.toStringAsFixed(2)} • ${totalSkr.toStringAsFixed(0)} \$SKR)'
+                                    : '${langController.t("payWithSol")} (\$${totalUsd.toStringAsFixed(2)} • ${totalSol.toStringAsFixed(3)} SOL)',
                                 style: GoogleFonts.fredoka(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                       ),
@@ -522,12 +522,13 @@ class MarketplaceScreen extends StatelessWidget {
     BandanaProductModel item,
     AuthController authController,
     MarketplaceController marketplaceController,
+    LanguageController langController,
   ) {
     if (item.isSoldOut) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('⚠️ Esta bandana está agotada.', style: GoogleFonts.fredoka(color: Colors.white)),
+          content: Text(langController.t('soldOutNotice'), style: GoogleFonts.fredoka(color: Colors.white)),
         ),
       );
       return;
@@ -567,7 +568,7 @@ class MarketplaceScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Canjear con Puntos PawtScore 🐾',
+                    langController.t('redeemWithPointsTitle'),
                     style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                   ),
                   const SizedBox(height: 12),
@@ -583,7 +584,7 @@ class MarketplaceScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.name, style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('${item.pricePoints} pts c/u • Stock disp: ${item.stock}', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
+                            Text('${item.pricePoints} ${langController.t("pointsEach")} • ${langController.t("stockAvailable")}: ${item.stock}', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -594,7 +595,7 @@ class MarketplaceScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Cantidad:', style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold)),
+                      Text(langController.t('quantity'), style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
                           IconButton(
@@ -616,8 +617,8 @@ class MarketplaceScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Costo Total:', style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold)),
-                      Text('$totalPoints pts (Tienes $userScore pts)', style: GoogleFonts.fredoka(fontSize: 14, color: canAfford ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
+                      Text(langController.t('totalCost'), style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text('$totalPoints pts (${langController.t("youHavePoints")} $userScore pts)', style: GoogleFonts.fredoka(fontSize: 14, color: canAfford ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -633,7 +634,7 @@ class MarketplaceScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: AppTheme.emeraldGreen,
-                                  content: Text('🎉 ¡Canjeaste $selectedQuantity de ${item.name} por $totalPoints pts!', style: GoogleFonts.fredoka()),
+                                  content: Text('${langController.t("redeemSuccessMsg")} ($selectedQuantity x ${item.name})', style: GoogleFonts.fredoka()),
                                 ),
                               );
                             }
@@ -643,7 +644,7 @@ class MarketplaceScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       child: Text(
-                        canAfford ? 'Confirmar Canje ($totalPoints pts)' : 'Puntos insuficientes',
+                        canAfford ? '${langController.t("confirmRedeem")} ($totalPoints pts)' : langController.t('insufficientPoints'),
                         style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
@@ -661,13 +662,14 @@ class MarketplaceScreen extends StatelessWidget {
     BuildContext context,
     MarketplaceController marketplaceController,
     AuthController authController,
+    LanguageController langController,
   ) {
     final currentUserEmail = authController.currentProfile?.email?.toLowerCase().trim() ?? '';
     if (currentUserEmail != AppConfig.adminEmail.toLowerCase().trim()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('⚠️ Acceso restringido únicamente para ${AppConfig.adminEmail}', style: GoogleFonts.fredoka(color: Colors.white)),
+          content: Text('${langController.t("adminRestrictedNotice")} (${AppConfig.adminEmail})', style: GoogleFonts.fredoka(color: Colors.white)),
         ),
       );
       return;
@@ -698,7 +700,7 @@ class MarketplaceScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Acceso Admin',
+                      langController.t('adminAccessTitle'),
                       style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.primaryTerracotta),
                     ),
                   ),
@@ -721,7 +723,7 @@ class MarketplaceScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Sesión: ${AppConfig.adminEmail}',
+                            '${langController.t("adminSession")}: ${AppConfig.adminEmail}',
                             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.emeraldGreen),
                           ),
                         ),
@@ -730,7 +732,7 @@ class MarketplaceScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Ingresa la contraseña de administrador:',
+                    langController.t('enterAdminPassword'),
                     style: GoogleFonts.fredoka(fontSize: 13, color: AppTheme.textPrimaryDark),
                   ),
                   const SizedBox(height: 8),
@@ -739,7 +741,7 @@ class MarketplaceScreen extends StatelessWidget {
                     obscureText: isObscured,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Contraseña',
+                      hintText: langController.t('passwordHint'),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -761,10 +763,10 @@ class MarketplaceScreen extends StatelessWidget {
                     },
                   ),
                   if (errorMessage != null) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Text(
                       errorMessage!,
-                      style: GoogleFonts.fredoka(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.outfit(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ],
@@ -772,7 +774,7 @@ class MarketplaceScreen extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                  child: Text(langController.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -789,7 +791,7 @@ class MarketplaceScreen extends StatelessWidget {
                     backgroundColor: AppTheme.primaryTerracotta,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: Text('Ingresar', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(langController.t('verifyAccess'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -1351,7 +1353,7 @@ class MarketplaceScreen extends StatelessWidget {
           // Admin Panel Button (ONLY VISIBLE TO wernesto66@gmail.com)
           if (isAdmin)
             GestureDetector(
-              onTap: () => _promptAdminPasswordDialog(context, marketplaceController, authController),
+              onTap: () => _promptAdminPasswordDialog(context, marketplaceController, authController, langController),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1647,7 +1649,7 @@ class MarketplaceScreen extends StatelessWidget {
                                     child: ElevatedButton(
                                       onPressed: isSoldOut
                                           ? null
-                                          : () => _showRedeemModal(context, item, authController, marketplaceController),
+                                          : () => _showRedeemModal(context, item, authController, marketplaceController, langController),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: isSoldOut
                                             ? Colors.grey.shade300
@@ -1657,7 +1659,7 @@ class MarketplaceScreen extends StatelessWidget {
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
                                       child: Text(
-                                        isSoldOut ? 'Agotado' : '${item.pricePoints}pt',
+                                        isSoldOut ? langController.t('soldOut') : '${item.pricePoints}pt',
                                         style: GoogleFonts.fredoka(
                                           color: isSoldOut
                                               ? Colors.grey.shade600
@@ -1686,7 +1688,7 @@ class MarketplaceScreen extends StatelessWidget {
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
                                       child: Text(
-                                        isSoldOut ? 'Agotado' : '\$${item.priceUsd}',
+                                        isSoldOut ? langController.t('soldOut') : '\$${item.priceUsd}',
                                         style: GoogleFonts.fredoka(
                                           color: isSoldOut ? Colors.grey.shade600 : Colors.white,
                                           fontSize: 11,

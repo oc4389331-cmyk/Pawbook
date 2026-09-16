@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 import '../screens/login_screen.dart';
+import 'language_selector.dart';
 
-class TermsAndConditionsModal extends StatelessWidget {
+class TermsAndConditionsModal extends StatefulWidget {
   final VoidCallback? onAccepted;
   final bool showAuthButtons;
 
@@ -30,11 +33,19 @@ class TermsAndConditionsModal extends StatelessWidget {
   }
 
   @override
+  State<TermsAndConditionsModal> createState() => _TermsAndConditionsModalState();
+}
+
+class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
+  bool _isAgreed = false;
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final langController = Provider.of<LanguageController>(context);
 
     return Container(
-      constraints: BoxConstraints(maxHeight: size.height * 0.88),
+      constraints: BoxConstraints(maxHeight: size.height * 0.90),
       decoration: const BoxDecoration(
         color: AppTheme.bgWarmCream,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -55,13 +66,13 @@ class TermsAndConditionsModal extends StatelessWidget {
             ),
           ),
 
-          // Header
+          // Header with Title, Language Selector, and Close Button
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryTerracotta.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
@@ -69,36 +80,46 @@ class TermsAndConditionsModal extends StatelessWidget {
                   child: const Icon(
                     Icons.gavel_rounded,
                     color: AppTheme.primaryTerracotta,
-                    size: 26,
+                    size: 22,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Términos y Condiciones',
+                        langController.t('termsTitle'),
                         style: GoogleFonts.fredoka(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.primaryTerracotta,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Uso de la Plataforma Pawtbook 🐾',
+                        langController.t('termsSubtitle'),
                         style: GoogleFonts.outfit(
-                          fontSize: 13,
+                          fontSize: 11.5,
                           color: AppTheme.textMutedWarm,
                           fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
+                // Dynamic Language Selector inside Terms Modal
+                const LanguageSelector(),
+                const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppTheme.warmBrown),
+                  icon: const Icon(Icons.close_rounded, color: AppTheme.warmBrown, size: 22),
                   onPressed: () => Navigator.of(context).pop(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
               ],
             ),
@@ -109,13 +130,13 @@ class TermsAndConditionsModal extends StatelessWidget {
           // Scrollable Terms Content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Highlights Banner
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -129,11 +150,11 @@ class TermsAndConditionsModal extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.verified_user_rounded, color: AppTheme.primaryTerracotta, size: 22),
+                        const Icon(Icons.verified_user_rounded, color: AppTheme.primaryTerracotta, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Para interactuar, ver videos ilimitados, dar likes, comentar y patrocinar mascotas en Solana, debes aceptar nuestros términos y crear tu cuenta.',
+                            langController.t('termsBannerText'),
                             style: GoogleFonts.outfit(
                               fontSize: 12.5,
                               color: AppTheme.textPrimaryDark,
@@ -145,58 +166,53 @@ class TermsAndConditionsModal extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
 
                   _buildTermSection(
                     icon: Icons.pets_rounded,
                     iconColor: AppTheme.primaryTerracotta,
-                    title: '1. Ecosistema Pet-Centric & Roles',
-                    content:
-                        'Pawtbook es la red social y plataforma SocialFi en Solana donde las mascotas son las protagonistas. Solo los perfiles de mascotas registradas por sus tutores pueden publicar videos y fotos. Los usuarios humanos actúan como patrocinadores, seguidores e interactúan con la comunidad.',
+                    title: langController.t('termsSection1Title'),
+                    content: langController.t('termsSection1Content'),
                   ),
 
                   _buildTermSection(
                     icon: Icons.shield_rounded,
                     iconColor: AppTheme.emeraldGreen,
-                    title: '2. Bienestar Animal y Cero Tolerancia al Maltrato',
-                    content:
-                        'Está terminantemente prohibido subir, compartir o promover contenido que involucre maltrato, abuso, negligencia, peleas o explotación animal. Pawtbook cuenta con moderación automatizada y comunitaria. Cualquier infracción resultará en el bloqueo inmediato y permanente de la cuenta.',
+                    title: langController.t('termsSection2Title'),
+                    content: langController.t('termsSection2Content'),
                   ),
 
                   _buildTermSection(
                     icon: Icons.bolt_rounded,
                     iconColor: AppTheme.solanaPurple,
-                    title: '3. Solana Web3, PawtScore y Patrocinios',
-                    content:
-                        'El sistema de recompensas, PawtScore, propinas e insignias NFT utiliza la blockchain de Solana. Los usuarios son responsables de resguardar sus credenciales de acceso y llaves de billetera. Las transacciones en Solana son irreversibles por diseño de la red.',
+                    title: langController.t('termsSection3Title'),
+                    content: langController.t('termsSection3Content'),
                   ),
 
                   _buildTermSection(
                     icon: Icons.cloud_done_rounded,
                     iconColor: AppTheme.accentOrange,
-                    title: '4. Almacenamiento Seguro & Privacidad de Datos',
-                    content:
-                        'Todo el material audiovisual publicado se almacena y optimiza en Cloudflare R2 con CDN de alta velocidad. Tu información personal está protegida y nunca es comercializada a terceros. Al subir contenido, otorgas a Pawtbook la licencia para mostrarlo en el feed global y perfiles asociados.',
+                    title: langController.t('termsSection4Title'),
+                    content: langController.t('termsSection4Content'),
                   ),
 
                   _buildTermSection(
                     icon: Icons.handshake_rounded,
                     iconColor: AppTheme.warmBrown,
-                    title: '5. Aceptación y Actualizaciones',
-                    content:
-                        'Al registrarte y hacer clic en "Aceptar Términos", declaras haber leído y consentido estos términos y condiciones de uso y la política de privacidad de Pawtbook en su totalidad.',
+                    title: langController.t('termsSection5Title'),
+                    content: langController.t('termsSection5Content'),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
           ),
 
-          // Bottom Action Buttons
-          if (showAuthButtons) ...[
+          // Bottom Action Buttons with Checkbox
+          if (widget.showAuthButtons) ...[
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
               decoration: const BoxDecoration(
                 color: AppTheme.surfaceWarm,
                 border: Border(top: BorderSide(color: AppTheme.borderWarm, width: 1)),
@@ -204,49 +220,85 @@ class TermsAndConditionsModal extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Primary Button: Accept & Create Account
+                  // Mandatory Acceptance Checkbox
+                  InkWell(
+                    onTap: () => setState(() => _isAgreed = !_isAgreed),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _isAgreed,
+                            activeColor: AppTheme.primaryTerracotta,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                            onChanged: (val) => setState(() => _isAgreed = val ?? false),
+                          ),
+                          Expanded(
+                            child: Text(
+                              langController.t('termsCheckboxPrompt'),
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _isAgreed ? AppTheme.primaryTerracotta : AppTheme.textPrimaryDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Primary Button: Accept & Create Account (ENABLED ONLY WHEN _isAgreed == true)
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
+                    height: 48,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryTerracotta,
+                        backgroundColor: _isAgreed ? AppTheme.primaryTerracotta : Colors.grey.shade400,
                         foregroundColor: Colors.white,
-                        elevation: 3,
+                        elevation: _isAgreed ? 3 : 0,
                         shadowColor: AppTheme.primaryTerracotta.withValues(alpha: 0.35),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                       ),
-                      icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                      icon: Icon(
+                        _isAgreed ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       label: Text(
-                        '🐾 Aceptar Términos y Crear Cuenta',
+                        langController.t('termsAcceptAndSignUp'),
                         style: GoogleFonts.fredoka(
-                          fontSize: 15,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        if (onAccepted != null) {
-                          onAccepted!();
-                        } else {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(
-                                initialIsSignUp: true,
-                                termsAcceptedInitially: true,
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: _isAgreed
+                          ? () {
+                              Navigator.of(context).pop();
+                              if (widget.onAccepted != null) {
+                                widget.onAccepted!();
+                              } else {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(
+                                      initialIsSignUp: true,
+                                      termsAcceptedInitially: true,
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          : null,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   // Secondary Button: Already have account / Log in
                   SizedBox(
                     width: double.infinity,
-                    height: 44,
+                    height: 42,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.warmBrown,
@@ -255,9 +307,9 @@ class TermsAndConditionsModal extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.login_rounded, size: 18, color: AppTheme.primaryTerracotta),
                       label: Text(
-                        '🔑 Ya tengo cuenta (Iniciar Sesión)',
+                        langController.t('termsAlreadyHaveAccount'),
                         style: GoogleFonts.fredoka(
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.warmBrown,
                         ),
@@ -280,10 +332,10 @@ class TermsAndConditionsModal extends StatelessWidget {
             ),
           ] else ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
               child: SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryTerracotta,
@@ -291,7 +343,7 @@ class TermsAndConditionsModal extends StatelessWidget {
                   ),
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
-                    'Entendido',
+                    langController.t('understood'),
                     style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
@@ -310,9 +362,9 @@ class TermsAndConditionsModal extends StatelessWidget {
     required String content,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: AppTheme.surfaceWarm,
           borderRadius: BorderRadius.circular(16),
