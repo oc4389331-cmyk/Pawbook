@@ -577,8 +577,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ),
                     ),
 
-                  // Billetera, Abonos & Patrocinios de la Mascota (Audit Ledger & Withdrawals)
-                  _buildSponsorshipLedgerCard(authController, oracleController, langController, isOwner),
+                  // Billetera, Abonos & Patrocinios de la Mascota (Audit Ledger & Withdrawals - Solo visible para el dueño/tutor)
+                  if (isOwner)
+                    _buildSponsorshipLedgerCard(authController, oracleController, langController, isOwner),
 
 
                   // Solana Dynamic Wallet Card for this Pet
