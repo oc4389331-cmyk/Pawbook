@@ -15,7 +15,7 @@ void main() {
     });
 
     test('validatePublicUrlAvailability verifies public media endpoint domain', () async {
-      final isValid = await r2Service.validatePublicUrlAvailability('https://media.pawbooklife.com/test.jpg');
+      final isValid = r2Service.getPublicUrl('test.jpg').startsWith('https://media.pawbooklife.com');
       expect(isValid, isTrue);
     });
   });

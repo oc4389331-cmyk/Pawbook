@@ -12,6 +12,8 @@ import '../../models/post_model.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
 import '../widgets/claim_sponsorship_modal.dart';
+import '../widgets/post_card.dart';
+import '../widgets/terms_and_conditions_modal.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -907,61 +909,124 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 itemCount: petPosts.length,
                 itemBuilder: (context, index) {
                   final post = petPosts[index];
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      color: AppTheme.surfaceWarm,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            post.mediaUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(
-                              child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
+                  return GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (modalCtx) {
+                          return Container(
+                            decoration: const BoxDecoration(
+                              color: AppTheme.bgWarmCream,
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                             ),
-                          ),
-                          if (isOwner)
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        backgroundColor: AppTheme.surfaceWarm,
-                                        title: Text('Eliminar publicación', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
-                                        content: Text('¿Estás seguro de que quieres eliminar esta publicación?', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark)),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(ctx),
-                                            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.pop(ctx);
-                                              feedController.deletePetPost(post.id);
-                                              setState(() {
-                                                _postsFuture = feedController.getPostsForPet(widget.pet.id, currentUserId: authController.currentProfile?.id);
-                                              });
-                                            },
-                                            child: Text('Eliminar', style: GoogleFonts.fredoka(color: Colors.redAccent)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                            padding: const EdgeInsets.only(top: 14, bottom: 20),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.borderWarm,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  PostCard(
+                                    post: post,
+                                    onPlayAttempt: () async {
+                                      if (!authController.isAuthenticated) {
+                                        TermsAndConditionsModal.show(context);
+                                        return false;
+                                      }
+                                      return true;
+                                    },
+                                    onSponsor: (petId, amount) {
+                                      SponsorshipModal.show(
+                                        context,
+                                        pet: widget.pet,
+                                        userId: authController.currentProfile?.id ?? 'usr_guest',
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
-                        ],
+                          );
+                        },
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        color: AppTheme.surfaceWarm,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              post.mediaUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
+                              ),
+                            ),
+                            // Video Icon indicator overlay
+                            if (post.mediaType == 'video')
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.55),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                                ),
+                              ),
+                            if (isOwner)
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          backgroundColor: AppTheme.surfaceWarm,
+                                          title: Text('Eliminar publicación', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                                          content: Text('¿Estás seguro de que quieres eliminar esta publicación?', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark)),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx),
+                                              child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(ctx);
+                                                feedController.deletePetPost(post.id);
+                                                setState(() {
+                                                  _postsFuture = feedController.getPostsForPet(widget.pet.id, currentUserId: authController.currentProfile?.id);
+                                                });
+                                              },
+                                              child: Text('Eliminar', style: GoogleFonts.fredoka(color: Colors.redAccent)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );

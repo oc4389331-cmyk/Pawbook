@@ -6,12 +6,14 @@ import '../../models/pet_model.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../services/app_audio_player.dart';
+import 'app_video_player_widget.dart';
 
 class TikTokFeedItem extends StatefulWidget {
   final PostModel post;
   final String currentUserId;
   final bool isCurrentPage;
   final VoidCallback? onLikeToggled;
+  final Future<bool> Function()? onPlayAttempt;
 
   const TikTokFeedItem({
     super.key,
@@ -19,6 +21,7 @@ class TikTokFeedItem extends StatefulWidget {
     required this.currentUserId,
     this.isCurrentPage = true,
     this.onLikeToggled,
+    this.onPlayAttempt,
   });
 
   @override
@@ -195,21 +198,17 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
               }),
             ),
           ),
+        ] else if (widget.post.mediaType == 'video') ...[
+          AppVideoPlayerWidget(
+            videoUrl: widget.post.mediaUrl,
+            isCurrentPage: widget.isCurrentPage,
+            isMuted: _isMuted || widget.post.hasSound,
+            loop: true,
+            fit: BoxFit.contain,
+            onPlayAttempt: widget.onPlayAttempt,
+          ),
         ] else ...[
           _buildMediaImage(widget.post.mediaUrl),
-
-          // Play Icon Overlay if video
-          if (widget.post.mediaType == 'video')
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.play_arrow_rounded, size: 48, color: Colors.white),
-              ),
-            ),
         ],
 
         // 2. Sound Playing Indicator / Mute Toggle (Top-Left under header)

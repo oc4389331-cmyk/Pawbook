@@ -5,10 +5,18 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
+import '../widgets/terms_and_conditions_modal.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool initialIsSignUp;
+  final bool termsAcceptedInitially;
+
+  const LoginScreen({
+    super.key,
+    this.initialIsSignUp = false,
+    this.termsAcceptedInitially = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final TextEditingController _nameController = TextEditingController();
 
   bool _isOtpSent = false;
-  bool _isSignUp = false; // false = Iniciar Sesión, true = Crear Cuenta
+  late bool _isSignUp; // false = Iniciar Sesión, true = Crear Cuenta
+  late bool _acceptedTerms;
 
   // Controlador de animación para el loader de patita
   late AnimationController _pawAnimController;
@@ -30,6 +39,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    _isSignUp = widget.initialIsSignUp;
+    _acceptedTerms = widget.termsAcceptedInitially;
+
     // Inicializar animación de patita
     _pawAnimController = AnimationController(
       vsync: this,
@@ -68,8 +80,78 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
+    if (_isSignUp && !_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.primaryTerracotta,
+          content: Text(
+            'Por favor acepta los Términos y Condiciones de uso para crear tu cuenta.',
+            style: GoogleFonts.fredoka(color: Colors.white),
+          ),
+          action: SnackBarAction(
+            label: 'Ver Términos',
+            textColor: Colors.white,
+            onPressed: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
+          ),
+        ),
+      );
+      return;
+    }
     await authController.loginWithGoogle(
       isSignUp: _isSignUp,
+    );
+  }
+
+  Widget _buildTermsAndConditionsCheckbox() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _acceptedTerms
+            ? AppTheme.emeraldGreen.withOpacity(0.08)
+            : AppTheme.surfaceWarm,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _acceptedTerms ? AppTheme.emeraldGreen.withOpacity(0.5) : AppTheme.borderWarm,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Checkbox(
+            value: _acceptedTerms,
+            activeColor: AppTheme.primaryTerracotta,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+            onChanged: (val) {
+              setState(() => _acceptedTerms = val ?? false);
+            },
+          ),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'Acepto los ',
+                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimaryDark),
+                ),
+                GestureDetector(
+                  onTap: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
+                  child: Text(
+                    'Términos y Condiciones de Uso 🐾',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryTerracotta,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -412,6 +494,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
                         ),
+                        if (_isSignUp) _buildTermsAndConditionsCheckbox(),
                         const SizedBox(height: 14),
 
                         // Botón: Enviar código (distinto color y texto según modo)
@@ -447,6 +530,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     if (_isSignUp && _nameController.text.trim().isEmpty) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Por favor ingresa tu nombre completo')),
+                                      );
+                                      return;
+                                    }
+                                    if (_isSignUp && !_acceptedTerms) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppTheme.primaryTerracotta,
+                                          content: Text(
+                                            'Por favor acepta los Términos y Condiciones de uso para crear tu cuenta.',
+                                            style: GoogleFonts.fredoka(color: Colors.white),
+                                          ),
+                                          action: SnackBarAction(
+                                            label: 'Ver Términos',
+                                            textColor: Colors.white,
+                                            onPressed: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
+                                          ),
+                                        ),
                                       );
                                       return;
                                     }

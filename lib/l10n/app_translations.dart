@@ -44,6 +44,8 @@ class AppTranslations {
       'payWithGooglePayPaypal': 'Solana Wallet (SOL / USDC)',
       'profanityWarning': 'Inappropriate language detected. Please keep comments friendly for pets! 🐾',
       'logOut': 'Log Out',
+      'termsAndConditions': 'Terms and Conditions',
+      'acceptTermsAndSignUp': 'Accept Terms and Create Account',
     },
     'es': {
       'appName': 'Pawtbook 🐾',
@@ -89,6 +91,8 @@ class AppTranslations {
       'payWithGooglePayPaypal': 'Solana Wallet (SOL / USDC)',
       'profanityWarning': 'Lenguaje inapropiado detectado. Por favor mantén comentarios respetuosos para las mascotas 🐾',
       'logOut': 'Cerrar Sesión',
+      'termsAndConditions': 'Términos y Condiciones',
+      'acceptTermsAndSignUp': 'Aceptar Términos y Crear Cuenta',
     },
     'zh': {
       'appName': 'Pawtbook 🐾',

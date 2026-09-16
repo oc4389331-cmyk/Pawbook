@@ -14,6 +14,7 @@ import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
+import '../widgets/terms_and_conditions_modal.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/wallet_dashboard_modal.dart';
 import '../widgets/live_oracle_ticker.dart';
@@ -1193,9 +1194,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   post: post,
                   currentUserId: currentUserId,
                   isCurrentPage: _currentFeedPage == index,
+                  onPlayAttempt: () async {
+                    if (!authController.isAuthenticated) {
+                      TermsAndConditionsModal.show(
+                        context,
+                        onAccepted: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(
+                                initialIsSignUp: true,
+                                termsAcceptedInitially: true,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                      return false;
+                    }
+                    return true;
+                  },
                   onLikeToggled: () {
                     if (!authController.isAuthenticated) {
-                      _showTikTokRegistrationWall(context, authController);
+                      TermsAndConditionsModal.show(
+                        context,
+                        onAccepted: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(
+                                initialIsSignUp: true,
+                                termsAcceptedInitially: true,
+                              ),
+                            ),
+                          );
+                        },
+                      );
                     } else {
                       setState(() {});
                     }

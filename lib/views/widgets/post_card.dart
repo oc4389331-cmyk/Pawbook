@@ -4,17 +4,20 @@ import '../../models/post_model.dart';
 import '../../theme/app_theme.dart';
 import 'pet_badge.dart';
 import 'sponsor_dialog.dart';
+import 'app_video_player_widget.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
   final Function(String petId, int amount)? onSponsor;
   final Function(String postId)? onReport;
+  final Future<bool> Function()? onPlayAttempt;
 
   const PostCard({
     super.key,
     required this.post,
     this.onSponsor,
     this.onReport,
+    this.onPlayAttempt,
   });
 
   @override
@@ -97,39 +100,32 @@ class _PostCardState extends State<PostCard> {
               child: Container(
                 width: double.infinity,
                 color: AppTheme.surfaceDark,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Image.network(
-                      widget.post.mediaUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppTheme.surfaceDark,
-                          child: const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.pets, size: 48, color: AppTheme.solanaPurple),
-                                SizedBox(height: 8),
-                                Text('Pawtbook Media R2 Served', style: TextStyle(color: AppTheme.textMuted)),
-                              ],
+                child: widget.post.mediaType == 'video'
+                    ? AppVideoPlayerWidget(
+                        videoUrl: widget.post.mediaUrl,
+                        isCurrentPage: true,
+                        loop: true,
+                        onPlayAttempt: widget.onPlayAttempt,
+                      )
+                    : Image.network(
+                        widget.post.mediaUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: AppTheme.surfaceDark,
+                            child: const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.pets, size: 48, color: AppTheme.solanaPurple),
+                                  SizedBox(height: 8),
+                                  Text('Pawtbook Media R2 Served', style: TextStyle(color: AppTheme.textMuted)),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                    if (widget.post.mediaType == 'video')
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.play_arrow, size: 36, color: AppTheme.solanaGreen),
+                          );
+                        },
                       ),
-                  ],
-                ),
               ),
             ),
           ),
@@ -160,7 +156,7 @@ class _PostCardState extends State<PostCard> {
                       },
                     ),
                     Text(
-                      ' likes',
+                      '$_likesCount likes',
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const Spacer(),
