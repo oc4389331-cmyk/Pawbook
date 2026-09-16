@@ -1043,6 +1043,62 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     );
   }
 
+  Future<void> _confirmResetPetLedger() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceWarm,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.restart_alt_rounded, color: Colors.redAccent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Reiniciar Historial a 0',
+                style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          '¿Deseas eliminar todos los registros de abonos y retiros de prueba de ${widget.pet.name} para comenzar de cero?',
+          style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sí, Reiniciar a 0', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final messenger = ScaffoldMessenger.of(context);
+      setState(() => _isLoadingLedger = true);
+      await _supabaseService.resetPetLedger(widget.pet.id);
+      await _loadPetLedger();
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.emeraldGreen,
+          content: Text(
+            '✅ Historial de patrocinios y balance de ${widget.pet.name} reiniciados a 0.',
+            style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildSponsorshipLedgerCard(
     AuthController authController,
     OracleController oracleController,
@@ -1113,6 +1169,11 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.restart_alt_rounded, color: Colors.white70, size: 20),
+                  tooltip: 'Reiniciar a 0 (Limpiar pruebas)',
+                  onPressed: _confirmResetPetLedger,
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),

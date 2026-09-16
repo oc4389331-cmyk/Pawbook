@@ -849,6 +849,54 @@ app.get('/api/sponsorship/pet-ledger/:petId', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 7C. RESET PET LEDGER & SPONSORSHIPS (Start from scratch / clean test data)
+// --------------------------------------------------------------------------
+app.post('/api/sponsorship/reset-pet-ledger', async (req, res) => {
+  const { petId, petName } = req.body;
+  if (!petId && !petName) {
+    return res.status(400).json({ success: false, error: 'Missing petId or petName' });
+  }
+
+  if (supabaseAdmin) {
+    try {
+      let targetPetId = petId;
+      if (!targetPetId && petName) {
+        const { data: petData } = await supabaseAdmin
+          .from('pets')
+          .select('id')
+          .ilike('name', petName);
+        if (petData && petData.length > 0) {
+          targetPetId = petData[0].id;
+        }
+      }
+
+      if (targetPetId) {
+        // 1. Delete all sponsorships for this pet
+        await supabaseAdmin.from('sponsorships').delete().eq('pet_id', targetPetId);
+        // 2. Delete all withdrawals for this pet
+        await supabaseAdmin.from('withdrawals').delete().eq('pet_id', targetPetId);
+        // 3. Reset total_sponsored_score to 0
+        await supabaseAdmin.from('pets').update({ total_sponsored_score: 0 }).eq('id', targetPetId);
+
+        return res.json({
+          success: true,
+          petId: targetPetId,
+          message: `Pet ledger successfully reset to 0 for petId: ${targetPetId}`
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting pet ledger:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  return res.json({
+    success: true,
+    message: 'Reset pet ledger completed (mock mode)'
+  });
+});
+
+// --------------------------------------------------------------------------
 // 7C. LIVE ORACLE PRICE FEED FOR $SKR (Solana DexScreener / Orca / Jupiter)
 // Mint Address: SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3
 // --------------------------------------------------------------------------

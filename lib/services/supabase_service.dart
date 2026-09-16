@@ -965,6 +965,27 @@ class SupabaseService {
     }
   }
 
+  /// Reset all sponsorships and withdrawals for a pet (starts balance from 0)
+  Future<bool> resetPetLedger(String petId) async {
+    _mockSponsorships.removeWhere((s) => s.petId == petId);
+    _mockWithdrawals.removeWhere((w) => w.petId == petId);
+    if (_mockPets.containsKey(petId)) {
+      _mockPets[petId] = _mockPets[petId]!.copyWith(totalSponsoredScore: 0);
+    }
+
+    if (_client != null) {
+      try {
+        await _client!.from('sponsorships').delete().eq('pet_id', petId);
+        await _client!.from('withdrawals').delete().eq('pet_id', petId);
+        await _client!.from('pets').update({'total_sponsored_score': 0}).eq('id', petId);
+        return true;
+      } catch (e) {
+        debugPrint('Error resetting pet ledger in Supabase: $e');
+      }
+    }
+    return true;
+  }
+
 
 
   // --- Orders Operations ---
