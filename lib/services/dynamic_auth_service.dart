@@ -29,10 +29,13 @@ class SolanaTransactionResult {
   final String? solscanUrl;
   final String? fromAddress;
   final String? toAddress;
+  final String tokenType;
+  final double skrAmount;
   final double solAmount;
   final String? errorMessage;
   final bool userCancelled;
   final bool isNotInstalled;
+  final bool insufficientBalance;
 
   SolanaTransactionResult({
     required this.isSuccess,
@@ -40,10 +43,13 @@ class SolanaTransactionResult {
     this.solscanUrl,
     this.fromAddress,
     this.toAddress,
+    this.tokenType = 'SKR',
+    this.skrAmount = 0.0,
     this.solAmount = 0.0,
     this.errorMessage,
     this.userCancelled = false,
     this.isNotInstalled = false,
+    this.insufficientBalance = false,
   });
 }
 
@@ -51,12 +57,14 @@ class SolanaBalanceResult {
   final bool isSuccess;
   final double sol;
   final int lamports;
+  final double skr;
   final String? errorMessage;
 
   SolanaBalanceResult({
     required this.isSuccess,
     this.sol = 0.0,
     this.lamports = 0,
+    this.skr = 0.0,
     this.errorMessage,
   });
 }
@@ -312,22 +320,27 @@ class DynamicAuthService {
   Future<SolanaTransactionResult> sendWalletTransfer({
     required String walletType,
     required String recipientAddress,
-    required double solAmount,
+    double solAmount = 0.0,
+    double skrAmount = 0.0,
+    String tokenType = 'SKR',
     String? fromAddress,
     bool isDevnet = false,
   }) async {
     final type = walletType.toLowerCase();
+    final isSkr = tokenType.toUpperCase() == 'SKR';
 
     // 1. Dynamic In-App / Embedded Wallet (Zero extension needed, instant Solana transfer)
     if (type.contains('dynamic') || type.contains('embedded') || type.contains('pawtbook')) {
       final effectiveFrom = fromAddress ?? _generateRealSolanaAddress('dynamic_${DateTime.now().millisecondsSinceEpoch}');
-      final sig = 'dyn_sol_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
+      final sig = 'dyn_${isSkr ? 'skr' : 'sol'}_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
       return SolanaTransactionResult(
         isSuccess: true,
         signature: sig,
         solscanUrl: 'https://solscan.io/tx/$sig',
         fromAddress: effectiveFrom,
         toAddress: recipientAddress,
+        tokenType: tokenType,
+        skrAmount: skrAmount,
         solAmount: solAmount,
       );
     }
@@ -339,6 +352,8 @@ class DynamicAuthService {
           final jsParams = js.JsObject.jsify({
             'walletType': walletType,
             'recipientAddress': recipientAddress,
+            'tokenType': tokenType,
+            'skrAmount': skrAmount,
             'solAmount': solAmount,
             'fromAddress': fromAddress,
             'isDevnet': isDevnet,
@@ -358,9 +373,12 @@ class DynamicAuthService {
                     'solscanUrl': result['solscanUrl']?.toString(),
                     'fromAddress': result['fromAddress']?.toString(),
                     'toAddress': result['toAddress']?.toString(),
-                    'solAmount': solAmount,
+                    'tokenType': result['tokenType']?.toString() ?? tokenType,
+                    'skrAmount': (result['skrAmount'] is num) ? (result['skrAmount'] as num).toDouble() : skrAmount,
+                    'solAmount': (result['solAmount'] is num) ? (result['solAmount'] as num).toDouble() : solAmount,
                     'userCancelled': result['userCancelled'] == true,
                     'isNotInstalled': result['isNotInstalled'] == true,
+                    'insufficientBalance': result['insufficientBalance'] == true,
                     'error': result['error']?.toString(),
                   };
                   completer.complete(dartMap);
@@ -396,13 +414,19 @@ class DynamicAuthService {
                 solscanUrl: res['solscanUrl'],
                 fromAddress: res['fromAddress'],
                 toAddress: res['toAddress'],
-                solAmount: solAmount,
+                tokenType: res['tokenType'] ?? tokenType,
+                skrAmount: (res['skrAmount'] is num) ? (res['skrAmount'] as num).toDouble() : skrAmount,
+                solAmount: (res['solAmount'] is num) ? (res['solAmount'] as num).toDouble() : solAmount,
               );
             } else {
               return SolanaTransactionResult(
                 isSuccess: false,
                 userCancelled: res['userCancelled'] == true,
                 isNotInstalled: res['isNotInstalled'] == true,
+                insufficientBalance: res['insufficientBalance'] == true,
+                tokenType: tokenType,
+                skrAmount: skrAmount,
+                solAmount: solAmount,
                 errorMessage: res['error'] ?? 'Error desconocido en $walletType',
               );
             }
@@ -426,6 +450,49 @@ class DynamicAuthService {
       isSuccess: false,
       errorMessage: 'La ejecución de transacciones on-chain requiere la versión web conectada a Phantom o Solflare.',
     );
+  }
+
+  /// Query real $SKR SPL Token balance for any Solana wallet address
+  Future<double> getSkrTokenBalance(String walletAddress, {bool isDevnet = false}) async {
+    if (walletAddress.isEmpty || walletAddress.length < 30) return 0.0;
+
+    if (kIsWeb) {
+      try {
+        final bridge = js.context['PawtbookSolana'];
+        if (bridge != null) {
+          final jsParams = js.JsObject.jsify({
+            'walletAddress': walletAddress,
+            'isDevnet': isDevnet,
+          });
+
+          final promise = bridge.callMethod('getSkrBalance', [jsParams]);
+          final completer = Completer<double>();
+
+          if (promise != null) {
+            promise.callMethod('then', [
+              js.allowInterop((result) {
+                try {
+                  final skr = (result['skr'] is num) ? (result['skr'] as num).toDouble() : 0.0;
+                  completer.complete(skr);
+                } catch (_) {
+                  completer.complete(0.0);
+                }
+              }),
+              js.allowInterop((_) {
+                completer.complete(0.0);
+              }),
+            ]);
+
+            return await completer.future.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => 0.0,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+    return 0.0;
   }
 
   /// Get real SOL balance for any Solana / Dynamic address

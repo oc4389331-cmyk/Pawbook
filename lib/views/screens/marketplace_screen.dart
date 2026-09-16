@@ -424,7 +424,9 @@ class MarketplaceScreen extends StatelessWidget {
                                 final res = await dynamicAuthService.sendWalletTransfer(
                                   walletType: selectedWallet,
                                   recipientAddress: recipientWallet,
-                                  solAmount: effectiveSol,
+                                  tokenType: selectedToken,
+                                  skrAmount: totalSkr,
+                                  solAmount: totalSol,
                                 );
 
                                 if (context.mounted) {

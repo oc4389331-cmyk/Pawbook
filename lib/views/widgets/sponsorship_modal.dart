@@ -67,6 +67,7 @@ class SponsorshipModal extends StatefulWidget {
 class _SponsorshipModalState extends State<SponsorshipModal> {
   int _selectedSkrAmount = 100;
   String _selectedWallet = 'Dynamic'; // Default to Dynamic Embedded Wallet for instant payments
+  String _selectedCurrency = 'SKR'; // 'SKR' (Tokens $SKR) or 'SOL' (Solana SOL via Oracle)
   bool _isProcessing = false;
   String _processingStep = '';
 
@@ -159,24 +160,52 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     final usdPrice = _calculateUsdPrice(oracleController);
-    final solPrice = (usdPrice / 155.0).toStringAsFixed(5);
+    final totalSkr = _selectedSkrAmount;
+    final totalSol = oracleController.priceSol > 0
+        ? totalSkr * oracleController.priceSol
+        : (usdPrice / 155.0);
+
+    final isDynamic = _selectedWallet.toLowerCase().contains('dynamic');
+    final isSkr = _selectedCurrency == 'SKR';
+
+    // 1. Dynamic In-App Balance Verification for $SKR
+    if (isDynamic && isSkr) {
+      final userSkrBalance = authController.currentProfile?.pawtScore ?? 0;
+      if (userSkrBalance < totalSkr) {
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.primaryTerracotta,
+            duration: const Duration(seconds: 5),
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '⚠️ Saldo insuficiente en tu cuenta Dynamic ($userSkrBalance \$SKR). Necesitas $totalSkr \$SKR. Selecciona pagar en SOL o recarga \$SKR.',
+                    style: GoogleFonts.fredoka(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+    }
 
     // 10% Platform Fee Calculation
-    final totalSkr = _selectedSkrAmount;
     final feePercent = AppConfig.sponsorshipPlatformFeePercent; // 10%
     final feeSkr = (totalSkr * (feePercent / 100.0)).round();
     final netSkr = totalSkr - feeSkr;
-    final totalSol = double.tryParse(solPrice) ?? 0.001;
     final feeSol = totalSol * (feePercent / 100.0);
     final netSol = totalSol - feeSol;
-
-    final isDynamic = _selectedWallet.toLowerCase().contains('dynamic');
 
     setState(() {
       _isProcessing = true;
       _processingStep = isDynamic
-          ? '⚡ Procesando patrocinio con tu Wallet Dynamic de Pawtbook...'
-          : '✍️ Abre tu wallet $_selectedWallet y confirma la transacción...';
+          ? '⚡ Procesando patrocinio de $totalSkr \$SKR con tu Wallet Dynamic...'
+          : '✍️ Abre tu wallet $_selectedWallet y confirma la transacción de ${isSkr ? "$totalSkr \$SKR" : "${totalSol.toStringAsFixed(4)} SOL"}...';
     });
 
     try {
@@ -184,11 +213,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           'sol_${widget.userId.length > 12 ? widget.userId.substring(0, 12) : widget.userId}';
       final petWallet = widget.pet.dynamicWalletAddress;
 
-      // Execute transfer directly via Solana Wallet Adapter (identical to Marketplace)
+      // Execute transfer directly via Solana Wallet Adapter
       final txResult = await _dynamicAuthService.sendWalletTransfer(
         walletType: _selectedWallet,
         recipientAddress: AppConfig.marketplaceTreasuryWallet,
-        solAmount: totalSol > 0 ? totalSol : 0.001,
+        tokenType: _selectedCurrency,
+        skrAmount: totalSkr.toDouble(),
+        solAmount: totalSol,
         fromAddress: payerWallet,
       );
 
@@ -231,6 +262,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       final txHash = txResult.signature ?? 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
       final solscanUrl = txResult.solscanUrl;
 
+      // If paid via Dynamic in-app balance, deduct from user's account
+      if (isDynamic && isSkr) {
+        authController.deductPawtScore(totalSkr);
+      }
+
       // Register on Backend with Fee breakdown
       await _renderService.payWithCardConvertToSkr(
         sponsorId: widget.userId,
@@ -246,14 +282,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         sponsorId: widget.userId,
         petId: widget.pet.id,
         amount: totalSkr,
-        paymentMethod: 'solana_${_selectedWallet.toLowerCase()}',
+        paymentMethod: 'solana_${_selectedCurrency.toLowerCase()}_${_selectedWallet.toLowerCase()}',
         txHash: txHash,
         feePercent: feePercent,
         feeAmount: feeSkr,
         netAmount: netSkr,
       ).timeout(const Duration(seconds: 4), onTimeout: () {});
-
-      authController.addPawtScore(totalSkr);
 
       if (mounted) {
         nav.pop();
@@ -320,7 +354,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final authController = Provider.of<AuthController>(context);
     final oracleController = Provider.of<OracleController>(context);
     final currentUsdPrice = _calculateUsdPrice(oracleController);
-    final currentSolPrice = (currentUsdPrice / 155.0).toStringAsFixed(5);
+    final currentSolPrice = (oracleController.priceSol > 0
+            ? (_selectedSkrAmount * oracleController.priceSol)
+            : (currentUsdPrice / 155.0))
+        .toStringAsFixed(5);
+
+    final userSkrBalance = authController.currentProfile?.pawtScore ?? 0;
 
     return Container(
       constraints: BoxConstraints(
@@ -335,7 +374,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.only(
-            top: 16,
+            top: 14,
             left: 20,
             right: 20,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -412,14 +451,121 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Currency / Token Selection: $SKR Token vs SOL
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '1. Método de Pago:',
+                    style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    _selectedWallet == 'Dynamic'
+                        ? 'Saldo: $userSkrBalance \$SKR'
+                        : 'SPL Token / SOL',
+                    style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedCurrency = 'SKR'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedCurrency == 'SKR'
+                              ? AppTheme.emeraldGreen.withValues(alpha: 0.12)
+                              : AppTheme.surfaceWarm,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.borderWarm,
+                            width: _selectedCurrency == 'SKR' ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('💎 ', style: TextStyle(fontSize: 16)),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tokens \$SKR',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.textPrimaryDark,
+                                  ),
+                                ),
+                                Text(
+                                  'SPL Token Nativo',
+                                  style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedCurrency = 'SOL'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedCurrency == 'SOL'
+                              ? AppTheme.accentOrange.withValues(alpha: 0.12)
+                              : AppTheme.surfaceWarm,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _selectedCurrency == 'SOL' ? AppTheme.accentOrange : AppTheme.borderWarm,
+                            width: _selectedCurrency == 'SOL' ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('⚡ ', style: TextStyle(fontSize: 16)),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Solana SOL',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedCurrency == 'SOL' ? AppTheme.accentOrange : AppTheme.textPrimaryDark,
+                                  ),
+                                ),
+                                Text(
+                                  'Conversión Oráculo',
+                                  style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
 
               // Select Amount ($SKR Token packages)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '1. Selecciona el Paquete de \$SKR:',
+                    '2. Selecciona el Paquete de \$SKR:',
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -440,14 +586,14 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   _buildAmountOption(1000, oracleController.convertSkrToUsd(1000), 'VIP 💎'),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Select Solana Wallet Provider
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '2. Selecciona tu Wallet de Solana:',
+                    '3. Selecciona tu Wallet de Solana:',
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Container(
@@ -537,11 +683,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen,
+                            color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.accentOrange,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '$_selectedSkrAmount \$SKR ≈ \$$currentUsdPrice USD',
+                            _selectedCurrency == 'SKR'
+                                ? '$_selectedSkrAmount \$SKR ≈ \$$currentUsdPrice USD'
+                                : '$currentSolPrice SOL (≈ $_selectedSkrAmount \$SKR)',
                             style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -632,7 +780,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 child: ElevatedButton(
                   onPressed: _isProcessing ? null : () => _processWalletSponsorship(authController, oracleController, langController),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(22),
                     ),
@@ -647,14 +795,16 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.bolt_rounded,
+                            Icon(
+                              _selectedCurrency == 'SKR' ? Icons.bolt_rounded : Icons.account_balance_wallet_rounded,
                               color: Colors.white,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Pagar $_selectedSkrAmount \$SKR con $_selectedWallet',
+                              _selectedCurrency == 'SKR'
+                                  ? 'Pagar $_selectedSkrAmount \$SKR con $_selectedWallet'
+                                  : 'Pagar $currentSolPrice SOL con $_selectedWallet',
                               style: GoogleFonts.fredoka(
                                 color: Colors.white,
                                 fontSize: 14,

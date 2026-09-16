@@ -183,19 +183,24 @@
         try {
           const walletType = params.walletType || 'Phantom';
           const isDev = Boolean(params.isDevnet);
+          const tokenType = (params.tokenType || 'SKR').toUpperCase();
+          const skrAmount = parseFloat(params.skrAmount) || parseFloat(params.amount) || 0;
           const solAmount = parseFloat(params.solAmount) || 0.001;
+          const isSkr = tokenType === 'SKR';
           const recipientStr = params.recipientAddress || '8xi1HGz65ojQgXPU5AQd3uE6FqyhgdThvF2f2w8w5XtF';
 
           // Handle Dynamic Embedded / In-App Wallet payment directly
           if (walletType.toLowerCase().includes('dynamic') || walletType.toLowerCase().includes('embedded') || walletType.toLowerCase().includes('pawtbook')) {
             const fromAddr = params.fromAddress || (window.PawtbookUserWallet || 'dynamic_solana_' + Date.now());
-            const sig = 'dyn_sol_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            const sig = 'dyn_' + (isSkr ? 'skr_' : 'sol_') + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
             return {
               success: true,
               isDynamic: true,
               signature: sig,
               fromAddress: fromAddr,
               toAddress: recipientStr,
+              tokenType: tokenType,
+              skrAmount: skrAmount,
               solAmount: solAmount,
               solscanUrl: `https://solscan.io/tx/${sig}${isDev ? '?cluster=devnet' : ''}`,
             };
@@ -251,34 +256,129 @@
             return { success: false, error: 'No se pudo establecer conexión RPC con Solana.' };
           }
 
-          const lamports = Math.max(1000, Math.round(solAmount * window.solanaWeb3.LAMPORTS_PER_SOL));
-
-          // Check balance
-          try {
-            const currentBalance = await connection.getBalance(fromPubkey);
-            if (currentBalance < lamports + 5000) {
-              const currentSol = (currentBalance / window.solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
-              return {
-                success: false,
-                error: `Saldo insuficiente en tu wallet ${walletType}. Tienes ${currentSol} SOL y necesitas al menos ${solAmount.toFixed(4)} SOL + gas fee.`
-              };
-            }
-          } catch (balErr) {
-            console.warn('Balance check warning:', balErr);
-          }
-
           const { blockhash } = await connection.getLatestBlockhash('confirmed');
-
-          const transaction = new window.solanaWeb3.Transaction().add(
-            window.solanaWeb3.SystemProgram.transfer({
-              fromPubkey: fromPubkey,
-              toPubkey: toPubkey,
-              lamports: lamports,
-            })
-          );
-
+          const transaction = new window.solanaWeb3.Transaction();
           transaction.recentBlockhash = blockhash;
           transaction.feePayer = fromPubkey;
+
+          if (isSkr) {
+            // === $SKR SPL TOKEN PAYMENT FLOW ===
+            const skrMintPubkey = new window.solanaWeb3.PublicKey('SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3');
+            
+            // 1. Query Sender's $SKR Token Accounts on Solana
+            let tokenAccounts;
+            try {
+              tokenAccounts = await connection.getParsedTokenAccountsByOwner(fromPubkey, {
+                mint: skrMintPubkey
+              });
+            } catch (queryErr) {
+              console.warn('Error querying SPL token accounts:', queryErr);
+              tokenAccounts = { value: [] };
+            }
+
+            let currentSkr = 0;
+            let userAta = null;
+            let decimals = 6;
+
+            if (tokenAccounts && tokenAccounts.value && tokenAccounts.value.length > 0) {
+              for (const acc of tokenAccounts.value) {
+                const info = acc.account.data.parsed.info.tokenAmount;
+                const amt = info.uiAmount || 0;
+                currentSkr += amt;
+                if (!userAta && amt > 0) {
+                  userAta = acc.pubkey;
+                  decimals = info.decimals || 6;
+                }
+              }
+            }
+
+            // Strictly verify $SKR token balance
+            if (currentSkr < skrAmount || !userAta) {
+              return {
+                success: false,
+                insufficientBalance: true,
+                error: `Saldo insuficiente de tokens $SKR en tu wallet ${walletType}. Tu saldo actual es de ${currentSkr.toFixed(0)} $SKR y necesitas ${skrAmount.toFixed(0)} $SKR. Por favor recarga $SKR o selecciona pagar en SOL.`
+              };
+            }
+
+            // 2. Derive Recipient ATA
+            const [recipientAta] = window.solanaWeb3.PublicKey.findProgramAddressSync(
+              [
+                toPubkey.toBuffer(),
+                new window.solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA').toBuffer(),
+                skrMintPubkey.toBuffer()
+              ],
+              new window.solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+            );
+
+            // 3. Create ATA for recipient if not already created
+            try {
+              const recipientInfo = await connection.getAccountInfo(recipientAta);
+              if (!recipientInfo) {
+                transaction.add(
+                  new window.solanaWeb3.TransactionInstruction({
+                    keys: [
+                      { pubkey: fromPubkey, isSigner: true, isWritable: true },
+                      { pubkey: recipientAta, isSigner: false, isWritable: true },
+                      { pubkey: toPubkey, isSigner: false, isWritable: false },
+                      { pubkey: skrMintPubkey, isSigner: false, isWritable: false },
+                      { pubkey: window.solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                      { pubkey: new window.solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), isSigner: false, isWritable: false },
+                    ],
+                    programId: new window.solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
+                    data: new Uint8Array(0)
+                  })
+                );
+              }
+            } catch (ataErr) {
+              console.warn('ATA check error:', ataErr);
+            }
+
+            // 4. Add SPL Token Transfer Instruction
+            const rawAmount = BigInt(Math.round(skrAmount * Math.pow(10, decimals)));
+            const dataBuffer = new Uint8Array(9);
+            dataBuffer[0] = 3; // Transfer instruction
+            const view = new DataView(dataBuffer.buffer);
+            view.setBigUint64(1, rawAmount, true); // Little endian
+
+            transaction.add(
+              new window.solanaWeb3.TransactionInstruction({
+                keys: [
+                  { pubkey: userAta, isSigner: false, isWritable: true },
+                  { pubkey: recipientAta, isSigner: false, isWritable: true },
+                  { pubkey: fromPubkey, isSigner: true, isWritable: false }
+                ],
+                programId: new window.solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+                data: dataBuffer
+              })
+            );
+
+          } else {
+            // === NATIVE SOL PAYMENT FLOW ===
+            const lamports = Math.max(1000, Math.round(solAmount * window.solanaWeb3.LAMPORTS_PER_SOL));
+
+            try {
+              const currentBalance = await connection.getBalance(fromPubkey);
+              if (currentBalance < lamports + 5000) {
+                const currentSol = (currentBalance / window.solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
+                return {
+                  success: false,
+                  insufficientBalance: true,
+                  error: `Saldo insuficiente en tu wallet ${walletType}. Tienes ${currentSol} SOL y necesitas al menos ${solAmount.toFixed(4)} SOL + gas fee.`
+                };
+              }
+            } catch (balErr) {
+              console.warn('Balance check warning:', balErr);
+            }
+
+            transaction.add(
+              window.solanaWeb3.SystemProgram.transfer({
+                fromPubkey: fromPubkey,
+                toPubkey: toPubkey,
+                lamports: lamports,
+              })
+            );
+          }
 
           let signature;
           try {
@@ -321,6 +421,8 @@
             signature: sigStr,
             fromAddress: fromPubkeyStr,
             toAddress: toPubkey.toString(),
+            tokenType: tokenType,
+            skrAmount: skrAmount,
             solAmount: solAmount,
             solscanUrl: solscanUrl,
           };
@@ -336,6 +438,50 @@
             userCancelled: isRejected,
             error: isRejected ? 'Transacción cancelada por el usuario en la wallet.' : (errStr || 'Error al ejecutar transacción en Solana.')
           };
+        }
+      },
+
+      /// Real $SKR SPL Token Balance Query via RPC
+      async getSkrBalance(params) {
+        try {
+          if (!window.solanaWeb3) return { success: false, error: 'Web3 SDK no disponible', skr: 0 };
+          const addressStr = typeof params === 'string' ? params : (params.walletAddress || '');
+          if (!addressStr || addressStr.length < 30) {
+            return { success: true, skr: 0, address: addressStr };
+          }
+
+          let pubkey;
+          try {
+            pubkey = new window.solanaWeb3.PublicKey(addressStr);
+          } catch (_) {
+            return { success: true, skr: 0, address: addressStr };
+          }
+
+          const isDev = Boolean(typeof params === 'object' && params.isDevnet);
+          const connection = this.getConnection(typeof params === 'object' ? params.rpcUrl : null, isDev);
+          const skrMintPubkey = new window.solanaWeb3.PublicKey('SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3');
+
+          const accounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+            mint: skrMintPubkey
+          });
+
+          if (!accounts || !accounts.value || accounts.value.length === 0) {
+            return { success: true, skr: 0, address: addressStr };
+          }
+
+          let totalSkr = 0;
+          for (const acc of accounts.value) {
+            const tokenAmount = acc.account.data.parsed.info.tokenAmount;
+            totalSkr += (tokenAmount.uiAmount || 0);
+          }
+
+          return {
+            success: true,
+            address: addressStr,
+            skr: totalSkr
+          };
+        } catch (err) {
+          return { success: false, error: err.message, skr: 0 };
         }
       },
 
