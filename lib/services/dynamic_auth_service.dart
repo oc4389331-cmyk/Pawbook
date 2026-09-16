@@ -32,6 +32,7 @@ class SolanaTransactionResult {
   final double solAmount;
   final String? errorMessage;
   final bool userCancelled;
+  final bool isNotInstalled;
 
   SolanaTransactionResult({
     required this.isSuccess,
@@ -42,6 +43,7 @@ class SolanaTransactionResult {
     this.solAmount = 0.0,
     this.errorMessage,
     this.userCancelled = false,
+    this.isNotInstalled = false,
   });
 }
 
@@ -400,6 +402,7 @@ class DynamicAuthService {
               return SolanaTransactionResult(
                 isSuccess: false,
                 userCancelled: res['userCancelled'] == true,
+                isNotInstalled: res['isNotInstalled'] == true,
                 errorMessage: res['error'] ?? 'Error desconocido en $walletType',
               );
             }

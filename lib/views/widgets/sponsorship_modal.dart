@@ -176,42 +176,15 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       _isProcessing = true;
       _processingStep = isDynamic
           ? '⚡ Procesando patrocinio con tu Wallet Dynamic de Pawtbook...'
-          : '⚡ Abriendo y conectando con $_selectedWallet...';
+          : '✍️ Abre tu wallet $_selectedWallet y confirma la transacción...';
     });
 
     try {
-      // Step 1: Connect specific Solana Wallet (Phantom / Solflare / Seeker / Dynamic)
-      await Future.delayed(const Duration(milliseconds: 300));
-      final walletResult = await _dynamicAuthService.connectSpecificWallet(
-        _selectedWallet,
-        providedAddress: authController.currentProfile?.walletAddress,
-      );
-
-      if (!walletResult.isSuccess) {
-        if (!isDynamic) {
-          if (mounted) {
-            setState(() => _isProcessing = false);
-            _showWalletNotInstalledDialog(context, _selectedWallet, authController, oracleController, langController);
-          }
-          return;
-        } else if (walletResult.errorMessage != null) {
-          throw Exception(walletResult.errorMessage);
-        }
-      }
-
-      final payerWallet = walletResult.walletAddress ??
-          authController.currentProfile?.walletAddress ??
-          'sol_${widget.userId.substring(0, 12)}';
+      final payerWallet = authController.currentProfile?.walletAddress ??
+          'sol_${widget.userId.length > 12 ? widget.userId.substring(0, 12) : widget.userId}';
       final petWallet = widget.pet.dynamicWalletAddress;
 
-      // Step 2: Request user approval & sign transaction
-      if (mounted) {
-        setState(() => _processingStep = isDynamic
-            ? '🚀 Transfiriendo \$SKR en la blockchain de Solana...'
-            : '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
-      }
-
-      // Execute transfer to Platform Treasury Custody Wallet
+      // Execute transfer directly via Solana Wallet Adapter (identical to Marketplace)
       final txResult = await _dynamicAuthService.sendWalletTransfer(
         walletType: _selectedWallet,
         recipientAddress: AppConfig.marketplaceTreasuryWallet,
@@ -222,13 +195,14 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
       if (!txResult.isSuccess) {
         if (txResult.userCancelled) {
           if (mounted) {
+            setState(() => _isProcessing = false);
             messenger.showSnackBar(
               SnackBar(
                 backgroundColor: AppTheme.primaryTerracotta,
                 duration: const Duration(seconds: 4),
                 content: Text(
-                  'ℹ️ Cancelaste la transacción en $_selectedWallet. No se realizó ningún cargo.',
-                  style: GoogleFonts.fredoka(),
+                  'ℹ️ Transacción cancelada en $_selectedWallet.',
+                  style: GoogleFonts.fredoka(color: Colors.white),
                 ),
               ),
             );
@@ -236,7 +210,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           return;
         }
 
-        if (!isDynamic) {
+        final errStr = txResult.errorMessage ?? '';
+        final isMissing = txResult.isNotInstalled || errStr.toLowerCase().contains('no está instalada');
+        if (isMissing && !isDynamic) {
           if (mounted) {
             setState(() => _isProcessing = false);
             _showWalletNotInstalledDialog(context, _selectedWallet, authController, oracleController, langController);
@@ -244,10 +220,10 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           return;
         }
 
-        throw Exception(txResult.errorMessage ?? 'Error desconocido al transferir con $_selectedWallet');
+        throw Exception(errStr.isNotEmpty ? errStr : 'Error al procesar el pago con $_selectedWallet');
       }
 
-      // Step 3: Transaction broadcasted successfully on Solana
+      // Step 2: Transaction broadcasted successfully on Solana
       if (mounted) {
         setState(() => _processingStep = '🚀 Confirmando patrocinio en la blockchain de Solana...');
       }

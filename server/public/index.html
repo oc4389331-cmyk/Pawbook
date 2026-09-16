@@ -72,7 +72,7 @@
         }
         if (type.includes('phantom')) {
           if (window.phantom && window.phantom.solana) return window.phantom.solana;
-          if (window.solana && window.solana.isPhantom) return window.solana;
+          if (window.solana && (window.solana.isPhantom || !window.solana.isSolflare)) return window.solana;
         }
         if (type.includes('seeker') || type.includes('mwa')) {
           if (window.solanaMobile || window.solanaSeedVault) return window.solanaMobile || window.solanaSeedVault;
@@ -96,26 +96,28 @@
         }
 
         try {
-          // Trigger interactive connection popup
-          const resp = await provider.connect({ onlyIfTrusted: false });
-          const address = (resp.publicKey || provider.publicKey).toString();
-
-          const nonce = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-          const timestamp = new Date().toISOString();
-          const message = `Pawtbook Solana\n\nAutorizar conexión de wallet para patrocinios.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
-          const encodedMessage = new TextEncoder().encode(message);
-
-          try {
-            if (typeof provider.signMessage === 'function') {
-              await provider.signMessage(encodedMessage, 'utf8');
+          if (!provider.isConnected) {
+            try {
+              await provider.connect({ onlyIfTrusted: false });
+            } catch (e) {
+              await provider.connect();
             }
-          } catch (_) {}
+          }
+          let address = '';
+          const pk = provider.publicKey || (provider.account && provider.account.publicKey);
+          if (pk) {
+            address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+          }
+          if (!address) {
+            return { success: false, error: 'No se pudo obtener la dirección pública de Phantom.' };
+          }
 
           return { success: true, address: address, signed: true };
         } catch (err) {
           console.error('Phantom connect error:', err);
-          const isCancel = err && err.message && (err.message.includes('User rejected') || err.message.includes('cancelled') || err.code === 4001);
-          return { success: false, userCancelled: isCancel, error: isCancel ? 'Conexión cancelada por el usuario en Phantom.' : (err.message || 'Error al conectar con Phantom.') };
+          const errStr = (err && (err.message || err.toString())) || '';
+          const isCancel = errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || err.code === 4001;
+          return { success: false, userCancelled: isCancel, error: isCancel ? 'Conexión cancelada por el usuario en Phantom.' : (errStr || 'Error al conectar con Phantom.') };
         }
       },
 
@@ -130,12 +132,23 @@
         }
 
         try {
-          await provider.connect();
-          const address = (provider.publicKey || (provider.publicKey && provider.publicKey.toString())).toString();
+          if (!provider.isConnected) {
+            await provider.connect();
+          }
+          let address = '';
+          const pk = provider.publicKey || (provider.account && provider.account.publicKey);
+          if (pk) {
+            address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+          }
+          if (!address) {
+            return { success: false, error: 'No se pudo obtener la dirección pública de Solflare. Por favor desbloquea la wallet.' };
+          }
           return { success: true, address: address, signed: true };
         } catch (err) {
           console.error('Solflare connect error:', err);
-          return { success: false, error: err.message || 'Conexión con Solflare rechazada.' };
+          const errStr = (err && (err.message || err.toString())) || '';
+          const isCancel = errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || errStr.includes('User cancel') || err.code === 4001;
+          return { success: false, userCancelled: isCancel, error: isCancel ? 'Conexión cancelada por el usuario en Solflare.' : (errStr || 'Conexión con Solflare rechazada.') };
         }
       },
 
@@ -197,19 +210,32 @@
             return {
               success: false,
               isNotInstalled: true,
-              error: `La wallet ${walletType} no está instalada en tu navegador. Puedes patrocinar directamente usando tu Dynamic Pawtbook Wallet o instalar la extensión.`
+              error: `La wallet ${walletType} no está instalada en tu navegador.`
             };
           }
 
           if (!provider.isConnected) {
-            await provider.connect({ onlyIfTrusted: false });
+            if (walletType.toLowerCase().includes('solflare')) {
+              await provider.connect();
+            } else {
+              try {
+                await provider.connect({ onlyIfTrusted: false });
+              } catch (e) {
+                await provider.connect();
+              }
+            }
           }
 
-          if (!provider.publicKey) {
+          let fromPubkeyStr = '';
+          const pk = provider.publicKey || (provider.account && provider.account.publicKey);
+          if (pk) {
+            fromPubkeyStr = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+          }
+
+          if (!fromPubkeyStr) {
             return { success: false, error: `No se pudo obtener la dirección pública de ${walletType}. Por favor desbloquea tu wallet.` };
           }
 
-          const fromPubkeyStr = provider.publicKey.toString();
           const fromPubkey = new window.solanaWeb3.PublicKey(fromPubkeyStr);
 
           // Parse or validate recipient address
