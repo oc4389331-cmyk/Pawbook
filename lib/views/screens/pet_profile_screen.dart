@@ -415,7 +415,11 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             icon: const Icon(Icons.volunteer_activism_rounded),
                             label: Text('Patrocinar', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                             onPressed: () {
-                              SponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile!.id);
+                              if (!authController.isAuthenticated) {
+                                TermsAndConditionsModal.show(context);
+                                return;
+                              }
+                              SponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile?.id ?? 'usr_guest');
                             },
                           ),
                         ],

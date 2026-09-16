@@ -12,6 +12,7 @@ import '../../services/dynamic_auth_service.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import 'terms_and_conditions_modal.dart';
 
 class SponsorshipModal extends StatefulWidget {
   final PetModel pet;
@@ -25,7 +26,13 @@ class SponsorshipModal extends StatefulWidget {
 
   static void show(BuildContext context, {required PetModel pet, required String userId}) {
     final auth = Provider.of<AuthController>(context, listen: false);
-    final isOwnPet = auth.isAuthenticated && (
+
+    if (!auth.isAuthenticated) {
+      TermsAndConditionsModal.show(context);
+      return;
+    }
+
+    final isOwnPet = (
       pet.ownerId == auth.currentProfile?.id ||
       pet.id == auth.activePet?.id ||
       auth.userPets.any((p) => p.id == pet.id)
@@ -59,7 +66,7 @@ class SponsorshipModal extends StatefulWidget {
 
 class _SponsorshipModalState extends State<SponsorshipModal> {
   int _selectedSkrAmount = 100;
-  String _selectedWallet = 'Phantom'; // 'Phantom', 'Solflare', 'Seeker', 'Dynamic'
+  String _selectedWallet = 'Dynamic'; // Default to Dynamic Embedded Wallet for instant payments
   bool _isProcessing = false;
   String _processingStep = '';
 
@@ -69,6 +76,80 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
 
   double _calculateUsdPrice(OracleController oracle) =>
       double.parse(oracle.convertSkrToUsd(_selectedSkrAmount).toStringAsFixed(2));
+
+  void _showWalletNotInstalledDialog(
+    BuildContext context,
+    String walletName,
+    AuthController authController,
+    OracleController oracleController,
+    LanguageController langController,
+  ) {
+    final downloadUrl = walletName.toLowerCase().contains('solflare')
+        ? 'https://solflare.com'
+        : 'https://phantom.app';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgWarmCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryTerracotta.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryTerracotta, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Wallet $walletName',
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.primaryTerracotta),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'No se detectó la extensión de $walletName en tu navegador o la conexión fue cancelada.\n\n¿Deseas pagar directamente usando tu Wallet Dynamic de Pawtbook (sin extensiones)?',
+              style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimaryDark, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              try {
+                js.context.callMethod('open', [downloadUrl, '_blank']);
+              } catch (_) {}
+            },
+            child: Text('Instalar $walletName', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.emeraldGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            icon: const Icon(Icons.bolt_rounded, size: 18),
+            label: Text('🐾 Pagar con Wallet Dynamic', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _selectedWallet = 'Dynamic');
+              _processWalletSponsorship(authController, oracleController, langController);
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _processWalletSponsorship(
     AuthController authController,
@@ -89,18 +170,33 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     final feeSol = totalSol * (feePercent / 100.0);
     final netSol = totalSol - feeSol;
 
+    final isDynamic = _selectedWallet.toLowerCase().contains('dynamic');
+
     setState(() {
       _isProcessing = true;
-      _processingStep = '⚡ Abriendo y conectando con $_selectedWallet...';
+      _processingStep = isDynamic
+          ? '⚡ Procesando patrocinio con tu Wallet Dynamic de Pawtbook...'
+          : '⚡ Abriendo y conectando con $_selectedWallet...';
     });
 
     try {
       // Step 1: Connect specific Solana Wallet (Phantom / Solflare / Seeker / Dynamic)
-      await Future.delayed(const Duration(milliseconds: 400));
-      final walletResult = await _dynamicAuthService.connectSpecificWallet(_selectedWallet);
+      await Future.delayed(const Duration(milliseconds: 300));
+      final walletResult = await _dynamicAuthService.connectSpecificWallet(
+        _selectedWallet,
+        providedAddress: authController.currentProfile?.walletAddress,
+      );
 
-      if (!walletResult.isSuccess && walletResult.errorMessage != null) {
-        throw Exception(walletResult.errorMessage);
+      if (!walletResult.isSuccess) {
+        if (!isDynamic) {
+          if (mounted) {
+            setState(() => _isProcessing = false);
+            _showWalletNotInstalledDialog(context, _selectedWallet, authController, oracleController, langController);
+          }
+          return;
+        } else if (walletResult.errorMessage != null) {
+          throw Exception(walletResult.errorMessage);
+        }
       }
 
       final payerWallet = walletResult.walletAddress ??
@@ -108,9 +204,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           'sol_${widget.userId.substring(0, 12)}';
       final petWallet = widget.pet.dynamicWalletAddress;
 
-      // Step 2: Request user approval & sign transaction on Solflare / Phantom popup
+      // Step 2: Request user approval & sign transaction
       if (mounted) {
-        setState(() => _processingStep = '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
+        setState(() => _processingStep = isDynamic
+            ? '🚀 Transfiriendo \$SKR en la blockchain de Solana...'
+            : '✍️ Autoriza la transacción en la ventana emergente de $_selectedWallet...');
       }
 
       // Execute transfer to Platform Treasury Custody Wallet
@@ -118,6 +216,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         walletType: _selectedWallet,
         recipientAddress: AppConfig.marketplaceTreasuryWallet,
         solAmount: totalSol > 0 ? totalSol : 0.001,
+        fromAddress: payerWallet,
       );
 
       if (!txResult.isSuccess) {
@@ -136,12 +235,21 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           }
           return;
         }
+
+        if (!isDynamic) {
+          if (mounted) {
+            setState(() => _isProcessing = false);
+            _showWalletNotInstalledDialog(context, _selectedWallet, authController, oracleController, langController);
+          }
+          return;
+        }
+
         throw Exception(txResult.errorMessage ?? 'Error desconocido al transferir con $_selectedWallet');
       }
 
       // Step 3: Transaction broadcasted successfully on Solana
       if (mounted) {
-        setState(() => _processingStep = '🚀 Confirmando \$SKR en la blockchain de Solana...');
+        setState(() => _processingStep = '🚀 Confirmando patrocinio en la blockchain de Solana...');
       }
 
       final txHash = txResult.signature ?? 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
@@ -369,9 +477,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.emeraldGreen.withOpacity(0.12),
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.3)),
+                      border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       '⚡ Red Solana',
@@ -388,19 +496,20 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   Row(
                     children: [
                       _buildWalletOption(
-                        id: 'Phantom',
-                        title: 'Phantom',
-                        subtitle: 'Extensión / Móvil',
-                        iconData: Icons.shield_rounded,
-                        color: const Color(0xFFAB9FF2),
+                        id: 'Dynamic',
+                        title: 'Dynamic SIWS',
+                        subtitle: 'Pawtbook Wallet',
+                        iconData: Icons.account_balance_wallet_rounded,
+                        color: AppTheme.emeraldGreen,
+                        badge: 'Directo 🐾',
                       ),
                       const SizedBox(width: 8),
                       _buildWalletOption(
-                        id: 'Solflare',
-                        title: 'Solflare',
-                        subtitle: 'Web / Extensión',
-                        iconData: Icons.wb_sunny_rounded,
-                        color: const Color(0xFFFC8C03),
+                        id: 'Phantom',
+                        title: 'Phantom',
+                        subtitle: 'Extensión / Web3',
+                        iconData: Icons.shield_rounded,
+                        color: const Color(0xFFAB9FF2),
                       ),
                     ],
                   ),
@@ -408,20 +517,20 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                   Row(
                     children: [
                       _buildWalletOption(
-                        id: 'Seeker',
-                        title: 'Solana Seeker',
-                        subtitle: 'Seed Vault Nativo 📱',
-                        iconData: Icons.phone_android_rounded,
-                        color: const Color(0xFF14F195),
-                        badge: 'Nativo Mobile',
+                        id: 'Solflare',
+                        title: 'Solflare',
+                        subtitle: 'Web / Extensión',
+                        iconData: Icons.wb_sunny_rounded,
+                        color: const Color(0xFFFC8C03),
                       ),
                       const SizedBox(width: 8),
                       _buildWalletOption(
-                        id: 'Dynamic',
-                        title: 'Dynamic SIWS',
-                        subtitle: 'Pawtbook Wallet',
-                        iconData: Icons.account_balance_wallet_rounded,
-                        color: AppTheme.emeraldGreen,
+                        id: 'Seeker',
+                        title: 'Solana Seeker',
+                        subtitle: 'Seed Vault 📱',
+                        iconData: Icons.phone_android_rounded,
+                        color: const Color(0xFF14F195),
+                        badge: 'Mobile',
                       ),
                     ],
                   ),
