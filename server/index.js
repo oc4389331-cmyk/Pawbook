@@ -640,6 +640,9 @@ app.post('/api/sponsorship/card-to-skr', async (req, res) => {
   }
 
   const txHash = 'skr_onramp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+  const feePercent = 10.0;
+  const feeAmount = Math.round(skrAmount * 0.10);
+  const netAmount = skrAmount - feeAmount;
 
   if (supabaseAdmin && sponsorId) {
     try {
@@ -650,12 +653,17 @@ app.post('/api/sponsorship/card-to-skr', async (req, res) => {
         amount: skrAmount,
         payment_method: 'card_to_skr',
         tx_hash: txHash,
+        fee_percent: feePercent,
+        fee_amount: feeAmount,
+        net_amount: netAmount,
+        is_claimed: false,
+        status: 'completed',
       });
 
       // Increment pet sponsorships & points
       await supabaseAdmin.rpc('increment_pet_sponsorship', {
         pet_id: petId,
-        amount: skrAmount
+        amount: netAmount
       }).catch(err => console.error('Error incrementing pet sponsorship:', err));
     } catch (e) {
       console.error('Error inserting card-to-skr sponsorship record:', e);
@@ -670,6 +678,173 @@ app.post('/api/sponsorship/card-to-skr', async (req, res) => {
     sponsorWallet: sponsorWallet || '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888',
     petWallet: petWallet || '8szRk9h4k1i5e2hGjVjK3f7g1f888888888888888888',
     message: `Payment of $${amountUsd || (skrAmount / 20.0)} USD converted to ${skrAmount} $SKR and transferred via Dynamic Solana Wallet.`
+  });
+});
+
+// --------------------------------------------------------------------------
+// 7B. CLAIM / WITHDRAW SPONSORSHIP PAYOUT WITH DOUBLE-SPEND LOCKING
+// --------------------------------------------------------------------------
+app.post('/api/sponsorship/claim-payout', async (req, res) => {
+  const { petId, userId, destinationWallet, txHash, amountSkr, amountSol, amountUsd } = req.body;
+
+  if (!petId || !userId || !destinationWallet) {
+    return res.status(400).json({ success: false, error: 'Missing required parameters: petId, userId, destinationWallet' });
+  }
+
+  const withdrawalId = 'wth_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  const payoutTxHash = txHash || ('payout_sol_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
+
+  if (supabaseAdmin) {
+    try {
+      // 1. Query all unclaimed sponsorships for this pet
+      const { data: unclaimedSpn, error: queryErr } = await supabaseAdmin
+        .from('sponsorships')
+        .select('id, net_amount, amount')
+        .eq('pet_id', petId)
+        .eq('is_claimed', false);
+
+      if (queryErr) {
+        console.error('Error querying unclaimed sponsorships:', queryErr);
+      }
+
+      const unclaimedList = unclaimedSpn || [];
+      const sponsorshipIds = unclaimedList.map(s => s.id);
+      const calculatedNetSkr = unclaimedList.reduce((acc, curr) => acc + (curr.net_amount || curr.amount || 0), 0);
+      const finalSkr = amountSkr || calculatedNetSkr;
+
+      // 2. Insert withdrawal record
+      await supabaseAdmin.from('withdrawals').insert({
+        id: withdrawalId,
+        pet_id: petId,
+        user_id: userId,
+        amount_skr: finalSkr,
+        amount_sol: amountSol || 0.0,
+        amount_usd: amountUsd || 0.0,
+        destination_wallet: destinationWallet,
+        tx_hash: payoutTxHash,
+        status: 'completed',
+        sponsorship_ids: sponsorshipIds,
+      });
+
+      // 3. LOCK all associated sponsorships: mark as is_claimed = true, status = 'withdrawn'
+      if (sponsorshipIds.length > 0) {
+        await supabaseAdmin
+          .from('sponsorships')
+          .update({
+            is_claimed: true,
+            status: 'withdrawn',
+            withdrawal_id: withdrawalId,
+            claimed_at: new Date().toISOString(),
+          })
+          .in('id', sponsorshipIds);
+      }
+
+      return res.json({
+        success: true,
+        withdrawalId,
+        txHash: payoutTxHash,
+        claimedSkr: finalSkr,
+        lockedSponsorshipsCount: sponsorshipIds.length,
+        message: 'Withdrawal processed and associated sponsorships locked successfully.'
+      });
+    } catch (err) {
+      console.error('Error in claim-payout execution:', err);
+      return res.status(500).json({ success: false, error: err.message || 'Internal error processing claim payout' });
+    }
+  }
+
+  return res.json({
+    success: true,
+    withdrawalId,
+    txHash: payoutTxHash,
+    claimedSkr: amountSkr || 100,
+    lockedSponsorshipsCount: 1,
+    message: 'Withdrawal simulated and locked successfully (no supabase client connected).'
+  });
+});
+
+// --------------------------------------------------------------------------
+// 7C. PET SPONSORSHIP LEDGER & AUDIT TRAIL
+// --------------------------------------------------------------------------
+app.get('/api/sponsorship/pet-ledger/:petId', async (req, res) => {
+  const { petId } = req.params;
+  if (!petId) return res.status(400).json({ success: false, error: 'Missing petId' });
+
+  if (supabaseAdmin) {
+    try {
+      // 1. Query sponsorships for pet with sponsor profile details
+      const { data: sponsorships, error: spnErr } = await supabaseAdmin
+        .from('sponsorships')
+        .select(`
+          id,
+          sponsor_id,
+          pet_id,
+          amount,
+          fee_percent,
+          fee_amount,
+          net_amount,
+          payment_method,
+          tx_hash,
+          is_claimed,
+          status,
+          withdrawal_id,
+          claimed_at,
+          created_at,
+          profiles:sponsor_id (full_name, username, avatar_url)
+        `)
+        .eq('pet_id', petId)
+        .order('created_at', { ascending: false });
+
+      // 2. Query withdrawals for pet
+      const { data: withdrawals, error: wthErr } = await supabaseAdmin
+        .from('withdrawals')
+        .select('*')
+        .eq('pet_id', petId)
+        .order('created_at', { ascending: false });
+
+      const allSpn = sponsorships || [];
+      const allWth = withdrawals || [];
+
+      // Calculate totals
+      let totalLifetimeSkr = 0;
+      let unclaimedSkr = 0;
+      let totalWithdrawnSkr = 0;
+
+      for (const s of allSpn) {
+        const net = s.net_amount || s.amount || 0;
+        totalLifetimeSkr += net;
+        if (!s.is_claimed) {
+          unclaimedSkr += net;
+        } else {
+          totalWithdrawnSkr += net;
+        }
+      }
+
+      return res.json({
+        success: true,
+        petId,
+        totalLifetimeSkr,
+        unclaimedSkr,
+        totalWithdrawnSkr,
+        sponsorshipsCount: allSpn.length,
+        withdrawalsCount: allWth.length,
+        sponsorships: allSpn,
+        withdrawals: allWth,
+      });
+    } catch (e) {
+      console.error('Error fetching pet ledger:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({
+    success: true,
+    petId,
+    totalLifetimeSkr: 0,
+    unclaimedSkr: 0,
+    totalWithdrawnSkr: 0,
+    sponsorships: [],
+    withdrawals: []
   });
 });
 

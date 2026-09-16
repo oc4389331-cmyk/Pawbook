@@ -1,3 +1,5 @@
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,9 +8,13 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
+import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
-import '../../theme/app_theme.dart';
 import '../../models/post_model.dart';
+import '../../models/sponsorship_model.dart';
+import '../../models/withdrawal_model.dart';
+import '../../services/supabase_service.dart';
+import '../../theme/app_theme.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
 import '../widgets/claim_sponsorship_modal.dart';
@@ -28,11 +34,21 @@ class PetProfileScreen extends StatefulWidget {
 }
 
 class _PetProfileScreenState extends State<PetProfileScreen> {
+  final SupabaseService _supabaseService = SupabaseService();
   bool _isVerifyingNft = false;
   String? _verifiedNftAddress;
   bool _isFollowing = false;
   bool _isUploadingAvatar = false;
   Future<List<PostModel>>? _postsFuture;
+
+  // Pet Sponsorship Ledger & Claim Audit State
+  List<SponsorshipModel> _petSponsorships = [];
+  List<WithdrawalModel> _petWithdrawals = [];
+  int _unclaimedSkr = 0;
+  int _lifetimeSkr = 0;
+  int _withdrawnSkr = 0;
+  bool _isLoadingLedger = true;
+  bool _showSponsorshipsList = false;
 
   Future<void> _pickAndChangePetAvatar(AuthController authController) async {
     final picker = ImagePicker();
@@ -111,6 +127,48 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     });
   }
 
+  Future<void> _loadPetLedger() async {
+    if (!mounted) return;
+    setState(() => _isLoadingLedger = true);
+
+    try {
+      final spns = await _supabaseService.getSponsorshipsForPet(widget.pet.id);
+      final wths = await _supabaseService.getWithdrawalsForPet(widget.pet.id);
+
+      int totalLife = 0;
+      int totalUnclaimed = 0;
+      int totalWithdrawn = 0;
+
+      for (final s in spns) {
+        totalLife += s.netAmount;
+        if (!s.isClaimed && s.status != 'withdrawn') {
+          totalUnclaimed += s.netAmount;
+        } else {
+          totalWithdrawn += s.netAmount;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _petSponsorships = spns;
+          _petWithdrawals = wths;
+          _lifetimeSkr = totalLife > 0 ? totalLife : widget.pet.totalSponsoredScore;
+          _unclaimedSkr = totalUnclaimed;
+          _withdrawnSkr = totalWithdrawn;
+          _isLoadingLedger = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _unclaimedSkr = widget.pet.totalSponsoredScore;
+          _lifetimeSkr = widget.pet.totalSponsoredScore;
+          _isLoadingLedger = false;
+        });
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -124,6 +182,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         });
       }
       _refreshPosts();
+      _loadPetLedger();
     });
   }
 
@@ -158,6 +217,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final feedController = Provider.of<FeedController>(context);
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
+    final oracleController = Provider.of<OracleController>(context);
     final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
         authController.activePet?.id == widget.pet.id ||
         authController.userPets.any((p) => p.id == widget.pet.id);
@@ -517,94 +577,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ),
                     ),
 
-                  // Claim Sponsorship Earnings Card (For Pet Owner)
-                  if (isOwner)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0D9488), Color(0xFF059669)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF059669).withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => ClaimSponsorshipModal.show(context, pet: widget.pet, userId: authController.currentProfile?.id ?? ''),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.diamond_rounded, color: Colors.white, size: 22),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Retiro de Patrocinios (Claim)',
-                                            style: GoogleFonts.fredoka(
-                                              color: Colors.white,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.25),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              'Lunes • >\$100',
-                                              style: GoogleFonts.fredoka(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '${widget.pet.totalSponsoredScore} \$SKR acumulados en Tesorería',
-                                        style: GoogleFonts.outfit(
-                                          color: Colors.white.withOpacity(0.88),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  // Billetera, Abonos & Patrocinios de la Mascota (Audit Ledger & Withdrawals)
+                  _buildSponsorshipLedgerCard(authController, oracleController, langController, isOwner),
+
 
                   // Solana Dynamic Wallet Card for this Pet
                   Container(
@@ -1044,6 +1019,576 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     );
   }
 
+  void _openSolscan(String txHash) {
+    final cleanHash = txHash.trim();
+    if (cleanHash.isEmpty) return;
+    final url = 'https://solscan.io/tx/$cleanHash';
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('open', [url, '_blank']);
+      } catch (_) {}
+    } else {
+      Clipboard.setData(ClipboardData(text: url));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enlace de Solscan copiado al portapapeles')),
+      );
+    }
+  }
+
+  void _copyToClipboard(String text, String message) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  Widget _buildSponsorshipLedgerCard(
+    AuthController authController,
+    OracleController oracleController,
+    LanguageController langController,
+    bool isOwner,
+  ) {
+    final availableUsd = oracleController.skrToUsd(_unclaimedSkr);
+    final availableSol = oracleController.skrToSol(_unclaimedSkr);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0F2027),
+            const Color(0xFF203A43),
+            const Color(0xFF2C5364),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.emeraldGreen.withOpacity(0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen.withOpacity(0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Billetera & Patrocinios',
+                        style: GoogleFonts.fredoka(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Abonos recibidos y registro auditable en Solana',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white70,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                  tooltip: 'Actualizar balance',
+                  onPressed: _loadPetLedger,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Available Balance Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.12)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'BALANCE DISPONIBLE (UNCLAIMED)',
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.emeraldGreen,
+                          fontSize: 11,
+                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.emeraldGreen.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Solana Ledger',
+                          style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$_unclaimedSkr',
+                        style: GoogleFonts.fredoka(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '\$SKR',
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.accentOrange,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '≈ \$${availableUsd.toStringAsFixed(2)} USD • ${availableSol.toStringAsFixed(4)} SOL (Oracle Live)',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Stats row (Recaudado Histórico vs Total Retirado)
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Total Histórico', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        const SizedBox(height: 2),
+                        Text('$_lifetimeSkr \$SKR', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Total Retirado', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        const SizedBox(height: 2),
+                        Text('$_withdrawnSkr \$SKR', style: GoogleFonts.fredoka(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Abonos', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        const SizedBox(height: 2),
+                        Text('${_petSponsorships.length}', style: GoogleFonts.fredoka(color: Colors.lightBlueAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Owner Action: Claim Payout Button
+            if (isOwner) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.diamond_rounded, size: 20),
+                  label: Text(
+                    'Retirar Patrocinios (Claim Payout)',
+                    style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () async {
+                    await ClaimSponsorshipModal.show(
+                      context,
+                      pet: widget.pet,
+                      userId: authController.currentProfile?.id ?? '',
+                    );
+                    _loadPetLedger();
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            const Divider(color: Colors.white24, height: 1),
+            const SizedBox(height: 8),
+
+            // Toggleable Abonos / Transactions List
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                setState(() => _showSponsorshipsList = !_showSponsorshipsList);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _showSponsorshipsList ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                          color: AppTheme.emeraldGreen,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Historial de Abonos & Solscan (${_petSponsorships.length})',
+                          style: GoogleFonts.fredoka(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _showSponsorshipsList ? 'Ocultar' : 'Ver detalle',
+                      style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            if (_showSponsorshipsList) ...[
+              const SizedBox(height: 10),
+              if (_isLoadingLedger)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(color: AppTheme.emeraldGreen),
+                  ),
+                )
+              else if (_petSponsorships.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.pets_rounded, color: Colors.white38, size: 32),
+                      const SizedBox(height: 6),
+                      Text(
+                        'No hay abonos registrados aún para esta mascota.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _petSponsorships.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final s = _petSponsorships[index];
+                    final isWithdrawn = s.isClaimed || s.status == 'withdrawn';
+                    final dateStr = '${s.createdAt.day.toString().padLeft(2, '0')}/${s.createdAt.month.toString().padLeft(2, '0')}/${s.createdAt.year}';
+                    final txHashStr = s.txHash;
+                    final txDisplay = (txHashStr != null && txHashStr.isNotEmpty)
+                        ? (txHashStr.length > 14
+                            ? '${txHashStr.substring(0, 6)}...${txHashStr.substring(txHashStr.length - 6)}'
+                            : txHashStr)
+                        : null;
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isWithdrawn
+                              ? Colors.white.withOpacity(0.08)
+                              : AppTheme.emeraldGreen.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: AppTheme.emeraldGreen.withOpacity(0.2),
+                                backgroundImage: s.sponsorAvatar != null && s.sponsorAvatar!.isNotEmpty
+                                    ? NetworkImage(s.sponsorAvatar!)
+                                    : null,
+                                child: (s.sponsorAvatar == null || s.sponsorAvatar!.isEmpty)
+                                    ? const Icon(Icons.person, color: AppTheme.emeraldGreen, size: 16)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      s.sponsorName ?? 'Patrocinador',
+                                      style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      dateStr,
+                                      style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '+${s.netAmount} \$SKR',
+                                    style: GoogleFonts.fredoka(
+                                      color: isWithdrawn ? Colors.white60 : AppTheme.emeraldGreen,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isWithdrawn
+                                          ? Colors.amber.withOpacity(0.15)
+                                          : AppTheme.emeraldGreen.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isWithdrawn ? Icons.lock_outline_rounded : Icons.check_circle_outline_rounded,
+                                          color: isWithdrawn ? Colors.amberAccent : AppTheme.emeraldGreen,
+                                          size: 10,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          isWithdrawn ? 'Retirado' : 'Disponible',
+                                          style: GoogleFonts.outfit(
+                                            color: isWithdrawn ? Colors.amberAccent : AppTheme.emeraldGreen,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (txDisplay != null && txHashStr != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.fingerprint_rounded, color: Colors.white38, size: 14),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'TX: $txDisplay',
+                                      style: GoogleFonts.robotoMono(color: Colors.white60, fontSize: 10),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => _copyToClipboard(txHashStr, 'TX Hash copiado'),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(2),
+                                      child: Icon(Icons.copy_rounded, color: Colors.white60, size: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  InkWell(
+                                    onTap: () => _openSolscan(txHashStr),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.solanaPurple.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('Solscan', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                          const SizedBox(width: 2),
+                                          const Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+
+              // Completed Withdrawals Section (if any)
+              if (_petWithdrawals.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Retiros Realizados (${_petWithdrawals.length})',
+                  style: GoogleFonts.fredoka(color: Colors.amberAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _petWithdrawals.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final w = _petWithdrawals[index];
+                    final dateStr = '${w.createdAt.day.toString().padLeft(2, '0')}/${w.createdAt.month.toString().padLeft(2, '0')}/${w.createdAt.year}';
+                    final walletDisplay = w.destinationWallet.length > 12
+                        ? '${w.destinationWallet.substring(0, 6)}...${w.destinationWallet.substring(w.destinationWallet.length - 4)}'
+                        : w.destinationWallet;
+
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Colors.amberAccent, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${w.amountSkr} \$SKR retirados', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text('$dateStr • Destino: $walletDisplay', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
+                              ],
+                            ),
+                          ),
+                          if (w.txHash != null && w.txHash!.isNotEmpty)
+                            InkWell(
+                              onTap: () => _openSolscan(w.txHash!),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.solanaPurple.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('Solscan', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9)),
+                                    const SizedBox(width: 2),
+                                    const Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatColumn(String label, String value, Color color) {
     return Column(
       children: [
@@ -1060,3 +1605,4 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     );
   }
 }
+

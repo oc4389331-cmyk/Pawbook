@@ -98,8 +98,30 @@ CREATE TABLE IF NOT EXISTS public.sponsorships (
     sponsor_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     pet_id TEXT NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
     amount INT NOT NULL,
-    payment_method TEXT DEFAULT 'stripe' NOT NULL, -- 'stripe' or 'solana_pay'
+    payment_method TEXT DEFAULT 'solana_pay' NOT NULL,
     tx_hash TEXT,
+    fee_percent NUMERIC DEFAULT 10.0 NOT NULL,
+    fee_amount INT DEFAULT 0 NOT NULL,
+    net_amount INT NOT NULL,
+    is_claimed BOOLEAN DEFAULT false NOT NULL,
+    status TEXT DEFAULT 'completed' NOT NULL, -- 'completed', 'withdrawn', 'cancelled'
+    withdrawal_id TEXT,
+    claimed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- 7B. Withdrawals / Payouts Ledger Table (Creator claims tracking & double-spend protection)
+CREATE TABLE IF NOT EXISTS public.withdrawals (
+    id TEXT PRIMARY KEY,
+    pet_id TEXT NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    amount_skr INT NOT NULL,
+    amount_sol NUMERIC DEFAULT 0 NOT NULL,
+    amount_usd NUMERIC DEFAULT 0 NOT NULL,
+    destination_wallet TEXT NOT NULL,
+    tx_hash TEXT,
+    status TEXT DEFAULT 'completed' NOT NULL, -- 'completed', 'pending_audit'
+    sponsorship_ids TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -133,6 +155,9 @@ CREATE INDEX IF NOT EXISTS idx_post_likes_user ON public.post_likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_likes_post ON public.post_likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON public.comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_sponsorships_pet ON public.sponsorships(pet_id);
+CREATE INDEX IF NOT EXISTS idx_sponsorships_claimed ON public.sponsorships(pet_id, is_claimed);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_pet ON public.withdrawals(pet_id);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON public.withdrawals(user_id);
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON public.follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_pet ON public.follows(following_pet_id);
 

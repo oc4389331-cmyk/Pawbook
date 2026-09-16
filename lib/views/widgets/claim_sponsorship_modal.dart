@@ -123,13 +123,16 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
         return;
       }
 
-      // 2. Deduct claimable score / record payout in Supabase
       final txHash = txResult.signature ?? 'claim_tx_${DateTime.now().millisecondsSinceEpoch}';
-      await _supabaseService.sponsorPet(
-        sponsorId: widget.userId,
+
+      // 2. Lock sponsorships and register withdrawal in Supabase / Local Ledger
+      await _supabaseService.processPetWithdrawal(
         petId: widget.pet.id,
-        amount: -claimableSkr, // Deduct claimed amount
-        paymentMethod: 'claim_payout_solana',
+        userId: widget.userId,
+        destinationWallet: targetWallet,
+        amountSkr: claimableSkr,
+        amountSol: claimableSol,
+        amountUsd: claimableUsd,
         txHash: txHash,
       );
 
@@ -160,11 +163,11 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '🎉 ¡Retiro (Claim) Exitoso!',
+                        '🎉 ¡Retiro (Claim) Exitoso y Bloqueado!',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        'Se han enviado ${claimableSol.toStringAsFixed(4)} SOL (\$${claimableUsd.toStringAsFixed(2)} USD) a tu wallet ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}',
+                        'Se han liquidado $claimableSkr \$SKR (${claimableSol.toStringAsFixed(4)} SOL • \$${claimableUsd.toStringAsFixed(2)} USD) a tu wallet ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                       ),
                     ],

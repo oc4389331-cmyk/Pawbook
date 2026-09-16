@@ -3,11 +3,17 @@ class SponsorshipModel {
   final String sponsorId;
   final String petId;
   final int amount;
-  final String paymentMethod; // 'solana_pay' or 'solana_phantom', etc.
+  final String paymentMethod; // 'solana_pay' or 'solana_skr_phantom', etc.
   final String? txHash;
   final double feePercent;
   final int feeAmount;
   final int netAmount;
+  final bool isClaimed;
+  final String status; // 'completed', 'withdrawn', 'cancelled'
+  final String? withdrawalId;
+  final DateTime? claimedAt;
+  final String? sponsorName;
+  final String? sponsorAvatar;
   final DateTime createdAt;
 
   SponsorshipModel({
@@ -20,6 +26,12 @@ class SponsorshipModel {
     this.feePercent = 10.0,
     int? feeAmount,
     int? netAmount,
+    this.isClaimed = false,
+    this.status = 'completed',
+    this.withdrawalId,
+    this.claimedAt,
+    this.sponsorName,
+    this.sponsorAvatar,
     required this.createdAt,
   })  : feeAmount = feeAmount ?? (amount * 0.10).round(),
         netAmount = netAmount ?? (amount - (amount * 0.10).round());
@@ -40,8 +52,14 @@ class SponsorshipModel {
       feePercent: feeP,
       feeAmount: feeA,
       netAmount: netA,
+      isClaimed: json['is_claimed'] == true,
+      status: json['status'] ?? (json['is_claimed'] == true ? 'withdrawn' : 'completed'),
+      withdrawalId: json['withdrawal_id'],
+      claimedAt: json['claimed_at'] != null ? DateTime.tryParse(json['claimed_at'].toString()) : null,
+      sponsorName: json['sponsor_name'] ?? json['profiles']?['full_name'] ?? json['profiles']?['username'],
+      sponsorAvatar: json['sponsor_avatar'] ?? json['profiles']?['avatar_url'],
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }
@@ -57,7 +75,49 @@ class SponsorshipModel {
       'fee_percent': feePercent,
       'fee_amount': feeAmount,
       'net_amount': netAmount,
+      'is_claimed': isClaimed,
+      'status': status,
+      'withdrawal_id': withdrawalId,
+      'claimed_at': claimedAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
     };
+  }
+
+  SponsorshipModel copyWith({
+    String? id,
+    String? sponsorId,
+    String? petId,
+    int? amount,
+    String? paymentMethod,
+    String? txHash,
+    double? feePercent,
+    int? feeAmount,
+    int? netAmount,
+    bool? isClaimed,
+    String? status,
+    String? withdrawalId,
+    DateTime? claimedAt,
+    String? sponsorName,
+    String? sponsorAvatar,
+    DateTime? createdAt,
+  }) {
+    return SponsorshipModel(
+      id: id ?? this.id,
+      sponsorId: sponsorId ?? this.sponsorId,
+      petId: petId ?? this.petId,
+      amount: amount ?? this.amount,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      txHash: txHash ?? this.txHash,
+      feePercent: feePercent ?? this.feePercent,
+      feeAmount: feeAmount ?? this.feeAmount,
+      netAmount: netAmount ?? this.netAmount,
+      isClaimed: isClaimed ?? this.isClaimed,
+      status: status ?? this.status,
+      withdrawalId: withdrawalId ?? this.withdrawalId,
+      claimedAt: claimedAt ?? this.claimedAt,
+      sponsorName: sponsorName ?? this.sponsorName,
+      sponsorAvatar: sponsorAvatar ?? this.sponsorAvatar,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 }

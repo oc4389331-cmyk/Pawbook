@@ -119,6 +119,9 @@ class OracleController extends ChangeNotifier {
     return skrAmount * _priceUsd;
   }
 
+  double skrToUsd(num skrAmount) => convertSkrToUsd(skrAmount);
+  double skrToSol(num skrAmount) => skrAmount * _priceSol;
+
   String get formattedPriceUsd => '\$${_priceUsd.toStringAsFixed(4)} USD';
   String get formattedChange => '${_change24h >= 0 ? '+' : ''}${_change24h.toStringAsFixed(2)}%';
 
