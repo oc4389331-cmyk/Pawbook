@@ -15,19 +15,21 @@ import '../../theme/app_theme.dart';
 class ClaimSponsorshipModal extends StatefulWidget {
   final PetModel pet;
   final String userId;
+  final int? unclaimedSkr;
 
   const ClaimSponsorshipModal({
     super.key,
     required this.pet,
     required this.userId,
+    this.unclaimedSkr,
   });
 
-  static Future<void> show(BuildContext context, {required PetModel pet, required String userId}) {
+  static Future<void> show(BuildContext context, {required PetModel pet, required String userId, int? unclaimedSkr}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => ClaimSponsorshipModal(pet: pet, userId: userId),
+      builder: (ctx) => ClaimSponsorshipModal(pet: pet, userId: userId, unclaimedSkr: unclaimedSkr),
     );
   }
 
@@ -88,6 +90,16 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
     final nav = Navigator.of(context);
     final targetWallet = _destinationWalletController.text.trim();
 
+    if (claimableSkr <= 0) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.primaryTerracotta,
+          content: Text('⚠️ No tienes saldo disponible de \$SKR para retirar.', style: GoogleFonts.fredoka(color: Colors.white)),
+        ),
+      );
+      return;
+    }
+
     if (targetWallet.isEmpty || targetWallet.length < 32) {
       messenger.showSnackBar(
         SnackBar(
@@ -100,15 +112,16 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingStep = '💎 Procesando transferencia de fondos desde Tesorería Pawtbook...';
+      _processingStep = '💎 Transfiriendo $claimableSkr \$SKR a tu wallet de Solana...';
     });
 
     try {
-      // 1. Send SOL from platform escrow/treasury to creator's wallet
+      // 1. Send strictly $SKR tokens from platform escrow/treasury to creator's wallet
       final txResult = await _dynamicAuthService.sendWalletTransfer(
         walletType: _selectedTargetWallet,
         recipientAddress: targetWallet,
-        solAmount: claimableSol > 0 ? claimableSol : 0.001,
+        tokenType: 'SKR',
+        skrAmount: claimableSkr.toDouble(),
       );
 
       if (!txResult.isSuccess && txResult.userCancelled) {
@@ -123,7 +136,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
         return;
       }
 
-      final txHash = txResult.signature ?? 'claim_tx_${DateTime.now().millisecondsSinceEpoch}';
+      final txHash = txResult.signature ?? 'claim_skr_${DateTime.now().millisecondsSinceEpoch}';
 
       // 2. Lock sponsorships and register withdrawal in Supabase / Local Ledger
       await _supabaseService.processPetWithdrawal(
@@ -163,11 +176,11 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '🎉 ¡Retiro (Claim) Exitoso y Bloqueado!',
+                        '🎉 ¡Retiro de $claimableSkr \$SKR Exitoso y Bloqueado!',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        'Se han liquidado $claimableSkr \$SKR (${claimableSol.toStringAsFixed(4)} SOL • \$${claimableUsd.toStringAsFixed(2)} USD) a tu wallet ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
+                        'Se han transferido $claimableSkr \$SKR a tu wallet ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                       ),
                     ],
@@ -199,15 +212,14 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
     final oracleController = Provider.of<OracleController>(context);
     final authController = Provider.of<AuthController>(context);
 
-    final petScore = widget.pet.totalSponsoredScore;
-    final totalSkr = petScore;
+    final totalSkr = widget.unclaimedSkr ?? 0;
     final claimableUsd = double.parse(oracleController.convertSkrToUsd(totalSkr).toStringAsFixed(2));
-    final claimableSol = claimableUsd / 155.0;
+    final claimableSol = oracleController.convertSkrToSol(totalSkr);
 
     final nowUtc = DateTime.now().toUtc();
     final isMonday = nowUtc.weekday == AppConfig.claimDayOfWeek;
-    final hasMinBalance = claimableUsd >= AppConfig.minClaimAmountUsd;
-    final canClaim = isMonday && hasMinBalance;
+    final hasMinBalance = totalSkr > 0;
+    final canClaim = totalSkr > 0;
 
     return Container(
       constraints: BoxConstraints(
@@ -563,8 +575,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         )
                       : Text(
                           canClaim
-                              ? 'Reclamar \$${claimableUsd.toStringAsFixed(2)} USD (${claimableSol.toStringAsFixed(4)} SOL)'
-                              : '🔒 Retiro Bloqueado (Cumple las 2 condiciones)',
+                              ? 'Retirar $totalSkr \$SKR (≈ \$${claimableUsd.toStringAsFixed(2)} USD)'
+                              : '🔒 Sin saldo disponible de \$SKR para retirar',
                           style: GoogleFonts.fredoka(
                             color: canClaim ? Colors.white : AppTheme.textMutedWarm,
                             fontSize: 14,

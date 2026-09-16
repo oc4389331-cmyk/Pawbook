@@ -152,7 +152,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         setState(() {
           _petSponsorships = spns;
           _petWithdrawals = wths;
-          _lifetimeSkr = totalLife > 0 ? totalLife : widget.pet.totalSponsoredScore;
+          _lifetimeSkr = totalLife;
           _unclaimedSkr = totalUnclaimed;
           _withdrawnSkr = totalWithdrawn;
           _isLoadingLedger = false;
@@ -161,8 +161,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _unclaimedSkr = widget.pet.totalSponsoredScore;
-          _lifetimeSkr = widget.pet.totalSponsoredScore;
+          _unclaimedSkr = 0;
+          _lifetimeSkr = 0;
+          _withdrawnSkr = 0;
           _isLoadingLedger = false;
         });
       }
@@ -1340,6 +1341,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       context,
                       pet: widget.pet,
                       userId: authController.currentProfile?.id ?? '',
+                      unclaimedSkr: _unclaimedSkr,
                     );
                     _loadPetLedger();
                   },
