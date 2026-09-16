@@ -267,27 +267,29 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         authController.deductPawtScore(totalSkr);
       }
 
-      // Register on Backend with Fee breakdown
-      await _renderService.payWithCardConvertToSkr(
-        sponsorId: widget.userId,
-        petId: widget.pet.id,
-        amountUsd: usdPrice,
-        skrAmount: totalSkr,
-        sponsorWallet: txResult.fromAddress ?? payerWallet,
-        petWallet: petWallet,
-      );
-
-      // Register in Supabase with 10% fee deducted
-      await _supabaseService.sponsorPet(
-        sponsorId: widget.userId,
-        petId: widget.pet.id,
-        amount: totalSkr,
-        paymentMethod: 'solana_${_selectedCurrency.toLowerCase()}_${_selectedWallet.toLowerCase()}',
-        txHash: txHash,
-        feePercent: feePercent,
-        feeAmount: feeSkr,
-        netAmount: netSkr,
-      ).timeout(const Duration(seconds: 4), onTimeout: () {});
+      // If paying with Card, invoke Card-to-SKR on-ramp backend
+      if (_selectedWallet.toLowerCase() == 'tarjeta' || _selectedWallet.toLowerCase() == 'card') {
+        await _renderService.payWithCardConvertToSkr(
+          sponsorId: widget.userId,
+          petId: widget.pet.id,
+          amountUsd: usdPrice,
+          skrAmount: totalSkr,
+          sponsorWallet: txResult.fromAddress ?? payerWallet,
+          petWallet: petWallet,
+        );
+      } else {
+        // Register in Supabase with 10% fee deducted and genuine Solana tx hash
+        await _supabaseService.sponsorPet(
+          sponsorId: widget.userId,
+          petId: widget.pet.id,
+          amount: totalSkr,
+          paymentMethod: 'solana_${_selectedCurrency.toLowerCase()}_${_selectedWallet.toLowerCase()}',
+          txHash: txHash,
+          feePercent: feePercent,
+          feeAmount: feeSkr,
+          netAmount: netSkr,
+        ).timeout(const Duration(seconds: 4), onTimeout: () {});
+      }
 
       if (mounted) {
         nav.pop();

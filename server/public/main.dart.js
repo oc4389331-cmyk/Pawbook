@@ -104935,19 +104935,24 @@ b0=a1.b
 a4=b0==null?"sol_"+m.e.toLowerCase()+"_"+Date.now():b0
 a5=a1.c
 if(h&&g)c2.Mp(j)
-c0=m.a
-b1=c0.d
-c0=c0.c
-b2=a1.d
-if(b2==null)b2=a
-s=8
-return A.l(m.y.Fx(k,c0.a,a0,j,b1,b2),$async$p8)
-case 8:b2=m.a
-b1=b2.d
+c0=m.e
+b1=c0.toLowerCase()==="tarjeta"||c0.toLowerCase()==="card"
+b2=m.a
+s=b1?8:10
+break
+case 8:c0=b2.d
 b2=b2.c
-s=9
-return A.l(m.z.r2(j,e,f,d,"solana_"+m.f.toLowerCase()+"_"+m.e.toLowerCase(),b2.a,b1,a4).ib(0,B.a_,new A.aHA()),$async$p8)
-case 9:if(m.c!=null){l.di()
+b1=a1.d
+if(b1==null)b1=a
+s=11
+return A.l(m.y.Fx(k,b2.a,a0,j,c0,b1),$async$p8)
+case 11:s=9
+break
+case 10:b1=b2.d
+b2=b2.c
+s=12
+return A.l(m.z.r2(j,e,f,d,"solana_"+m.f.toLowerCase()+"_"+c0.toLowerCase(),b2.a,b1,a4).ib(0,B.a_,new A.aHA()),$async$p8)
+case 12:case 9:if(m.c!=null){l.di()
 c0=a5!=null?A.TQ("SOLSCAN",new A.aHB(a5),B.e):null
 b1=A.h("\u26a1 \xa1Patrocinio Confirmado en "+m.e+"!",null,null,null,A.v().$3$color$fontSize$fontWeight(B.e,14,B.f),null,null)
 b2=m.a.c
