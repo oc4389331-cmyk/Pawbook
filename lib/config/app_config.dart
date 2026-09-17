@@ -39,7 +39,7 @@ class AppConfig {
   static const String adminPassword = 'Laravelt12050829';
 
   // App Identity
-  static const String appName = 'Pawtbook';
+  static const String appName = 'Pawbooklife';
   static const String appTagline = 'SocialFi for Pets on Solana';
 }
 

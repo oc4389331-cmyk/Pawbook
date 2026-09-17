@@ -97727,7 +97727,7 @@ return s},
 $S:590}
 A.Rp.prototype={
 N(a){var s=null,r=A.ui(B.aN,s,s),q=A.aRS(s,s,B.ae,!1,0,s,B.Ot,s,s,s,s,s,s,A.w().$3$color$fontSize$fontWeight(B.z,22,B.f),s,s),p=B.f2.aa(0.15),o=A.A(24),n=A.c0(s,s,B.l,s,s,s,3,s,s,B.e,s,s,B.qZ,B.l.aa(0.35),new A.aN(A.A(24),B.u),s,s,s,A.w().$2$fontSize$fontWeight(16,B.f),s),m=A.b6a(A.ui(B.aN,s,s).p1),l=A.w().$3$color$fontSize$fontWeight(B.l,26,B.f),k=A.w().$3$color$fontSize$fontWeight(B.z,20,B.f),j=A.w().$3$color$fontSize$fontWeight(B.z,17,B.am)
-return new A.DN(B.rC,"Pawtbook",r.auV(q,new A.Bn(B.e,p,3,new A.aN(o,B.FW),B.a0Q,s),B.IZ,new A.wb(n),B.l,B.ae,m.auU(A.ae().$2$color$fontSize(B.z,15),A.ae().$2$color$fontSize(B.x,13),l,k,j)),!1,s)}}
+return new A.DN(B.rC,"Pawbooklife",r.auV(q,new A.Bn(B.e,p,3,new A.aN(o,B.FW),B.a0Q,s),B.IZ,new A.wb(n),B.l,B.ae,m.auU(A.ae().$2$color$fontSize(B.z,15),A.ae().$2$color$fontSize(B.x,13),l,k,j)),!1,s)}}
 A.fY.prototype={
 a_r(a){var s=this
 return new A.fY(s.a,s.b,s.c,s.d,s.e,a,s.r,s.w,s.x)},

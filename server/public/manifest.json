@@ -1,11 +1,11 @@
 {
-    "name": "pawtbook",
-    "short_name": "pawtbook",
+    "name": "Pawbooklife",
+    "short_name": "Pawbooklife",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFDE7",
+    "theme_color": "#FF7043",
+    "description": "Pawbooklife - SocialFi for Pets on Solana.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
