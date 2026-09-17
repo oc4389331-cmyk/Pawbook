@@ -206,6 +206,11 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
             loop: true,
             fit: BoxFit.contain,
             onPlayAttempt: widget.onPlayAttempt,
+            onVideoTap: () {
+              if (widget.post.hasSound && _audioPlayer != null && !_isMuted && !_isPlayingSound) {
+                _audioPlayer!.play(widget.post.soundUrl!, loop: true);
+              }
+            },
           ),
         ] else ...[
           _buildMediaImage(widget.post.mediaUrl),

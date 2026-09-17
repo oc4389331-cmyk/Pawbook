@@ -23,12 +23,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
-  bool _isOtpSent = false;
   late bool _isSignUp; // false = Iniciar Sesión, true = Crear Cuenta
   late bool _acceptedTerms;
 
@@ -66,9 +62,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _pawAnimController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _otpController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -79,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
+  bool _validateTermsForSignUp() {
     if (_isSignUp && !_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -95,16 +88,181 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       );
-      return;
+      return false;
     }
+    return true;
+  }
+
+  Future<void> _handleGoogleSignIn(AuthController authController) async {
+    if (!_validateTermsForSignUp()) return;
     await authController.loginWithGoogle(
       isSignUp: _isSignUp,
+      fullName: _isSignUp && _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : null,
+    );
+  }
+
+  Future<void> _handleWalletSignIn(
+    AuthController authController, {
+    required String walletType,
+  }) async {
+    if (!_validateTermsForSignUp()) return;
+    final success = await authController.loginWithSolanaWallet(
+      walletType: walletType,
+      isSignUp: _isSignUp,
+      fullName: _isSignUp && _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : null,
+    );
+    if (success && mounted) {
+      _onLoginSuccess();
+    }
+  }
+
+  void _showOtherWalletsModal(AuthController authController) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.bgWarmCream,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryTerracotta, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Seleccionar Billetera de Solana',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimaryDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Conecta tu billetera para recibir donaciones y recompensas',
+                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Option 1: Solana Mobile / Seeker Seed Vault
+              _buildModalWalletOption(
+                title: 'Solana Seeker / Mobile Vault',
+                subtitle: 'Hardware Seed Vault para Solana Mobile',
+                iconWidget: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.phone_android_rounded, color: Colors.deepPurple),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleWalletSignIn(authController, walletType: 'Seeker');
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // Option 2: Generic Solana In-App / Embedded Web3 Wallet
+              _buildModalWalletOption(
+                title: 'Billetera Web3 Integrada (Solana)',
+                subtitle: 'Crear o conectar billetera instantánea de Solana',
+                iconWidget: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.flash_on_rounded, color: AppTheme.emeraldGreen),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleWalletSignIn(authController, walletType: 'Dynamic');
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModalWalletOption({
+    required String title,
+    required String subtitle,
+    required Widget iconWidget,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceWarm,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.borderWarm),
+        ),
+        child: Row(
+          children: [
+            iconWidget,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.fredoka(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppTheme.textMutedWarm,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppTheme.textMutedWarm),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildTermsAndConditionsCheckbox(LanguageController langController) {
     return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      margin: const EdgeInsets.only(top: 10, bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: _acceptedTerms
@@ -156,10 +314,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildGoogleButton(AuthController authController, LanguageController langController) {
+  Widget _buildGoogleButton(AuthController authController) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: 54,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
@@ -167,11 +325,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           elevation: 2,
           shadowColor: Colors.black.withOpacity(0.08),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(22),
             side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
           ),
         ),
-        onPressed: authController.isLoading ? null : () => _handleGoogleSignIn(authController, langController),
+        onPressed: authController.isLoading ? null : () => _handleGoogleSignIn(authController),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -192,11 +350,136 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             const SizedBox(width: 12),
             Text(
-              _isSignUp ? '✨ Crear Cuenta con Google' : '🔑 Iniciar Sesión con Google',
+              _isSignUp ? '✨ Continuar con Google' : '🔑 Iniciar Sesión con Google',
               style: GoogleFonts.fredoka(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimaryDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhantomButton(AuthController authController) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFAB9FF2), // Branded Phantom Purple
+          foregroundColor: Colors.white,
+          elevation: 3,
+          shadowColor: const Color(0xFFAB9FF2).withOpacity(0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        onPressed: authController.isLoading
+            ? null
+            : () => _handleWalletSignIn(authController, walletType: 'Phantom'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                shape: BoxShape.circle,
+              ),
+              child: const Text(
+                '👻',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _isSignUp ? '✨ Crear Cuenta con Phantom' : '👻 Iniciar Sesión con Phantom',
+              style: GoogleFonts.fredoka(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2C194D),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSolflareButton(AuthController authController) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFC7227), // Branded Solflare Flame
+          foregroundColor: Colors.white,
+          elevation: 3,
+          shadowColor: const Color(0xFFFC7227).withOpacity(0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        onPressed: authController.isLoading
+            ? null
+            : () => _handleWalletSignIn(authController, walletType: 'Solflare'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                shape: BoxShape.circle,
+              ),
+              child: const Text(
+                '🔥',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _isSignUp ? '✨ Crear Cuenta con Solflare' : '🔥 Iniciar Sesión con Solflare',
+              style: GoogleFonts.fredoka(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtherWalletsButton(AuthController authController) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.primaryTerracotta,
+          backgroundColor: AppTheme.surfaceWarm,
+          side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        onPressed: authController.isLoading ? null : () => _showOtherWalletsModal(authController),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppTheme.primaryTerracotta),
+            const SizedBox(width: 8),
+            Text(
+              '⚡ Otras Billeteras de Solana',
+              style: GoogleFonts.fredoka(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryTerracotta,
               ),
             ),
           ],
@@ -210,8 +493,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
 
-    // Detectar autenticación exitosa (p.ej. luego del redirect de Google OAuth)
-    // y navegar al HomeScreen automáticamente
+    // Detectar autenticación exitosa (p.ej. luego de Google OAuth)
     if (authController.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _onLoginSuccess();
@@ -225,604 +507,408 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           body: SafeArea(
             child: Column(
               children: [
-            // Language Selector Bar at Top
-            Padding(
-              padding: const EdgeInsets.only(top: 12, right: 20),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: const LanguageSelector(),
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // App Hero Logo Card (Pawly Warm Style)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceWarm,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryTerracotta.withOpacity(0.12),
-                              blurRadius: 24,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                          border: Border.all(color: AppTheme.cardWarm, width: 3),
-                        ),
-                        child: const Icon(
-                          Icons.pets_rounded,
-                          size: 64,
-                          color: AppTheme.primaryTerracotta,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        langController.t('appName'),
-                        style: GoogleFonts.fredoka(
-                          fontSize: 38,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryTerracotta,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        langController.t('appTagline'),
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          color: AppTheme.textMutedWarm,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Architecture Badges Pill
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildChip('Solana SIWS', AppTheme.primaryTerracotta),
-                          _buildChip('Dynamic.xyz Auth', AppTheme.accentOrange),
-                          _buildChip('Cloudflare R2', AppTheme.emeraldGreen),
-                          _buildChip('Stripe & Solana Pay', AppTheme.solanaPurple),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-
-                      if (authController.errorMessage != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.redAccent, width: 1.5),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 22),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  authController.errorMessage!,
-                                  style: GoogleFonts.outfit(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-
-                      // --- EMAIL & GOOGLE AUTHENTICATION MODE SELECTOR ---
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceWarm,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.borderWarm),
-                        ),
-                        child: Row(
-                          children: [
-                            // Botón Iniciar Sesión
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  authController.clearError();
-                                  setState(() {
-                                    _isSignUp = false;
-                                    _isOtpSent = false;
-                                    _emailController.clear();
-                                    _otpController.clear();
-                                    _nameController.clear();
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(16),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: !_isSignUp
-                                        ? AppTheme.primaryTerracotta
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '🔑 Iniciar Sesión',
-                                      style: GoogleFonts.fredoka(
-                                        color: !_isSignUp ? Colors.white : AppTheme.textMutedWarm,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Botón Crear Cuenta
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  authController.clearError();
-                                  setState(() {
-                                    _isSignUp = true;
-                                    _isOtpSent = false;
-                                    _emailController.clear();
-                                    _otpController.clear();
-                                    _nameController.clear();
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(16),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: _isSignUp
-                                        ? AppTheme.accentOrange
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '✨ Crear Cuenta',
-                                      style: GoogleFonts.fredoka(
-                                        color: _isSignUp ? Colors.white : AppTheme.textMutedWarm,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (!_isOtpSent) ...[
-                        // Título según el modo
-                        Text(
-                          _isSignUp ? '✨ Crea tu cuenta en Pawbook' : '🔐 Inicia Sesión en Pawbook',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _isSignUp
-                              ? 'Ingresa tus datos o usa Google para registrarte en la plataforma.'
-                              : 'Ingresa tu correo o usa Google para acceder a tu cuenta existente.',
-                          style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 18),
-
-                        // --- BOTÓN GOOGLE DENTRO DE AMBAS PESTAÑAS (INICIAR SESIÓN Y CREAR CUENTA) ---
-                        _buildGoogleButton(authController, langController),
-                        const SizedBox(height: 18),
-
-                        // Divisor entre Google y Correo
-                        Row(
-                          children: [
-                            const Expanded(child: Divider()),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                _isSignUp ? 'o regístrate con correo' : 'o ingresa con tu correo',
-                                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const Expanded(child: Divider()),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-
-                        // Campo de nombre (solo en Crear Cuenta)
-                        if (_isSignUp) ...[
-                          TextField(
-                            controller: _nameController,
-                            keyboardType: TextInputType.name,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: InputDecoration(
-                              hintText: 'Tu nombre completo',
-                              hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                              prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.accentOrange),
-                              filled: true,
-                              fillColor: AppTheme.surfaceWarm,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.accentOrange, width: 2)),
-                            ),
-                            style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Campo Email
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: langController.t('emailHint'),
-                            hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                            ),
-                            filled: true,
-                            fillColor: AppTheme.surfaceWarm,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide(
-                                color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                        ),
-                        if (_isSignUp) _buildTermsAndConditionsCheckbox(langController),
-                        const SizedBox(height: 14),
-
-                        // Botón: Enviar código (distinto color y texto según modo)
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                            ),
-                            icon: Icon(
-                              _isSignUp ? Icons.person_add_rounded : Icons.mark_email_read_rounded,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                            label: authController.isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : Text(
-                                    _isSignUp ? 'Crear Cuenta y Enviar Código 🚀' : 'Enviar Código de Verificación 📩',
-                                    style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                                  ),
-                            onPressed: authController.isLoading
-                                ? null
-                                : () async {
-                                    final email = _emailController.text.trim();
-                                    if (email.isEmpty || !email.contains('@')) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Por favor ingresa un correo válido (ej. usuario@gmail.com)')),
-                                      );
-                                      return;
-                                    }
-                                    if (_isSignUp && _nameController.text.trim().isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Por favor ingresa tu nombre completo')),
-                                      );
-                                      return;
-                                    }
-                                    if (_isSignUp && !_acceptedTerms) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: AppTheme.primaryTerracotta,
-                                          content: Text(
-                                            langController.t('termsRequiredNotice'),
-                                            style: GoogleFonts.fredoka(color: Colors.white),
-                                          ),
-                                          action: SnackBarAction(
-                                            label: langController.t('viewTerms'),
-                                            textColor: Colors.white,
-                                            onPressed: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    final code = await authController.sendEmailOtp(
-                                      email,
-                                      isSignUp: _isSignUp,
-                                      fullName: _nameController.text.trim(),
-                                    );
-                                    if (code != null) {
-                                      setState(() {
-                                        _isOtpSent = true;
-                                      });
-                                    }
-                                  },
-                          ),
-                        ),
-                      ] else ...[
-                        // --- STEP 2: ENTER 6-DIGIT OTP VERIFICATION CODE ---
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surfaceWarm,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                              width: 1.8,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(
-                                _isSignUp ? Icons.how_to_reg_rounded : Icons.verified_user_rounded,
-                                size: 48,
-                                color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                _isSignUp ? '¡Ya casi! Verifica tu correo' : 'Ingresa el código de 6 dígitos',
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Enviamos un código de seguridad a:\n${_emailController.text.trim()}',
-                                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Real Email Inbox Notice Banner
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.emeraldGreen.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.mark_email_read_rounded, color: AppTheme.emeraldGreen, size: 20),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Te enviamos un código de 6 dígitos. Revisa tu bandeja de entrada y la carpeta SPAM.',
-                                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // 6-digit OTP Code Input Field
-                              TextField(
-                                controller: _otpController,
-                                keyboardType: TextInputType.number,
-                                maxLength: 6,
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.fredoka(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 8, color: AppTheme.primaryTerracotta),
-                                decoration: InputDecoration(
-                                  counterText: '',
-                                  hintText: '------',
-                                  hintStyle: GoogleFonts.fredoka(fontSize: 26, color: AppTheme.textMutedWarm, letterSpacing: 8),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    borderSide: BorderSide(
-                                      color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-
-                              // Verify & Login / Register Button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 52,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  ),
-                                  icon: Icon(
-                                    _isSignUp ? Icons.how_to_reg_rounded : Icons.lock_open_rounded,
-                                    color: Colors.white,
-                                  ),
-                                  label: authController.isLoading
-                                      ? const CircularProgressIndicator(color: Colors.white)
-                                      : Text(
-                                          _isSignUp ? 'Verificar y Crear Cuenta 🎉' : 'Verificar e Iniciar Sesión 🔐',
-                                          style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                                        ),
-                                  onPressed: authController.isLoading
-                                      ? null
-                                      : () async {
-                                          final code = _otpController.text.trim();
-                                          if (code.length < 6) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Ingresa el código completo de 6 dígitos')),
-                                            );
-                                            return;
-                                          }
-                                          final ok = await authController.verifyEmailOtpAndLogin(
-                                            _emailController.text.trim(),
-                                            code,
-                                            fullName: _nameController.text.trim(),
-                                          );
-                                          if (ok && mounted) _onLoginSuccess();
-                                        },
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-
-                                  TextButton.icon(
-                                icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppTheme.textMutedWarm),
-                                label: Text(
-                                  'Cambiar correo o reenviar código',
-                                  style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13, fontWeight: FontWeight.w600),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isOtpSent = false;
-                                    _otpController.clear();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+                // Language Selector Bar at Top
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, right: 20),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: const LanguageSelector(),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-
-    // ── PAW LOADING OVERLAY ──────────────────────────────────────────────
-    if (authController.isLoading)
-      Positioned.fill(
-        child: Container(
-          color: AppTheme.bgWarmCream.withOpacity(0.90),
-          child: Center(
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Círculo exterior con glow
-                  Container(
-                    width: 130,
-                    height: 130,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppTheme.primaryTerracotta.withOpacity(0.15),
-                          AppTheme.primaryTerracotta.withOpacity(0.0),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      // Patita pulsante con ScaleTransition
-                      child: ScaleTransition(
-                        scale: _pawScaleAnim,
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.surfaceWarm,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryTerracotta.withOpacity(0.25),
-                                blurRadius: 24,
-                                spreadRadius: 6,
-                              ),
-                            ],
-                            border: Border.all(
-                              color: AppTheme.primaryTerracotta.withOpacity(0.3),
-                              width: 2.5,
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // App Hero Logo Card
+                          Container(
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceWarm,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryTerracotta.withOpacity(0.12),
+                                  blurRadius: 24,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                              border: Border.all(color: AppTheme.cardWarm, width: 3),
                             ),
-                          ),
-                          child: const Center(
-                            child: Icon(
+                            child: const Icon(
                               Icons.pets_rounded,
-                              size: 46,
+                              size: 56,
                               color: AppTheme.primaryTerracotta,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 20),
+                          Text(
+                            langController.t('appName'),
+                            style: GoogleFonts.fredoka(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryTerracotta,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            langController.t('appTagline'),
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              color: AppTheme.textMutedWarm,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Architecture Badges Pill
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildChip('Solana Web3', AppTheme.primaryTerracotta),
+                              _buildChip('Phantom & Solflare', AppTheme.accentOrange),
+                              _buildChip('Google Auth', const Color(0xFF4285F4)),
+                              _buildChip('Cloudflare R2', AppTheme.emeraldGreen),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Error Banner
+                          if (authController.errorMessage != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.redAccent, width: 1.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      authController.errorMessage!,
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.red.shade900,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 18, color: Colors.redAccent),
+                                    onPressed: () => authController.clearError(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // --- MODE SELECTOR TABS (Iniciar Sesión / Crear Cuenta) ---
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 20),
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceWarm,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppTheme.borderWarm),
+                            ),
+                            child: Row(
+                              children: [
+                                // Botón Iniciar Sesión
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      authController.clearError();
+                                      setState(() {
+                                        _isSignUp = false;
+                                        _nameController.clear();
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 250),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: !_isSignUp
+                                            ? AppTheme.primaryTerracotta
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '🔑 Iniciar Sesión',
+                                          style: GoogleFonts.fredoka(
+                                            color: !_isSignUp ? Colors.white : AppTheme.textMutedWarm,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Botón Crear Cuenta
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      authController.clearError();
+                                      setState(() {
+                                        _isSignUp = true;
+                                        _nameController.clear();
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 250),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: _isSignUp
+                                            ? AppTheme.accentOrange
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '✨ Crear Cuenta',
+                                          style: GoogleFonts.fredoka(
+                                            color: _isSignUp ? Colors.white : AppTheme.textMutedWarm,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Título y Subtítulo según el modo
+                          Text(
+                            _isSignUp ? '✨ Crea tu cuenta en Pawbook' : '🔐 Inicia Sesión en Pawbook',
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _isSignUp ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isSignUp
+                                ? 'Usa tu cuenta de Google o conecta tu billetera de Solana para registrarte.'
+                                : 'Accede fácilmente con tu cuenta de Google o tu billetera de Solana.',
+                            style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Campo opcional de nombre (solo en Crear Cuenta)
+                          if (_isSignUp) ...[
+                            TextField(
+                              controller: _nameController,
+                              keyboardType: TextInputType.name,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(
+                                hintText: 'Tu nombre o apodo de tutor (opcional)',
+                                hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                                prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.accentOrange),
+                                filled: true,
+                                fillColor: AppTheme.surfaceWarm,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: AppTheme.accentOrange, width: 2)),
+                              ),
+                              style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
+                            ),
+                            _buildTermsAndConditionsCheckbox(langController),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // --- BOTÓN GOOGLE ---
+                          _buildGoogleButton(authController),
+                          const SizedBox(height: 20),
+
+                          // Divisor Solana Web3
+                          Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'o accede con tu Wallet de Solana',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: AppTheme.textMutedWarm,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // --- BOTÓN PHANTOM WALLET ---
+                          _buildPhantomButton(authController),
+                          const SizedBox(height: 12),
+
+                          // --- BOTÓN SOLFLARE WALLET ---
+                          _buildSolflareButton(authController),
+                          const SizedBox(height: 12),
+
+                          // --- BOTÓN OTRAS WALLETS DE SOLANA ---
+                          _buildOtherWalletsButton(authController),
+                          const SizedBox(height: 24),
+
+                          // Tarjeta informativa sobre la billetera de beneficios
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryTerracotta.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppTheme.primaryTerracotta.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.shield_outlined, color: AppTheme.primaryTerracotta, size: 24),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Tu billetera de Solana quedará vinculada para recibir patrocinios, propinas (\$SKR / SOL) y beneficios para tus mascotas.',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: AppTheme.textPrimaryDark,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    '🐾 Iniciando sesión...',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryTerracotta,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Un momento, estamos preparando\ntu perfil en Pawbook',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: AppTheme.textMutedWarm,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Dots de progreso
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (i) {
-                      return AnimatedBuilder(
-                        animation: _pawAnimController,
-                        builder: (_, __) {
-                          final delay = i * 0.33;
-                          final val = ((_pawAnimController.value - delay).clamp(0.0, 1.0));
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppTheme.primaryTerracotta.withOpacity(0.3 + val * 0.7),
-                            ),
-                          );
-                        },
-                      );
-                    }),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-    ],
-  );
+
+        // ── PAW LOADING OVERLAY ──────────────────────────────────────────────
+        if (authController.isLoading)
+          Positioned.fill(
+            child: Container(
+              color: AppTheme.bgWarmCream.withOpacity(0.92),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Círculo exterior con glow
+                    Container(
+                      width: 130,
+                      height: 130,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.primaryTerracotta.withOpacity(0.15),
+                            AppTheme.primaryTerracotta.withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        // Patita pulsante con ScaleTransition
+                        child: ScaleTransition(
+                          scale: _pawScaleAnim,
+                          child: Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppTheme.surfaceWarm,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryTerracotta.withOpacity(0.25),
+                                  blurRadius: 24,
+                                  spreadRadius: 6,
+                                ),
+                              ],
+                              border: Border.all(
+                                color: AppTheme.primaryTerracotta.withOpacity(0.3),
+                                width: 2.5,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.pets_rounded,
+                                size: 46,
+                                color: AppTheme.primaryTerracotta,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      '🐾 Conectando...',
+                      style: GoogleFonts.fredoka(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryTerracotta,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Verificando tu cuenta y wallet en Solana...',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: AppTheme.textMutedWarm,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Dots de progreso
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (i) {
+                        return AnimatedBuilder(
+                          animation: _pawAnimController,
+                          builder: (_, __) {
+                            final delay = i * 0.33;
+                            final val = ((_pawAnimController.value - delay).clamp(0.0, 1.0));
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.primaryTerracotta.withOpacity(0.3 + val * 0.7),
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildChip(String label, Color color) {

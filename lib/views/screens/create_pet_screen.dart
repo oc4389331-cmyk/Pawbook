@@ -138,8 +138,6 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   final _customSpeciesController = TextEditingController();
   final _bioController = TextEditingController();
   final _customAvatarUrlController = TextEditingController();
-  final _tutorEmailController = TextEditingController();
-  final _tutorPasswordController = TextEditingController();
 
   String _selectedSpecies = 'Perro 🐶';
   String _selectedBreed = 'Mestizo / Criollo';
@@ -156,8 +154,6 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     _customSpeciesController.dispose();
     _bioController.dispose();
     _customAvatarUrlController.dispose();
-    _tutorEmailController.dispose();
-    _tutorPasswordController.dispose();
     super.dispose();
   }
 
@@ -664,106 +660,84 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 decoration: _inputDecoration('¡Cuenta algo divertido de tu mascota!', Icons.description_rounded),
               ),
 
-              // Account Linking Section (ONLY for Guests creating a pet)
-              if (!authController.isAuthenticated) ...[
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceWarm,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.primaryTerracotta.withOpacity(0.3), width: 1.5),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              const SizedBox(height: 20),
+
+              // Wallet Beneficiaria Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.emeraldGreen.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Billetera Receptora de Beneficios (\$SKR / SOL)',
+                            style: GoogleFonts.fredoka(
+                              color: AppTheme.textPrimaryDark,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Las donaciones, patrocinios y propinas de tu mascota se depositarán directamente en esta billetera de Solana:',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.borderWarm),
+                      ),
+                      child: Row(
                         children: [
-                          const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryTerracotta),
+                          const Icon(Icons.verified_user_rounded, color: AppTheme.emeraldGreen, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Correo para Iniciar Sesión (Tutor):',
-                              style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 15, fontWeight: FontWeight.bold),
+                              authController.currentProfile?.walletAddress ?? 'Billetera vinculada a tu cuenta',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 12,
+                                color: AppTheme.textPrimaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.emeraldGreen.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Vinculada',
+                              style: GoogleFonts.fredoka(
+                                color: AppTheme.emeraldGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Ingresa tu correo para administrar tu cuenta y volver a entrar a tu mascota desde cualquier celular.',
-                        style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _tutorEmailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                        decoration: _inputDecoration('tu.correo@gmail.com', Icons.email_outlined),
-                        validator: (v) {
-                          if (!authController.isAuthenticated && (v == null || v.trim().isEmpty || !v.contains('@'))) {
-                            return 'Por favor ingresa tu correo para crear tu cuenta de acceso';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _tutorPasswordController,
-                        obscureText: true,
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                        decoration: _inputDecoration('Contraseña (mínimo 6 caracteres)', Icons.lock_outline_rounded),
-                        validator: (v) {
-                          if (!authController.isAuthenticated && (v == null || v.trim().length < 6)) {
-                            return 'Por favor ingresa una contraseña de al menos 6 caracteres';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: TextButton.icon(
-                          icon: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(color: Color(0xFF4285F4), shape: BoxShape.circle),
-                            child: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                          ),
-                          label: Text(
-                            'O asociar rápidamente con Google',
-                            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13),
-                          ),
-                          onPressed: () async {
-                            final emailToUse = _tutorEmailController.text.trim();
-                            final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-                            if (emailToUse.isNotEmpty && !emailRegex.hasMatch(emailToUse)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: Colors.redAccent,
-                                  content: Text(
-                                    '❌ "$emailToUse" no es un correo válido. Debe incluir @ y dominio (ej. usuario@gmail.com)',
-                                    style: GoogleFonts.fredoka(color: Colors.white),
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final ok = await authController.loginWithGoogle(
-                              googleEmail: emailToUse.isNotEmpty ? emailToUse : null,
-                            );
-                            if (ok && mounted) {
-                              setState(() {
-                                _tutorEmailController.text = authController.currentProfile?.email ?? emailToUse;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
               const SizedBox(height: 28),
 
               // Submit Button
@@ -775,7 +749,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.check_circle_rounded, color: Colors.white),
                   label: Text(
-                    authController.isLoading ? 'Registrando Perfil y Wallet...' : 'Crear Perfil y Asociar Cuenta',
+                    authController.isLoading ? 'Registrando Mascota...' : 'Crear Perfil de Mascota ✨',
                     style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -790,35 +764,40 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                                 ? _customSpeciesController.text.trim()
                                 : _selectedSpecies.split(' ').first;
 
+                            final userWallet = authController.currentProfile?.walletAddress;
+                            final ownerId = authController.currentProfile?.id ?? 'usr_pending';
+
                             final newPet = PetModel(
                               id: 'pet_${const Uuid().v4().substring(0, 8)}',
-                              ownerId: authController.currentProfile?.id ?? 'usr_pending',
+                              ownerId: ownerId,
                               name: _nameController.text.trim(),
                               species: speciesFinal,
                               breed: _selectedBreed,
                               bio: _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : 'Creador oficial en Pawtbook 🐾',
                               avatarUrl: _selectedAvatar,
-                              nftMintAddress: null,
+                              nftMintAddress: userWallet,
                               createdAt: DateTime.now(),
                             );
 
+                            final messenger = ScaffoldMessenger.of(context);
+                            final nav = Navigator.of(context);
+
                             await authController.registerPet(
                               newPet,
-                              ownerEmail: _tutorEmailController.text.trim(),
-                              ownerPassword: _tutorPasswordController.text.trim(),
+                              customPayoutWallet: userWallet,
                             );
 
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   backgroundColor: AppTheme.emeraldGreen,
                                   content: Text(
-                                    '🎉 ¡${newPet.name} registrado! Tu cuenta de Tutor y Wallet de Solana han sido vinculadas.',
+                                    '🎉 ¡${newPet.name} registrado exitosamente! La billetera receptora de beneficios ha sido configurada.',
                                     style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               );
-                              Navigator.of(context).pop();
+                              nav.pop();
                             }
                           }
                         },

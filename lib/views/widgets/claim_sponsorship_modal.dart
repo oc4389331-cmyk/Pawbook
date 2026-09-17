@@ -218,8 +218,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
 
     final nowUtc = DateTime.now().toUtc();
     final isMonday = nowUtc.weekday == AppConfig.claimDayOfWeek;
-    final hasMinBalance = totalSkr > 0;
-    final canClaim = totalSkr > 0;
+    final hasMinBalance = claimableUsd >= 100.0;
+    final canClaim = totalSkr > 0 && hasMinBalance && isMonday;
 
     return Container(
       constraints: BoxConstraints(

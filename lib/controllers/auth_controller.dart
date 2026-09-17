@@ -161,7 +161,11 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> loginWithSolanaWallet({String walletType = 'Phantom'}) async {
+  Future<bool> loginWithSolanaWallet({
+    String walletType = 'Phantom',
+    bool isSignUp = false,
+    String? fullName,
+  }) async {
     _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
@@ -169,13 +173,37 @@ class AuthController extends ChangeNotifier {
     try {
       final res = await _dynamicAuthService.authenticateWithSolanaWallet(walletType: walletType);
       if (!res.isSuccess || res.walletAddress == null) {
-        _errorMessage = res.errorMessage ?? 'Wallet authentication failed';
+        _errorMessage = res.errorMessage ?? 'No se pudo conectar con la wallet $walletType.';
         _setLoading(false);
+        notifyListeners();
         return false;
       }
 
+      final walletAddr = res.walletAddress!;
+
+      // Validar existencia de perfil en Supabase
+      final existingProfile = await _supabaseService.getProfileByWallet(walletAddr);
+
+      if (isSignUp) {
+        if (existingProfile != null) {
+          _errorMessage = '⚠️ Esta wallet (${walletAddr.length > 12 ? walletAddr.substring(0, 6) + "..." + walletAddr.substring(walletAddr.length - 4) : walletAddr}) ya está registrada en Pawbook. Por favor selecciona "Iniciar Sesión".';
+          _setLoading(false);
+          notifyListeners();
+          return false;
+        }
+      } else {
+        // En modo Iniciar Sesión, si no existe el perfil, bloquear y pedir crear cuenta
+        if (existingProfile == null) {
+          _errorMessage = '⚠️ No existe una cuenta registrada con esta wallet (${walletAddr.length > 12 ? walletAddr.substring(0, 6) + "..." + walletAddr.substring(walletAddr.length - 4) : walletAddr}). Por favor selecciona "Crear Cuenta".';
+          _setLoading(false);
+          notifyListeners();
+          return false;
+        }
+      }
+
       await _processAuthenticatedUser(
-        walletAddress: res.walletAddress!,
+        walletAddress: walletAddr,
+        fullName: fullName,
         jwtToken: res.jwtToken ?? '',
       );
       _setLoading(false);
@@ -183,6 +211,7 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
+      notifyListeners();
       return false;
     }
   }
@@ -505,29 +534,27 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> registerPet(PetModel pet, {String? ownerEmail, String? ownerPassword}) async {
+  Future<void> registerPet(PetModel pet, {String? customPayoutWallet}) async {
     _setLoading(true);
 
     try {
       // 1. If guest, automatically create Tutor profile & Embedded Solana Wallet
       if (_currentProfile == null) {
-        final email = (ownerEmail != null && ownerEmail.trim().isNotEmpty)
-            ? ownerEmail.trim()
-            : 'tutor.${pet.name.toLowerCase()}@gmail.com';
-        final authRes = await _dynamicAuthService.authenticateWithGoogle(email: email);
-        final walletAddress = authRes.walletAddress ?? 'sol_${email.hashCode.abs()}';
-
+        final generatedWallet = 'sol_${DateTime.now().millisecondsSinceEpoch}';
         await _processAuthenticatedUser(
-          walletAddress: walletAddress,
-          email: email,
-          jwtToken: authRes.jwtToken ?? 'dyn_jwt_pet_${pet.name.toLowerCase()}',
+          walletAddress: generatedWallet,
+          fullName: 'Tutor de ${pet.name}',
+          jwtToken: 'dyn_jwt_guest_$generatedWallet',
         );
       }
 
-      // 2. Link pet to owner ID and ensure valid Dynamic Solana Wallet Address
-      final petWallet = (pet.nftMintAddress != null && pet.nftMintAddress!.isNotEmpty)
-          ? pet.nftMintAddress!
-          : pet.dynamicWalletAddress;
+      // 2. Link pet to owner ID and ensure the connected wallet is assigned as the benefit/payout wallet
+      final petWallet = (customPayoutWallet != null && customPayoutWallet.isNotEmpty)
+          ? customPayoutWallet
+          : (pet.nftMintAddress != null && pet.nftMintAddress!.isNotEmpty
+              ? pet.nftMintAddress!
+              : (_currentProfile?.walletAddress ?? pet.dynamicWalletAddress));
+
       final petWithOwner = pet.copyWith(
         ownerId: _currentProfile!.id,
         nftMintAddress: petWallet,

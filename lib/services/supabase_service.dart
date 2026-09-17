@@ -833,7 +833,7 @@ class SupabaseService {
             .eq('pet_id', petId)
             .order('created_at', ascending: false);
 
-        if (res is List && res.isNotEmpty) {
+        if (res is List) {
           return (res as List)
               .map((json) => SponsorshipModel.fromJson(Map<String, dynamic>.from(json)))
               .toList();
@@ -872,8 +872,7 @@ class SupabaseService {
             .eq('pet_id', petId)
             .order('created_at', ascending: false);
 
-
-        if (res is List && res.isNotEmpty) {
+        if (res is List) {
           return (res as List)
               .map((json) => WithdrawalModel.fromJson(Map<String, dynamic>.from(json)))
               .toList();
