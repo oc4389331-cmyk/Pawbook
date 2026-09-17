@@ -1245,8 +1245,11 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            // Top Overlay Header — placed FIRST so sidebar renders on top
-            SafeArea(
+            // TOP HEADER: Brand (Abbreviated) & Live Oracle Ticker
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 0,
+              right: 0,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
@@ -1254,54 +1257,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.pets_rounded, color: AppTheme.accentOrange, size: 28),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.pets_rounded, color: AppTheme.brandCoral, size: 24),
+                        const SizedBox(width: 6),
                         Text(
-                          'Pawtbook',
+                          'Pawbook',
                           style: GoogleFonts.fredoka(
-                            fontSize: 24,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            shadows: [
-                              const Shadow(color: Colors.black45, blurRadius: 8),
+                            shadows: const [
+                              Shadow(color: Colors.black45, blurRadius: 8),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        const LiveOracleTicker(compact: true),
-                        const SizedBox(width: 8),
-                        const LanguageSelector(isDark: true),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            if (!authController.isAuthenticated) {
-                              _showTikTokRegistrationWall(context, authController);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.4),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white30),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${authController.currentProfile?.pawtScore ?? 100} pts',
-                                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    const LiveOracleTicker(compact: true),
                   ],
                 ),
               ),

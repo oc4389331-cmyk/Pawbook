@@ -19,6 +19,7 @@ import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
 import '../widgets/claim_sponsorship_modal.dart';
 import '../widgets/post_card.dart';
+import '../widgets/language_selector.dart';
 import '../widgets/terms_and_conditions_modal.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
@@ -233,6 +234,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
+          const Center(child: LanguageSelector()),
+          const SizedBox(width: 6),
           if (isOwner && widget.onSwitchToHuman != null)
             IconButton(
               icon: const Icon(Icons.person_pin_rounded, color: AppTheme.primaryTerracotta, size: 28),
