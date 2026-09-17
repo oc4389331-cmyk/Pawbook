@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../controllers/pet_controller.dart';
@@ -144,7 +145,7 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '${item.pointsCost} PawtScore',
+                                  '${NumberFormat('#,###').format(item.pointsCost)} PawtScore',
                                   style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                               ),

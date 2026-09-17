@@ -31,23 +31,23 @@ class PetController extends ChangeNotifier {
   final List<RewardItem> availableRewards = [
     RewardItem(
       id: 'rw_1',
-      title: 'Pawtbook Custom Leather Collar',
-      description: 'Handcrafted premium leather collar with custom Solana NFT badge engraving.',
-      pointsCost: 150,
-      imageUrl: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
+      title: 'Organic Gourmet Pet Treats Box',
+      description: '100% natural, grain-free organic treats pack for healthy energy.',
+      pointsCost: 10000,
+      imageUrl: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400',
     ),
     RewardItem(
       id: 'rw_2',
-      title: 'Organic Gourmet Pet Treats Box',
-      description: '100% natural, grain-free organic treats pack for healthy energy.',
-      pointsCost: 80,
-      imageUrl: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400',
+      title: 'Pawtbook Custom Leather Collar',
+      description: 'Handcrafted premium leather collar with custom Solana NFT badge engraving.',
+      pointsCost: 20000,
+      imageUrl: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
     ),
     RewardItem(
       id: 'rw_3',
       title: 'Interactive Smart Laser Toy',
       description: 'Automatic motion-activated laser toy to keep pets active and entertained.',
-      pointsCost: 200,
+      pointsCost: 30000,
       imageUrl: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=400',
     ),
   ];
