@@ -263,7 +263,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceWarm,
+                  color: AppTheme.pastelSkyBlue.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppTheme.borderWarm),
                 ),
@@ -291,7 +291,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           ),
                           Text(
                             '🏆 PawtScore: ${authController.currentProfile?.pawtScore ?? 0} pts',
-                            style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
+                            style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -312,17 +312,17 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   ],
                 ),
               ),
-            // Header Hero Card (Pawly Warm Style)
+            // Header Hero Card (Pawly Pastel Style)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceWarm,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: AppTheme.borderWarm),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryTerracotta.withOpacity(0.08),
+                    color: AppTheme.primaryTerracotta.withValues(alpha: 0.08),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
@@ -418,14 +418,15 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentOrange.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.pastelPeach,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppTheme.brandCoral.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           '${widget.pet.species} • ${widget.pet.breed}',
-                          style: GoogleFonts.fredoka(color: AppTheme.accentOrange, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(color: AppTheme.brandCoral, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -496,14 +497,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                          colors: [AppTheme.brandCoral, Color(0xFF7C3AED)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF2563EB).withOpacity(0.3),
+                            color: AppTheme.brandCoral.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -521,7 +522,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.insights_rounded, color: Colors.white, size: 22),
@@ -545,7 +546,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.25),
+                                              color: Colors.white.withValues(alpha: 0.25),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
@@ -563,7 +564,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                       Text(
                                         langController.t('metricsSubtitle'),
                                         style: GoogleFonts.outfit(
-                                          color: Colors.white.withOpacity(0.88),
+                                          color: Colors.white.withValues(alpha: 0.88),
                                           fontSize: 11,
                                         ),
                                       ),
@@ -713,8 +714,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatColumn(langController.t('pawtScoreLabel'), '${widget.pet.totalSponsoredScore} pts', AppTheme.accentOrange),
-                          _buildStatColumn(langController.t('posts'), '$postsCount', AppTheme.primaryTerracotta),
+                          Expanded(child: _buildStatColumn(langController.t('pawtScoreLabel'), '${widget.pet.totalSponsoredScore} pts', AppTheme.brandCoral, bgColor: AppTheme.pastelPeach.withValues(alpha: 0.6))),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildStatColumn(langController.t('posts'), '$postsCount', AppTheme.solanaPurple, bgColor: AppTheme.pastelLavender.withValues(alpha: 0.6))),
                         ],
                       );
                     },
@@ -1653,19 +1655,27 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     );
   }
 
-  Widget _buildStatColumn(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm),
-        ),
-      ],
+  Widget _buildStatColumn(String label, String value, Color color, {Color? bgColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: bgColor ?? AppTheme.pastelPeach.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderWarm),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

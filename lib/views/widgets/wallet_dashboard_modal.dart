@@ -459,12 +459,12 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _showWithdrawForm ? AppTheme.surfaceWarm : AppTheme.emeraldGreen,
-                        foregroundColor: _showWithdrawForm ? AppTheme.primaryTerracotta : Colors.white,
+                        backgroundColor: _showWithdrawForm ? AppTheme.pastelPeach : AppTheme.emeraldGreen,
+                        foregroundColor: _showWithdrawForm ? AppTheme.brandCoral : Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: _showWithdrawForm ? AppTheme.borderWarm : Colors.transparent),
+                          side: BorderSide(color: _showWithdrawForm ? AppTheme.brandCoral.withValues(alpha: 0.3) : Colors.transparent),
                         ),
                         elevation: _showWithdrawForm ? 0 : 2,
                       ),
@@ -481,8 +481,8 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.surfaceWarm,
-                      foregroundColor: AppTheme.primaryTerracotta,
+                      backgroundColor: AppTheme.pastelSkyBlue.withValues(alpha: 0.6),
+                      foregroundColor: AppTheme.solanaPurple,
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -505,9 +505,9 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceWarm,
+                    color: AppTheme.pastelPeach.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.accentOrange.withValues(alpha: 0.4)),
+                    border: Border.all(color: AppTheme.brandCoral.withValues(alpha: 0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -261,42 +261,45 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.bgWarmCream,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderWarm,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Text(
-                'Seleccionar Foto para Mascota ☁️',
+                'Foto de Perfil de tu Mascota 📸',
                 style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
               ),
               const SizedBox(height: 6),
               Text(
-                'Se guardará directamente en Cloudflare R2',
-                style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                'Elige cómo deseas establecer la imagen de perfil:',
+                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Option 1: Pick from Device Gallery / File Manager
+              // Option 1: Gallery / Device File
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.surfaceWarm,
+                  decoration: BoxDecoration(
+                    color: AppTheme.pastelSkyBlue,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryTerracotta),
+                  child: const Icon(Icons.photo_library_rounded, color: AppTheme.solanaPurple),
                 ),
                 title: Text('Galería / Archivos del Dispositivo', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
                 subtitle: Text('Subir foto desde tu dispositivo a Cloudflare R2', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
@@ -311,11 +314,11 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.surfaceWarm,
+                  decoration: BoxDecoration(
+                    color: AppTheme.pastelPeach,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.camera_alt_rounded, color: AppTheme.accentOrange),
+                  child: const Icon(Icons.camera_alt_rounded, color: AppTheme.brandCoral),
                 ),
                 title: Text('Tomar Foto con Cámara', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
                 subtitle: Text('Capturar directamente una foto nueva', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
@@ -330,8 +333,8 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.surfaceWarm,
+                  decoration: BoxDecoration(
+                    color: AppTheme.pastelMint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.link_rounded, color: AppTheme.emeraldGreen),
@@ -668,9 +671,9 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.emeraldGreen.withOpacity(0.08),
+                  color: AppTheme.pastelMint.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4), width: 1.5),
+                  border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,7 +725,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppTheme.emeraldGreen.withOpacity(0.15),
+                              color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -816,9 +819,9 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
-      prefixIcon: Icon(icon, color: AppTheme.primaryTerracotta),
+      prefixIcon: Icon(icon, color: AppTheme.brandCoral),
       filled: true,
-      fillColor: AppTheme.surfaceWarm,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -830,7 +833,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 2),
+        borderSide: const BorderSide(color: AppTheme.brandCoral, width: 2),
       ),
     );
   }

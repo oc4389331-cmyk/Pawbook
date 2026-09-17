@@ -366,7 +366,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: hasMinBalance ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : AppTheme.surfaceWarm,
+                  color: hasMinBalance ? AppTheme.pastelMint.withValues(alpha: 0.7) : AppTheme.pastelPeach.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -377,7 +377,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                   children: [
                     Icon(
                       hasMinBalance ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
-                      color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.accentOrange,
+                      color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.brandCoral,
                       size: 22,
                     ),
                     const SizedBox(width: 12),
@@ -414,7 +414,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isMonday ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : AppTheme.surfaceWarm,
+                  color: isMonday ? AppTheme.pastelMint.withValues(alpha: 0.7) : AppTheme.pastelLavender.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isMonday ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -425,7 +425,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                   children: [
                     Icon(
                       isMonday ? Icons.check_circle_rounded : Icons.calendar_month_rounded,
-                      color: isMonday ? AppTheme.emeraldGreen : AppTheme.accentOrange,
+                      color: isMonday ? AppTheme.emeraldGreen : AppTheme.solanaPurple,
                       size: 22,
                     ),
                     const SizedBox(width: 12),

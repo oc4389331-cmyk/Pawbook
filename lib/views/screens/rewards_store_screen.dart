@@ -54,12 +54,14 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
+                  colors: [AppTheme.brandCoral, Color(0xFF7C3AED)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(22),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryTerracotta.withValues(alpha: 0.3),
+                    color: AppTheme.brandCoral.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -67,7 +69,7 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.stars, size: 40, color: Colors.white),
+                  const Icon(Icons.stars_rounded, size: 40, color: Colors.white),
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,14 +103,18 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 14),
-                  color: AppTheme.surfaceWarm,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  color: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: const BorderSide(color: AppTheme.borderWarm),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           child: Image.network(
                             item.imageUrl,
                             width: 70,
@@ -117,8 +123,8 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                             errorBuilder: (_, __, ___) => Container(
                               width: 70,
                               height: 70,
-                              color: AppTheme.bgWarmCream,
-                              child: const Icon(Icons.card_giftcard, color: AppTheme.primaryTerracotta),
+                              color: AppTheme.pastelPeach.withValues(alpha: 0.5),
+                              child: const Icon(Icons.card_giftcard, color: AppTheme.brandCoral),
                             ),
                           ),
                         ),
@@ -131,9 +137,16 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                               const SizedBox(height: 4),
                               Text(item.description, style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
                               const SizedBox(height: 6),
-                              Text(
-                                '${item.pointsCost} PawtScore',
-                                style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 13),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.pastelMint,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${item.pointsCost} PawtScore',
+                                  style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
                               ),
                             ],
                           ),
@@ -141,10 +154,10 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                         const SizedBox(width: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: canAfford ? AppTheme.primaryTerracotta : AppTheme.borderWarm,
+                            backgroundColor: canAfford ? AppTheme.brandCoral : AppTheme.borderWarm,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           ),
                           onPressed: !canAfford
                               ? null

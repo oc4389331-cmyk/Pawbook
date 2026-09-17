@@ -1098,8 +1098,8 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: (authController.isAuthenticated && authController.isPetModeActive)
           ? FloatingActionButton.extended(
               key: const ValueKey('fab_pet_mode'),
-              backgroundColor: AppTheme.primaryTerracotta,
-              elevation: 8,
+              backgroundColor: AppTheme.brandCoral,
+              elevation: 4,
               icon: const Icon(Icons.videocam_rounded, color: Colors.white),
               label: Text(
                 '+ Video (@${authController.activePet?.name ?? "Mascota"})',
@@ -1115,14 +1115,21 @@ class _HomeScreenState extends State<HomeScreen> {
           : null,
 
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.surfaceWarm,
-          border: Border(top: BorderSide(color: AppTheme.borderWarm, width: 1)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: AppTheme.pastelPeach, width: 1.2)),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.accentCoral.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -3),
+            ),
+          ],
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          backgroundColor: AppTheme.surfaceWarm,
-          selectedItemColor: AppTheme.primaryTerracotta,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppTheme.brandCoral,
           unselectedItemColor: AppTheme.textMutedWarm,
           selectedLabelStyle: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
@@ -2076,16 +2083,23 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceWarm,
+                color: AppTheme.pastelLavender.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppTheme.borderWarm),
+                border: Border.all(color: AppTheme.pastelLavender),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.pastelLavender.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.auto_awesome_rounded, color: AppTheme.accentOrange, size: 22),
+                      const Icon(Icons.auto_awesome_rounded, color: AppTheme.brandCoral, size: 22),
                       const SizedBox(width: 8),
                       Text(
                         langController.t('algorithmPreferencesTitle'),
@@ -2115,14 +2129,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             if (species.toLowerCase().contains('rabbit') || species.toLowerCase().contains('conejo')) emoji = '🐰';
 
                             return Chip(
-                              backgroundColor: AppTheme.primaryTerracotta.withOpacity(0.12),
-                              side: const BorderSide(color: AppTheme.primaryTerracotta),
+                              backgroundColor: AppTheme.pastelPeach,
+                              side: const BorderSide(color: AppTheme.accentCoral),
                               avatar: Text(emoji, style: const TextStyle(fontSize: 16)),
                               label: Text(
                                 species,
                                 style: GoogleFonts.fredoka(
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryTerracotta,
+                                  color: AppTheme.textPrimaryDark,
                                   fontSize: 13,
                                 ),
                               ),
@@ -2130,14 +2144,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           }).toList()
                         : [
                             Chip(
-                              backgroundColor: AppTheme.surfaceWarm,
-                              side: const BorderSide(color: AppTheme.borderWarm),
+                              backgroundColor: AppTheme.pastelPeach,
+                              side: const BorderSide(color: AppTheme.accentCoral),
                               avatar: const Text('🐕', style: TextStyle(fontSize: 16)),
                               label: Text(langController.t('dogsPrimary'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
                             ),
                             Chip(
-                              backgroundColor: AppTheme.surfaceWarm,
-                              side: const BorderSide(color: AppTheme.borderWarm),
+                              backgroundColor: AppTheme.pastelSkyBlue,
+                              side: const BorderSide(color: Color(0xFF90CAF9)),
                               avatar: const Text('🐱', style: TextStyle(fontSize: 16)),
                               label: Text(langController.t('cats'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
                             ),

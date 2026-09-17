@@ -570,10 +570,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _buildChip('Solana Web3', AppTheme.primaryTerracotta),
-                              _buildChip('Phantom & Solflare', AppTheme.accentOrange),
-                              _buildChip('Google Auth', const Color(0xFF4285F4)),
-                              _buildChip('Cloudflare R2', AppTheme.emeraldGreen),
+                              _buildChip('Solana Web3', AppTheme.pastelLavender, AppTheme.solanaPurple),
+                              _buildChip('Phantom & Solflare', AppTheme.pastelPeach, AppTheme.brandCoral),
+                              _buildChip('Google Auth', AppTheme.pastelSkyBlue, const Color(0xFF1976D2)),
+                              _buildChip('Cloudflare R2', AppTheme.pastelMint, AppTheme.emeraldGreen),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -584,7 +584,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.12),
+                                color: Colors.red.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: Colors.redAccent, width: 1.5),
                               ),
@@ -775,13 +775,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryTerracotta.withOpacity(0.06),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppTheme.primaryTerracotta.withOpacity(0.2)),
+                              color: AppTheme.pastelMint,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppTheme.accentTeaGreen, width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.shield_outlined, color: AppTheme.primaryTerracotta, size: 24),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppTheme.accentTeaGreen),
+                                  ),
+                                  child: const Icon(Icons.verified_user_rounded, color: AppTheme.emeraldGreen, size: 22),
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -790,6 +805,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       fontSize: 12,
                                       color: AppTheme.textPrimaryDark,
                                       height: 1.35,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
@@ -810,7 +826,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         if (authController.isLoading)
           Positioned.fill(
             child: Container(
-              color: AppTheme.bgWarmCream.withOpacity(0.92),
+              color: AppTheme.pastelVanilla.withValues(alpha: 0.94),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -823,8 +839,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            AppTheme.primaryTerracotta.withOpacity(0.15),
-                            AppTheme.primaryTerracotta.withOpacity(0.0),
+                            AppTheme.accentCoral.withValues(alpha: 0.25),
+                            AppTheme.accentCoral.withValues(alpha: 0.0),
                           ],
                         ),
                       ),
@@ -837,24 +853,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             height: 90,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppTheme.surfaceWarm,
+                              color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primaryTerracotta.withOpacity(0.25),
+                                  color: AppTheme.brandCoral.withValues(alpha: 0.25),
                                   blurRadius: 24,
                                   spreadRadius: 6,
                                 ),
                               ],
                               border: Border.all(
-                                color: AppTheme.primaryTerracotta.withOpacity(0.3),
-                                width: 2.5,
+                                color: AppTheme.pastelPeach,
+                                width: 3,
                               ),
                             ),
                             child: const Center(
                               child: Icon(
                                 Icons.pets_rounded,
                                 size: 46,
-                                color: AppTheme.primaryTerracotta,
+                                color: AppTheme.brandCoral,
                               ),
                             ),
                           ),
@@ -896,7 +912,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               height: 8,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: AppTheme.primaryTerracotta.withOpacity(0.3 + val * 0.7),
+                                color: AppTheme.brandCoral.withValues(alpha: 0.3 + val * 0.7),
                               ),
                             );
                           },
@@ -912,17 +928,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildChip(String label, Color color) {
+  Widget _buildChip(String label, Color bgColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.5), width: 1),
+        border: Border.all(color: textColor.withValues(alpha: 0.3), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: textColor.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label,
-        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
       ),
     );
   }

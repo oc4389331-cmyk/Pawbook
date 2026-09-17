@@ -503,18 +503,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             // Media Type Chips
             Text(
               langController.t('contentTypeLabel'),
-              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 14),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: ChoiceChip(
-                    avatar: Icon(Icons.photo_library_rounded, size: 20, color: _mediaType == 'image' ? Colors.white : AppTheme.primaryTerracotta),
-                    label: Text(langController.t('photosOption'), style: GoogleFonts.fredoka(color: _mediaType == 'image' ? Colors.white : AppTheme.warmBrown, fontWeight: FontWeight.bold)),
+                    avatar: Icon(Icons.photo_library_rounded, size: 20, color: _mediaType == 'image' ? Colors.white : AppTheme.brandCoral),
+                    label: Text(langController.t('photosOption'), style: GoogleFonts.fredoka(color: _mediaType == 'image' ? Colors.white : AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
                     selected: _mediaType == 'image',
-                    selectedColor: AppTheme.primaryTerracotta,
-                    backgroundColor: AppTheme.surfaceWarm,
+                    selectedColor: AppTheme.brandCoral,
+                    backgroundColor: AppTheme.pastelPeach.withValues(alpha: 0.5),
                     onSelected: (_) => setState(() {
                       _mediaType = 'image';
                       _pickedMedia.clear();
@@ -524,11 +524,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ChoiceChip(
-                    avatar: Icon(Icons.videocam_rounded, size: 20, color: _mediaType == 'video' ? Colors.white : AppTheme.primaryTerracotta),
-                    label: Text('Video (<30s)', style: GoogleFonts.fredoka(color: _mediaType == 'video' ? Colors.white : AppTheme.warmBrown, fontWeight: FontWeight.bold)),
+                    avatar: Icon(Icons.videocam_rounded, size: 20, color: _mediaType == 'video' ? Colors.white : AppTheme.solanaPurple),
+                    label: Text('Video (<30s)', style: GoogleFonts.fredoka(color: _mediaType == 'video' ? Colors.white : AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
                     selected: _mediaType == 'video',
-                    selectedColor: AppTheme.primaryTerracotta,
-                    backgroundColor: AppTheme.surfaceWarm,
+                    selectedColor: AppTheme.solanaPurple,
+                    backgroundColor: AppTheme.pastelLavender.withValues(alpha: 0.5),
                     onSelected: (_) => setState(() {
                       _mediaType = 'video';
                       _pickedMedia.clear();
@@ -974,21 +974,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             // Caption Field
             Text(
               'Descripción de la Publicación:',
-              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 14),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _captionController,
               maxLines: 3,
-              style: GoogleFonts.outfit(color: AppTheme.warmBrown),
+              style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
               decoration: InputDecoration(
                 hintText: 'Escribe una historia divertida sobre ${_selectedPet?.name ?? "tu mascota"}...',
                 hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
                 filled: true,
-                fillColor: AppTheme.surfaceWarm,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.brandCoral, width: 2)),
               ),
             ),
             const SizedBox(height: 28),
@@ -999,10 +999,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               height: 54,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryTerracotta,
+                  backgroundColor: AppTheme.brandCoral,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 3,
                 ),
                 icon: _isUploading
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
@@ -1028,7 +1028,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWarm,
+        color: AppTheme.pastelSkyBlue.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.borderWarm),
       ),
@@ -1037,11 +1037,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.straighten_rounded, size: 16, color: AppTheme.accentOrange),
+              const Icon(Icons.straighten_rounded, size: 16, color: AppTheme.solanaPurple),
               const SizedBox(width: 8),
               Text(
                 'Dimensiones recomendadas en px',
-                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 12),
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 12),
               ),
             ],
           ),
@@ -1050,10 +1050,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildDimensionChip('📷 Feed Vertical', '1080 × 1350 px (4:3)'),
-              _buildDimensionChip('🎥 Feed Video', '1080 × 1920 px (9:16)'),
-              _buildDimensionChip('🐾 Perfil', '400 × 400 px (1:1)'),
-              _buildDimensionChip('🛍️ Bandana', '800 × 800 px (1:1)'),
+              _buildDimensionChip('📷 Feed Vertical', '1080 × 1350 px (4:3)', AppTheme.pastelPeach),
+              _buildDimensionChip('🎥 Feed Video', '1080 × 1920 px (9:16)', AppTheme.pastelLavender),
+              _buildDimensionChip('🐾 Perfil', '400 × 400 px (1:1)', AppTheme.pastelMint),
+              _buildDimensionChip('🛍️ Bandana', '800 × 800 px (1:1)', AppTheme.pastelPink),
             ],
           ),
         ],
@@ -1061,20 +1061,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  Widget _buildDimensionChip(String label, String dim) {
+  Widget _buildDimensionChip(String label, String dim, [Color? chipBg]) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.bgWarmCream,
-        borderRadius: BorderRadius.circular(8),
+        color: chipBg ?? Colors.white,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.borderWarm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: GoogleFonts.fredoka(fontSize: 10, color: AppTheme.warmBrown, fontWeight: FontWeight.bold)),
+          Text(label, style: GoogleFonts.fredoka(fontSize: 10, color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
-          Text(dim, style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm)),
+          Text(dim, style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm, fontWeight: FontWeight.w600)),
         ],
       ),
     );

@@ -487,8 +487,8 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                         decoration: BoxDecoration(
                           color: _selectedCurrency == 'SKR'
-                              ? AppTheme.emeraldGreen.withValues(alpha: 0.12)
-                              : AppTheme.surfaceWarm,
+                              ? AppTheme.pastelMint
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -529,11 +529,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                         decoration: BoxDecoration(
                           color: _selectedCurrency == 'SOL'
-                              ? AppTheme.accentOrange.withValues(alpha: 0.12)
-                              : AppTheme.surfaceWarm,
+                              ? AppTheme.pastelPeach
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: _selectedCurrency == 'SOL' ? AppTheme.accentOrange : AppTheme.borderWarm,
+                            color: _selectedCurrency == 'SOL' ? AppTheme.brandCoral : AppTheme.borderWarm,
                             width: _selectedCurrency == 'SOL' ? 2 : 1,
                           ),
                         ),
@@ -549,7 +549,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                                   style: GoogleFonts.fredoka(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: _selectedCurrency == 'SOL' ? AppTheme.accentOrange : AppTheme.textPrimaryDark,
+                                    color: _selectedCurrency == 'SOL' ? AppTheme.brandCoral : AppTheme.textPrimaryDark,
                                   ),
                                 ),
                                 Text(
@@ -671,9 +671,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceWarm,
+                  color: AppTheme.pastelMint.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.borderWarm),
+                  border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -690,7 +690,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.accentOrange,
+                            color: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.brandCoral,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -719,7 +719,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         ),
                         Text(
                           '${(_selectedSkrAmount * 0.90).round()} \$SKR (~${((double.tryParse(currentSolPrice) ?? 0.0) * 0.90).toStringAsFixed(5)} SOL)',
-                          style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(color: AppTheme.brandCoral, fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -910,7 +910,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.emeraldGreen : AppTheme.surfaceWarm,
+            color: isSelected ? AppTheme.emeraldGreen : AppTheme.pastelPeach.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -950,7 +950,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               Text(
                 label,
                 style: GoogleFonts.fredoka(
-                  color: isSelected ? Colors.amberAccent : AppTheme.accentOrange,
+                  color: isSelected ? Colors.amberAccent : AppTheme.brandCoral,
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
