@@ -1260,7 +1260,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Icon(Icons.pets_rounded, color: AppTheme.brandCoral, size: 24),
                         const SizedBox(width: 6),
                         Text(
-                          'Pawbook',
+                          'Pawbooklife',
                           style: GoogleFonts.fredoka(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
