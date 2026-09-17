@@ -24,7 +24,25 @@ class MarketplaceController extends ChangeNotifier {
       final supaProducts = await _supabaseService.fetchMarketplaceProducts();
       if (supaProducts.isNotEmpty) {
         _products.clear();
-        _products.addAll(supaProducts);
+        for (final p in supaProducts) {
+          // If product in DB has legacy low points (< 1000), upgrade to new point tier
+          if (p.pricePoints < 1000) {
+            final upgradedPoints = p.id == 'bdn_neon'
+                ? 10000
+                : p.id == 'bdn_ocean'
+                    ? 12000
+                    : p.id == 'bdn_solana'
+                        ? 15000
+                        : p.id == 'bdn_golden'
+                            ? 25000
+                            : (p.pricePoints * 50);
+            final upgraded = p.copyWith(pricePoints: upgradedPoints);
+            _products.add(upgraded);
+            _supabaseService.saveMarketplaceProduct(upgraded);
+          } else {
+            _products.add(p);
+          }
+        }
       } else {
         _initDefaultProducts();
         // Save initial default products to Supabase in background
@@ -43,34 +61,12 @@ class MarketplaceController extends ChangeNotifier {
   }
 
   void _initDefaultProducts() {
-    if (_products.isNotEmpty) return;
+    _products.clear();
     _products.addAll([
-      BandanaProductModel(
-        id: 'bdn_solana',
-        name: 'Solana Cyber Bandana ⚡',
-        pricePoints: 250,
-        priceUsd: 12.99,
-        imageUrl: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600',
-        tag: 'Solana Exclusive',
-        colorValue: AppTheme.solanaPurple.value,
-        stock: 2,
-        description: 'Bandana cyberpunk de edición limitada inspirada en el ecosistema Solana.',
-      ),
-      BandanaProductModel(
-        id: 'bdn_golden',
-        name: 'Pawtbook Gold Edition 👑',
-        pricePoints: 500,
-        priceUsd: 24.99,
-        imageUrl: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
-        tag: 'Best Seller',
-        colorValue: AppTheme.primaryTerracotta.value,
-        stock: 2,
-        description: 'Bandana premium de alta costura para mascotas con detalles dorados.',
-      ),
       BandanaProductModel(
         id: 'bdn_neon',
         name: 'Neon Paw Glow Bandana 🌟',
-        pricePoints: 180,
+        pricePoints: 10000,
         priceUsd: 9.99,
         imageUrl: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600',
         tag: 'Limited Edition',
@@ -81,13 +77,35 @@ class MarketplaceController extends ChangeNotifier {
       BandanaProductModel(
         id: 'bdn_ocean',
         name: 'Ocean Beach Walker 🌊',
-        pricePoints: 200,
+        pricePoints: 12000,
         priceUsd: 10.99,
         imageUrl: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600',
         tag: 'Summer Collection',
         colorValue: AppTheme.emeraldGreen.value,
         stock: 2,
         description: 'Bandana transpirable resistente al agua ideal para días de playa.',
+      ),
+      BandanaProductModel(
+        id: 'bdn_solana',
+        name: 'Solana Cyber Bandana ⚡',
+        pricePoints: 15000,
+        priceUsd: 12.99,
+        imageUrl: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600',
+        tag: 'Solana Exclusive',
+        colorValue: AppTheme.solanaPurple.value,
+        stock: 2,
+        description: 'Bandana cyberpunk de edición limitada inspirada en el ecosistema Solana.',
+      ),
+      BandanaProductModel(
+        id: 'bdn_golden',
+        name: 'Pawtbook Gold Edition 👑',
+        pricePoints: 25000,
+        priceUsd: 24.99,
+        imageUrl: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
+        tag: 'Best Seller',
+        colorValue: AppTheme.primaryTerracotta.value,
+        stock: 2,
+        description: 'Bandana premium de alta costura para mascotas con detalles dorados.',
       ),
     ]);
   }

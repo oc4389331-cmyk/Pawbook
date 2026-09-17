@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
@@ -1664,7 +1665,7 @@ class MarketplaceScreen extends StatelessWidget {
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
                                       child: Text(
-                                        isSoldOut ? langController.t('soldOut') : '${item.pricePoints}pt',
+                                        isSoldOut ? langController.t('soldOut') : '${NumberFormat('#,###').format(item.pricePoints)}pt',
                                         style: GoogleFonts.fredoka(
                                           color: isSoldOut
                                               ? Colors.grey.shade600
