@@ -41,5 +41,10 @@ class AppConfig {
   // App Identity
   static const String appName = 'Pawbooklife';
   static const String appTagline = 'SocialFi for Pets on Solana';
+
+  // PawtScore Reward Rules
+  static const int pointsForMarketPurchase = 150;
+  static const int pointsForSponsorship = 150;
+  static const int pointsForVideoUpload = 50;
 }
 

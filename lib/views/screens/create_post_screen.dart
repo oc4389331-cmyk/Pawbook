@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/language_controller.dart';
@@ -1273,10 +1274,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         soundTitle: _selectedSound?.title,
       );
 
+      // Award 50 PawtScore points for uploading pet videos/posts
       if (mounted) {
+        final authController = Provider.of<AuthController>(context, listen: false);
+        authController.addPawtScore(AppConfig.pointsForVideoUpload);
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-            '¡Publicación subida a Cloudflare R2! 🐾${_selectedSound != null ? " 🎵 Con ${_selectedSound!.title}" : ""}',
+            '¡Publicación subida! 🐾 +${AppConfig.pointsForVideoUpload} PawtScore${_selectedSound != null ? " 🎵 Con ${_selectedSound!.title}" : ""}',
             style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
           ),
           backgroundColor: AppTheme.emeraldGreen,

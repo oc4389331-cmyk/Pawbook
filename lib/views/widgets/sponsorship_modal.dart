@@ -296,6 +296,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         ).timeout(const Duration(seconds: 4), onTimeout: () {});
       }
 
+      // Award PawtScore points for sponsoring pets (+150 pts)
+      authController.addPawtScore(AppConfig.pointsForSponsorship);
+
       if (mounted) {
         nav.pop();
         messenger.showSnackBar(
@@ -323,7 +326,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        langController.t('sponsorshipConfirmed').replaceAll('{wallet}', _selectedWallet),
+                        '${langController.t("sponsorshipConfirmed").replaceAll("{wallet}", _selectedWallet)} • +${AppConfig.pointsForSponsorship} PawtScore 🐾',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(

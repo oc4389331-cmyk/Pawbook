@@ -437,6 +437,9 @@ class MarketplaceScreen extends StatelessWidget {
                                   // Deduct stock in real-time
                                   marketplaceController.purchaseProduct(item.id, selectedQuantity);
 
+                                  // Award PawtScore points for buying in the market (+150 pts)
+                                  authController.addPawtScore(AppConfig.pointsForMarketPurchase);
+
                                   if (context.mounted) {
                                     final tokenPaidStr = selectedToken == 'SKR'
                                         ? '${totalSkr.toStringAsFixed(0)} \$SKR'
@@ -452,7 +455,7 @@ class MarketplaceScreen extends StatelessWidget {
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                '${langController.t("paySuccessMsg")} ($tokenPaidStr • $selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")})',
+                                                '${langController.t("paySuccessMsg")} ($tokenPaidStr • $selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")}) • +${AppConfig.pointsForMarketPurchase} PawtScore 🐾',
                                                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
                                               ),
                                             ),

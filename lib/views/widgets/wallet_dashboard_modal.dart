@@ -416,6 +416,27 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 10),
+
+                    // How to earn points quick row
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text('🛒 Market +150', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('•', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                          Text('💖 Sponsor +150', style: GoogleFonts.outfit(color: const Color(0xFFEC4899), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('•', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                          Text('📹 Video +50', style: GoogleFonts.outfit(color: const Color(0xFFA78BFA), fontSize: 11, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 14),
 
                     // Wallet Address copy row

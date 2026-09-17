@@ -447,6 +447,13 @@ class AppTranslations {
       'noMusicOriginal': 'No Music (Original Audio)',
       'discardChanges': 'Discard changes',
       'applyAndSave': 'Apply and Save',
+      'howToEarnPointsTitle': 'How to Earn PawtScore 🐾',
+      'earnMarketRule': 'Buy in Marketplace: +150 pts',
+      'earnSponsorshipRule': 'Sponsor Pets: +150 pts',
+      'earnUploadVideoRule': 'Upload Pet Videos: +50 pts',
+      'pointsEarnedPostMsg': 'You earned +50 PawtScore points! 🐾',
+      'pointsEarnedMarketMsg': 'You earned +150 PawtScore points! 🐾',
+      'pointsEarnedSponsorMsg': 'You earned +150 PawtScore points! 🐾',
     },
 
     'es': {
@@ -896,6 +903,13 @@ class AppTranslations {
       'noMusicOriginal': 'Sin Música (Audio Original)',
       'discardChanges': 'Descartar cambios',
       'applyAndSave': 'Aplicar y Guardar',
+      'howToEarnPointsTitle': '¿Cómo Ganar PawtScore? 🐾',
+      'earnMarketRule': 'Comprar en el Market: +150 pts',
+      'earnSponsorshipRule': 'Patrocinios a mascotas: +150 pts',
+      'earnUploadVideoRule': 'Subir videos de mascotas: +50 pts',
+      'pointsEarnedPostMsg': '¡Has ganado +50 puntos PawtScore por publicar tu video! 🐾',
+      'pointsEarnedMarketMsg': '¡Has ganado +150 puntos PawtScore por tu compra! 🐾',
+      'pointsEarnedSponsorMsg': '¡Has ganado +150 puntos PawtScore por tu patrocinio! 🐾',
     },
 
     'zh': {
@@ -1345,6 +1359,13 @@ class AppTranslations {
       'noMusicOriginal': '无音乐 (原声)',
       'discardChanges': '放弃更改',
       'applyAndSave': '应用并保存',
+      'howToEarnPointsTitle': '如何赚取 PawtScore 🐾',
+      'earnMarketRule': '在商城购物: +150 积分',
+      'earnSponsorshipRule': '赞助宠物: +150 积分',
+      'earnUploadVideoRule': '上传宠物视频: +50 积分',
+      'pointsEarnedPostMsg': '上传视频成功！你获得了 +50 PawtScore 积分！🐾',
+      'pointsEarnedMarketMsg': '购买成功！你获得了 +150 PawtScore 积分！🐾',
+      'pointsEarnedSponsorMsg': '赞助成功！你获得了 +150 PawtScore 积分！🐾',
     },
 
     'ja': {
@@ -1794,6 +1815,13 @@ class AppTranslations {
       'noMusicOriginal': '音楽なし (元の音声)',
       'discardChanges': '変更を破棄',
       'applyAndSave': '適用して保存',
+      'howToEarnPointsTitle': 'PawtScoreの獲得方法 🐾',
+      'earnMarketRule': 'マーケットで購入: +150 pts',
+      'earnSponsorshipRule': 'ペットをスポンサー: +150 pts',
+      'earnUploadVideoRule': 'ペット動画を投稿: +50 pts',
+      'pointsEarnedPostMsg': '動画を投稿しました！+50 PawtScore 獲得！🐾',
+      'pointsEarnedMarketMsg': '購入完了！+150 PawtScore 獲得！🐾',
+      'pointsEarnedSponsorMsg': 'スポンサー完了！+150 PawtScore 獲得！🐾',
     },
   };
 

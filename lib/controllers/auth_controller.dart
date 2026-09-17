@@ -772,6 +772,11 @@ class AuthController extends ChangeNotifier {
         pawtScore: _currentProfile!.pawtScore + amount,
       );
       notifyListeners();
+      try {
+        _supabaseService.updateProfile(_currentProfile!);
+      } catch (e) {
+        debugPrint('[Auth] Error persisting addPawtScore to Supabase: $e');
+      }
     }
   }
 
@@ -781,6 +786,11 @@ class AuthController extends ChangeNotifier {
         pawtScore: _currentProfile!.pawtScore - amount,
       );
       notifyListeners();
+      try {
+        _supabaseService.updateProfile(_currentProfile!);
+      } catch (e) {
+        debugPrint('[Auth] Error persisting deductPawtScore to Supabase: $e');
+      }
     }
   }
 

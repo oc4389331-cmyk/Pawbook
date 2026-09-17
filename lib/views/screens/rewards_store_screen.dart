@@ -85,7 +85,57 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // How to Earn PawtScore Rules Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.borderWarm),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.lightbulb_rounded, color: AppTheme.brandCoral, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        langController.t('howToEarnPointsTitle'),
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.primaryTerracotta),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildPointRuleChip('🛒 Market', '+150 pts', const Color(0xFF10B981)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildPointRuleChip('💖 Patrocinios', '+150 pts', const Color(0xFFEC4899)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildPointRuleChip('📹 Videos', '+50 pts', const Color(0xFF8B5CF6)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
 
             Text(
               langController.t('physicalRewardsAvailable'),
@@ -246,6 +296,34 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPointRuleChip(String title, String points, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textPrimaryDark),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            points,
+            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12, color: color),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
