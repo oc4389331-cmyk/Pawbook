@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
@@ -295,6 +296,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final feedController = Provider.of<FeedController>(context);
+    final langController = Provider.of<LanguageController>(context);
 
     // Rule Check: Human Profile without registered Pet is BLOCKED
     if (!authController.hasPet) {
@@ -308,7 +310,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           title: Text(
-            'Crear Publicación',
+            langController.t('createPostTitle'),
             style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
           ),
         ),
@@ -335,7 +337,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    '¡Solo las Mascotas Publican! 🐾',
+                    langController.t('onlyPetsCanPostTitle'),
                     style: GoogleFonts.fredoka(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -345,7 +347,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Para subir fotos y videos con música al feed, registra el perfil de tu mascota creadora en Solana.',
+                    langController.t('onlyPetsCanPostDesc'),
                     style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
@@ -360,7 +362,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                     icon: const Icon(Icons.add_circle_outline_rounded),
                     label: Text(
-                      'Registrar a tu Mascota',
+                      langController.t('registerYourPetBtn'),
                       style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     onPressed: () => Navigator.of(context).pushReplacement(
@@ -387,7 +389,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          isPetMode ? '🐾 Subir Fotos / Video' : '👤 Publicar para Mascota',
+          isPetMode ? langController.t('uploadMediaTitle') : langController.t('publishForPetTitle'),
           style: GoogleFonts.fredoka(
             fontWeight: FontWeight.bold,
             color: AppTheme.primaryTerracotta,
@@ -427,7 +429,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          isPetMode ? 'Modo Mascota Creadora Activo' : 'Modo Tutor Humano',
+                          isPetMode ? langController.t('petModeActiveBanner') : langController.t('tutorModeBanner'),
                           style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -436,8 +438,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   const SizedBox(height: 6),
                   Text(
                     isPetMode
-                        ? 'El post se publicará en el perfil de @${_selectedPet?.name ?? "tu mascota"} y podrá recibir patrocinios.'
-                        : 'Como tutor (${authController.currentProfile?.fullName ?? "Tutor"}), el post se asignará a la mascota seleccionada.',
+                        ? langController.t('petModeDesc')
+                        : langController.t('tutorModeDesc'),
                     style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 12),
                   ),
                 ],
@@ -447,7 +449,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
             // Pet Selector
             Text(
-              '🐾 Mascota Creadora que Publica:',
+              langController.t('publishingPetSelector'),
               style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
             ),
             const SizedBox(height: 8),
@@ -500,7 +502,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
             // Media Type Chips
             Text(
-              'Tipo de Contenido:',
+              langController.t('contentTypeLabel'),
               style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
             ),
             const SizedBox(height: 8),
@@ -509,7 +511,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 Expanded(
                   child: ChoiceChip(
                     avatar: Icon(Icons.photo_library_rounded, size: 20, color: _mediaType == 'image' ? Colors.white : AppTheme.primaryTerracotta),
-                    label: Text('Fotos (hasta 5)', style: GoogleFonts.fredoka(color: _mediaType == 'image' ? Colors.white : AppTheme.warmBrown, fontWeight: FontWeight.bold)),
+                    label: Text(langController.t('photosOption'), style: GoogleFonts.fredoka(color: _mediaType == 'image' ? Colors.white : AppTheme.warmBrown, fontWeight: FontWeight.bold)),
                     selected: _mediaType == 'image',
                     selectedColor: AppTheme.primaryTerracotta,
                     backgroundColor: AppTheme.surfaceWarm,
@@ -1007,8 +1009,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     : const Icon(Icons.send_rounded, color: Colors.white),
                 label: Text(
                   _isUploading
-                      ? 'Subiendo a Cloudflare R2...'
-                      : 'Publicar como @${_selectedPet?.name ?? "Mascota"}',
+                      ? langController.t('publishingPost')
+                      : '${langController.t("publishBtn")} (@${_selectedPet?.name ?? "Mascota"})',
                   style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 onPressed: _isUploading ? null : () => _submitPost(feedController),

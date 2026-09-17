@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_config.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/dynamic_auth_service.dart';
@@ -44,7 +45,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
 
   bool _isProcessing = false;
   String _processingStep = '';
-  String _selectedTargetWallet = 'Phantom';
+  final String _selectedTargetWallet = 'Phantom';
 
   @override
   void initState() {
@@ -58,30 +59,10 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
     super.dispose();
   }
 
-  String _getDayName(int weekday) {
-    switch (weekday) {
-      case DateTime.monday:
-        return 'Lunes';
-      case DateTime.tuesday:
-        return 'Martes';
-      case DateTime.wednesday:
-        return 'Miércoles';
-      case DateTime.thursday:
-        return 'Jueves';
-      case DateTime.friday:
-        return 'Viernes';
-      case DateTime.saturday:
-        return 'Sábado';
-      case DateTime.sunday:
-        return 'Domingo';
-      default:
-        return '';
-    }
-  }
-
   Future<void> _processClaimPayout(
     AuthController authController,
     OracleController oracleController,
+    LanguageController langController,
     double claimableUsd,
     double claimableSol,
     int claimableSkr,
@@ -94,7 +75,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('⚠️ No tienes saldo disponible de \$SKR para retirar.', style: GoogleFonts.fredoka(color: Colors.white)),
+          content: Text(langController.t('claimButtonLocked'), style: GoogleFonts.fredoka(color: Colors.white)),
         ),
       );
       return;
@@ -104,7 +85,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('⚠️ Por favor ingresa una dirección de wallet Solana válida.', style: GoogleFonts.fredoka(color: Colors.white)),
+          content: Text(langController.t('enterValidSolanaAddress'), style: GoogleFonts.fredoka(color: Colors.white)),
         ),
       );
       return;
@@ -112,7 +93,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
 
     setState(() {
       _isProcessing = true;
-      _processingStep = '💎 Transfiriendo $claimableSkr \$SKR a tu wallet de Solana...';
+      _processingStep = '${langController.t("transferringSkrProgress")} ($claimableSkr \$SKR)';
     });
 
     try {
@@ -129,7 +110,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
           messenger.showSnackBar(
             SnackBar(
               backgroundColor: AppTheme.primaryTerracotta,
-              content: Text('Transacción cancelada.', style: GoogleFonts.fredoka(color: Colors.white)),
+              content: Text(langController.t('txCancelledMsg'), style: GoogleFonts.fredoka(color: Colors.white)),
             ),
           );
         }
@@ -176,11 +157,11 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '🎉 ¡Retiro de $claimableSkr \$SKR Exitoso y Bloqueado!',
+                        '${langController.t("claimSuccessTitle")} ($claimableSkr \$SKR)',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        'Se han transferido $claimableSkr \$SKR a tu wallet ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
+                        '${langController.t("claimSuccessDesc")}: ${targetWallet.substring(0, 6)}...${targetWallet.substring(targetWallet.length - 4)}\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                       ),
                     ],
@@ -196,7 +177,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: Colors.redAccent,
-            content: Text('⚠️ Error al procesar el retiro: $e', style: GoogleFonts.fredoka(color: Colors.white)),
+            content: Text('${langController.t("payErrorMsg")} $e', style: GoogleFonts.fredoka(color: Colors.white)),
           ),
         );
       }
@@ -211,6 +192,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
   Widget build(BuildContext context) {
     final oracleController = Provider.of<OracleController>(context);
     final authController = Provider.of<AuthController>(context);
+    final langController = Provider.of<LanguageController>(context);
 
     final totalSkr = widget.unclaimedSkr ?? 0;
     final claimableUsd = double.parse(oracleController.convertSkrToUsd(totalSkr).toStringAsFixed(2));
@@ -265,7 +247,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.emeraldGreen.withOpacity(0.15),
+                          color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 24),
@@ -275,7 +257,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Retiro de Patrocinios (Claim)',
+                            langController.t('claimModalHeader'),
                             style: GoogleFonts.fredoka(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -283,7 +265,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                             ),
                           ),
                           Text(
-                            'Ganancias de @${widget.pet.name} en Tesorería',
+                            '${langController.t("earningsInTreasury")}: @${widget.pet.name}',
                             style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                           ),
                         ],
@@ -319,7 +301,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -331,16 +313,16 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Saldo Acumulado en Custodia:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                        Text(langController.t('unclaimedEarnings'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF14F195).withOpacity(0.2),
+                            color: const Color(0xFF14F195).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF14F195).withOpacity(0.4)),
+                            border: Border.all(color: const Color(0xFF14F195).withValues(alpha: 0.4)),
                           ),
                           child: Text(
-                            'EN TESORERÍA',
+                            langController.t('treasuryBadge'),
                             style: GoogleFonts.fredoka(color: const Color(0xFF14F195), fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -364,7 +346,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '$totalSkr \$SKR acumulados por patrocinios comunitarios',
+                      '$totalSkr \$SKR ${langController.t("accumulatedCommunitySponsorships")}',
                       style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
                     ),
                   ],
@@ -374,7 +356,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
 
               // Conditions Checklist Card
               Text(
-                'Condiciones Obligatorias para Retiro (Claim):',
+                langController.t('mandatoryClaimConditions'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -384,7 +366,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: hasMinBalance ? AppTheme.emeraldGreen.withOpacity(0.1) : AppTheme.surfaceWarm,
+                  color: hasMinBalance ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : AppTheme.surfaceWarm,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -404,7 +386,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '1. Monto mínimo mayor a \$100.00 USD',
+                            langController.t('condition1Title'),
                             style: GoogleFonts.fredoka(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -413,8 +395,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                           ),
                           Text(
                             hasMinBalance
-                                ? '✓ Cumplido (\$${claimableUsd.toStringAsFixed(2)} USD disponibles)'
-                                : '✗ No alcanzado (\$${claimableUsd.toStringAsFixed(2)} / \$100.00 USD. Faltan \$${(100.0 - claimableUsd).toStringAsFixed(2)} USD)',
+                                ? '✓ (\$${claimableUsd.toStringAsFixed(2)} USD)'
+                                : '✗ (\$${claimableUsd.toStringAsFixed(2)} / \$100.00 USD. Needed: \$${(100.0 - claimableUsd).toStringAsFixed(2)} USD)',
                             style: GoogleFonts.outfit(
                               fontSize: 11,
                               color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.textMutedWarm,
@@ -432,7 +414,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isMonday ? AppTheme.emeraldGreen.withOpacity(0.1) : AppTheme.surfaceWarm,
+                  color: isMonday ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : AppTheme.surfaceWarm,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isMonday ? AppTheme.emeraldGreen : AppTheme.borderWarm,
@@ -452,7 +434,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '2. Retiros habilitados: Solo LUNES (00:00 UTC)',
+                            langController.t('condition2Title'),
                             style: GoogleFonts.fredoka(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -461,8 +443,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                           ),
                           Text(
                             isMonday
-                                ? '✓ Lunes UTC activo (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC). ¡Retiros habilitados hoy!'
-                                : '✗ Hoy es ${_getDayName(nowUtc.weekday)} (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC). Se habilitan los Lunes a las 00:00 UTC.',
+                                ? '${langController.t("condition2Met")} (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC)'
+                                : '${langController.t("condition2NotMet")} (${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')} UTC)',
                             style: GoogleFonts.outfit(
                               fontSize: 11,
                               color: isMonday ? AppTheme.emeraldGreen : AppTheme.textMutedWarm,
@@ -480,7 +462,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
               // Destination Wallet Input (Visible when canClaim or for preview)
               if (canClaim) ...[
                 Text(
-                  'Dirección de Wallet de Destino (Solana):',
+                  langController.t('destinationWalletPrompt'),
                   style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
@@ -494,7 +476,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                     controller: _destinationWalletController,
                     style: GoogleFonts.sourceCodePro(fontSize: 12, color: AppTheme.textPrimaryDark),
                     decoration: InputDecoration(
-                      hintText: 'Ingresa tu wallet de Phantom / Solflare...',
+                      hintText: langController.t('walletInputHint'),
                       hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -551,6 +533,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                       : () => _processClaimPayout(
                             authController,
                             oracleController,
+                            langController,
                             claimableUsd,
                             claimableSol,
                             totalSkr,
@@ -558,7 +541,7 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: canClaim ? AppTheme.emeraldGreen : AppTheme.cardWarm,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.borderWarm.withOpacity(0.5),
+                    disabledBackgroundColor: AppTheme.borderWarm.withValues(alpha: 0.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                     elevation: canClaim ? 3 : 0,
                   ),
@@ -575,8 +558,8 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                         )
                       : Text(
                           canClaim
-                              ? 'Retirar $totalSkr \$SKR (≈ \$${claimableUsd.toStringAsFixed(2)} USD)'
-                              : '🔒 Sin saldo disponible de \$SKR para retirar',
+                              ? '${langController.t("claimButtonReady")}: $totalSkr \$SKR (≈ \$${claimableUsd.toStringAsFixed(2)} USD)'
+                              : langController.t('claimButtonLocked'),
                           style: GoogleFonts.fredoka(
                             color: canClaim ? Colors.white : AppTheme.textMutedWarm,
                             fontSize: 14,

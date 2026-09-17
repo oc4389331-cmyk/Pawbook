@@ -65,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showTikTokRegistrationWall(BuildContext context, AuthController authController) {
+    final langController = Provider.of<LanguageController>(context, listen: false);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 18),
 
               Text(
-                '¡Únete a la comunidad Pawtbook! 🐾',
+                langController.t('joinCommunityTitle'),
                 style: GoogleFonts.fredoka(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -116,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Has disfrutado de los primeros videos. Para continuar la experiencia, dar likes, comentar, patrocinar y ganar PawtScore, crea tu cuenta gratis.',
+                langController.t('guestLimitNotice'),
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   color: AppTheme.textMutedWarm,
@@ -136,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   icon: const Icon(Icons.person_outline_rounded, color: Colors.white),
                   label: Text(
-                    '👤 Crear / Entrar Cuenta de Humano',
+                    langController.t('createHumanAccountBtn'),
                     style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
@@ -160,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   icon: const Icon(Icons.pets_rounded, color: Colors.white),
                   label: Text(
-                    '🐾 Registrar Perfil de Mascota (Creador)',
+                    langController.t('registerCreatorPetBtn'),
                     style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text(
-                  'Seguir viendo videos por ahora 🐾',
+                  langController.t('continueWatchingGuest'),
                   style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 13),
                 ),
               ),
@@ -280,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const Icon(Icons.chat_bubble_outline_rounded, size: 48, color: AppTheme.textMutedWarm),
                                   const SizedBox(height: 12),
                                   Text(
-                                    '¡Sé el primero en comentar esta publicación! 🐾',
+                                    langController.t('beFirstComment'),
                                     style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 14),
                                     textAlign: TextAlign.center,
                                   ),
@@ -362,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         const Icon(Icons.star_rounded, color: Colors.white, size: 11),
                                                         const SizedBox(width: 2),
                                                         Text(
-                                                          'Creador',
+                                                          langController.t('creatorBadge'),
                                                           style: GoogleFonts.fredoka(
                                                             color: Colors.white,
                                                             fontSize: 10,
@@ -405,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     const Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryTerracotta),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      'Responder',
+                                                      langController.t('reply'),
                                                       style: GoogleFonts.fredoka(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.bold,
@@ -455,8 +456,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               const SizedBox(width: 6),
                                               Text(
                                                 isExpanded
-                                                    ? 'Ocultar ${replies.length == 1 ? "1 respuesta" : "${replies.length} respuestas"}'
-                                                    : 'Ver ${replies.length == 1 ? "1 respuesta" : "${replies.length} respuestas"}',
+                                                    ? '${langController.t("hideReplies")} (${replies.length})'
+                                                    : '${langController.t("viewReplies")} (${replies.length})',
                                                 style: GoogleFonts.fredoka(
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.bold,
@@ -538,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                                 borderRadius: BorderRadius.circular(6),
                                                               ),
                                                               child: Text(
-                                                                '⭐ Creador',
+                                                                '⭐ ${langController.t("creatorBadge")}',
                                                                 style: GoogleFonts.fredoka(
                                                                   color: Colors.white,
                                                                   fontSize: 9,
@@ -584,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         child: Padding(
                                                           padding: const EdgeInsets.symmetric(vertical: 2),
                                                           child: Text(
-                                                            'Responder',
+                                                            langController.t('reply'),
                                                             style: GoogleFonts.fredoka(
                                                               fontSize: 11,
                                                               fontWeight: FontWeight.bold,
@@ -629,7 +630,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Respondiendo a @${replyingToComment!.username ?? "usuario"}',
+                              '${langController.t("replyingTo")} @${replyingToComment!.username ?? "usuario"}',
                               style: GoogleFonts.fredoka(
                                 color: AppTheme.primaryTerracotta,
                                 fontSize: 12,
@@ -679,8 +680,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
                                       decoration: InputDecoration(
                                         hintText: replyingToComment != null
-                                            ? 'Escribe tu respuesta a @${replyingToComment!.username ?? "usuario"}... 🐾'
-                                            : 'Añadir un comentario amable... 🐾',
+                                            ? '${langController.t("replyingTo")} @${replyingToComment!.username ?? "usuario"}... 🐾'
+                                            : '${langController.t("writeCommentHint")}',
                                         hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                                         border: InputBorder.none,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -764,7 +765,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 icon: const Icon(Icons.lock_outline_rounded, size: 18),
                                 label: Text(
-                                  '🔑 Iniciar Sesión o Crear Cuenta para comentar 🐾',
+                                  '🔑 ${langController.t("loginWithGoogle")}',
                                   style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                                 ),
                                 onPressed: () {
@@ -785,6 +786,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEditHumanProfileModal(BuildContext context, AuthController authController) {
+    final langController = Provider.of<LanguageController>(context, listen: false);
     final profile = authController.currentProfile;
     final usernameController = TextEditingController(text: profile?.username ?? '');
     final fullNameController = TextEditingController(text: profile?.fullName ?? '');
@@ -825,7 +827,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      '✏️ Editar Perfil Humano',
+                      langController.t('editHumanProfileTitle'),
                       style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                     ),
                     const SizedBox(height: 16),
@@ -855,9 +857,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                         ),
                         icon: const Icon(Icons.desktop_windows_rounded, color: Colors.white, size: 20),
-                        label: const Text(
-                          '🖥️ Buscar Imagen en Escritorio',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        label: Text(
+                          langController.t('searchImageDesktopBtn'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         onPressed: () async {
                           try {
@@ -879,9 +881,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       backgroundColor: AppTheme.emeraldGreen,
-                                      content: Text('☁️ ¡Foto actualizada en Cloudflare R2 y anterior eliminada exitosamente! 🗑️'),
+                                      content: Text(langController.t('profileUpdatedSuccess')),
                                     ),
                                   );
                                 }
@@ -889,7 +891,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             }
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error al buscar/subir imagen: $e')),
+                              SnackBar(content: Text('Error: $e')),
                             );
                           }
                         },
@@ -902,7 +904,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: avatarUrlController,
                       onChanged: (_) => setModalState(() {}),
                       decoration: InputDecoration(
-                        labelText: 'URL de Foto de Perfil (Cloudflare R2)',
+                        labelText: langController.t('photoUrlLabel'),
                         hintText: 'https://media.pawbooklife.com/avatars/...',
                         prefixIcon: const Icon(Icons.photo_camera_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
@@ -916,7 +918,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(
                       controller: fullNameController,
                       decoration: InputDecoration(
-                        labelText: 'Nombre Completo',
+                        labelText: langController.t('fullNameLabel'),
                         hintText: 'Ej. Juan Pérez',
                         prefixIcon: const Icon(Icons.badge_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
@@ -930,7 +932,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(
                       controller: usernameController,
                       decoration: InputDecoration(
-                        labelText: 'Nombre de Usuario',
+                        labelText: langController.t('usernameLabel'),
                         hintText: 'Ej. @juan_pawt',
                         prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryTerracotta),
                         filled: true,
@@ -945,7 +947,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: bioController,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: 'Biografía / Acerca de ti',
+                        labelText: langController.t('humanBioLabel'),
                         hintText: 'Amante de las mascotas y tutor de Firulais 🐾',
                         prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
@@ -965,7 +967,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                             onPressed: () => Navigator.pop(ctx),
-                            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold)),
+                            child: Text(langController.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -979,7 +981,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: const Icon(Icons.save_rounded, color: Colors.white, size: 20),
                             label: authController.isLoading
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text('💾 Guardar Cambios', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+                                : Text(langController.t('saveChangesBtn'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
                             onPressed: authController.isLoading
                                 ? null
                                 : () async {
@@ -992,15 +994,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     if (ok && ctx.mounted) {
                                       Navigator.pop(ctx);
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('¡Perfil actualizado y guardado exitosamente! ✨'),
+                                        SnackBar(
+                                          content: Text(langController.t('profileUpdatedSuccess')),
                                           backgroundColor: AppTheme.emeraldGreen,
                                         ),
                                       );
                                     } else if (ctx.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text(authController.errorMessage ?? 'Error al guardar. Verifica la consola.'),
+                                          content: Text(authController.errorMessage ?? 'Error al guardar.'),
                                           backgroundColor: Colors.redAccent,
                                         ),
                                       );
@@ -1376,7 +1378,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Dejaste de seguir a @${post.petName ?? "mascota"}'),
+                              content: Text('${langController.t("unfollowedPetToast")}${post.petName ?? "mascota"}'),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -1389,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: AppTheme.emeraldGreen,
-                              content: Text('🐾 ¡Ahora sigues a @${post.petName ?? "mascota"}!'),
+                              content: Text('${langController.t("followedPetToast")}${post.petName ?? "mascota"}!'),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -1495,7 +1497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (isOwner)
                       ListTile(
                         leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                        title: Text('Eliminar publicación', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                        title: Text(langController.t('deletePost'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.redAccent)),
                         onTap: () async {
                           Navigator.pop(ctx);
                           await feedController.deletePetPost(post.id);
@@ -1505,7 +1507,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     else
                       ListTile(
                         leading: const Icon(Icons.report_problem_outlined, color: Colors.orange),
-                        title: Text('Reportar / Bloquear', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.orange)),
+                        title: Text(langController.t('reportOrBlock'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.orange)),
                         onTap: () async {
                           Navigator.pop(ctx);
                           await feedController.reportPost(post.id, userId: currentUserId);
@@ -1651,13 +1653,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                '¡Crea tu perfil en Pawtbook! 🐾',
+                langController.t('createProfilePromptTitle'),
                 style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
               Text(
-                'Únete como humano patrocinador o registra a tu mascota para subir videos y ganar PawtScore.',
+                langController.t('createProfilePromptDesc'),
                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
@@ -1671,7 +1673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                   ),
                   icon: const Icon(Icons.person_outline_rounded, color: Colors.white),
-                  label: Text('👤 Iniciar Sesión / Registrar Humano', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                  label: Text(langController.t('loginRegisterHumanBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -1689,7 +1691,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                   ),
                   icon: const Icon(Icons.pets_rounded, color: Colors.white),
-                  label: Text('🐾 Registrar Mascota Creadora', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                  label: Text(langController.t('registerCreatorPet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const CreatePetScreen()),
@@ -1784,11 +1786,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '🐾 Modo Mascota Creadora',
+                            langController.t('petModeActiveBanner'),
                             style: GoogleFonts.fredoka(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'Perfil de @${authController.activePet?.name ?? "Mascota"}',
+                            '${langController.t("profileOf")}${authController.activePet?.name ?? "Mascota"}',
                             style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1804,7 +1806,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       onPressed: onSwitchToPet,
                       child: Text(
-                        'Ver Mascota 🐾',
+                        langController.t('viewPetBtn'),
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
@@ -1883,7 +1885,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF14F195), size: 18),
                           const SizedBox(width: 6),
                           Text(
-                            'Mi Billetera Solana',
+                            langController.t('mySolanaWallet'),
                             style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1904,7 +1906,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    profile?.walletAddress ?? "No conectada",
+                    profile?.walletAddress ?? langController.t('notConnected'),
                     style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1923,7 +1925,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           icon: const Icon(Icons.account_balance_wallet_outlined, size: 16),
                           label: Text(
-                            'Ver Saldo y Retirar',
+                            langController.t('viewBalanceAndWithdraw'),
                             style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                           onPressed: () {
@@ -1953,7 +1955,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               icon: const Icon(Icons.edit_outlined, size: 18),
-              label: Text('✏️ Editar Perfil Humano', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+              label: Text(langController.t('editHumanProfileTitle'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
               onPressed: () => _showEditHumanProfileModal(context, authController),
             ),
             const SizedBox(height: 24),
@@ -1975,7 +1977,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 22),
                       const SizedBox(width: 8),
                       Text(
-                        '🐾 Mascotas que sigo',
+                        langController.t('followedPetsTitle'),
                         style: GoogleFonts.fredoka(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -2003,7 +2005,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             child: Center(
                               child: Text(
-                                'Aún no sigues a ninguna mascota.\n¡Toca el botón + en los videos del feed para seguir a tus creadores favoritos! 🐾',
+                                langController.t('noFollowedPetsNotice'),
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                               ),
@@ -2086,7 +2088,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.auto_awesome_rounded, color: AppTheme.accentOrange, size: 22),
                       const SizedBox(width: 8),
                       Text(
-                        '🎯 Preferencias de Contenido (Algoritmo)',
+                        langController.t('algorithmPreferencesTitle'),
                         style: GoogleFonts.fredoka(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
@@ -2097,7 +2099,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Basado en los videos que ves, likes y las mascotas que sigues, el algoritmo de Pawtbook prioriza estos animales en tu feed:',
+                    langController.t('algorithmPreferencesDesc'),
                     style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
@@ -2131,13 +2133,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               backgroundColor: AppTheme.surfaceWarm,
                               side: const BorderSide(color: AppTheme.borderWarm),
                               avatar: const Text('🐕', style: TextStyle(fontSize: 16)),
-                              label: Text('Perros (Principal)', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
+                              label: Text(langController.t('dogsPrimary'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
                             ),
                             Chip(
                               backgroundColor: AppTheme.surfaceWarm,
                               side: const BorderSide(color: AppTheme.borderWarm),
                               avatar: const Text('🐱', style: TextStyle(fontSize: 16)),
-                              label: Text('Gatos', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
+                              label: Text(langController.t('cats'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 13)),
                             ),
                           ],
                   ),

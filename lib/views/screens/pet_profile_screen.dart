@@ -236,7 +236,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           if (isOwner && widget.onSwitchToHuman != null)
             IconButton(
               icon: const Icon(Icons.person_pin_rounded, color: AppTheme.primaryTerracotta, size: 28),
-              tooltip: 'Cambiar a Perfil Humano (Tutor)',
+              tooltip: langController.t('switchToHumanTooltip'),
               onPressed: widget.onSwitchToHuman,
             ),
           if (isOwner)
@@ -285,12 +285,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '👤 Tutor: ${authController.currentProfile?.fullName ?? authController.currentProfile?.username ?? "Humano"}',
+                            '${langController.t("guardianLabel")} ${authController.currentProfile?.fullName ?? authController.currentProfile?.username ?? "Humano"}',
                             style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontSize: 13, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '🏆 PawtScore: ${authController.currentProfile?.pawtScore ?? 0} pts (Patrocinador)',
+                            '🏆 PawtScore: ${authController.currentProfile?.pawtScore ?? 0} pts',
                             style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11),
                           ),
                         ],
@@ -304,7 +304,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       icon: const Icon(Icons.switch_account_rounded, size: 16),
-                      label: Text('Humano', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: Text(langController.t('humanBtn'), style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
                       onPressed: widget.onSwitchToHuman ?? () {
                         Navigator.of(context).pop();
                       },
@@ -453,7 +453,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                             icon: Icon(isFollowing ? Icons.check_rounded : Icons.person_add_rounded),
-                            label: Text(isFollowing ? 'Siguiendo' : 'Seguir', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                            label: Text(isFollowing ? langController.t('followingBtn') : langController.t('followBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                             onPressed: () async {
                               final myId = authController.currentProfile!.id;
                               if (isFollowing) {
@@ -474,7 +474,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                             icon: const Icon(Icons.volunteer_activism_rounded),
-                            label: Text('Patrocinar', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                            label: Text(langController.t('sponsor'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                             onPressed: () {
                               if (!authController.isAuthenticated) {
                                 TermsAndConditionsModal.show(context);
@@ -534,7 +534,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                       Row(
                                         children: [
                                           Text(
-                                            'Métricas & Estadísticas',
+                                            langController.t('metricsAndStatsTitle'),
                                             style: GoogleFonts.fredoka(
                                               color: Colors.white,
                                               fontSize: 15,
@@ -549,7 +549,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              'Global & Videos',
+                                              langController.t('globalAndVideos'),
                                               style: GoogleFonts.fredoka(
                                                 color: Colors.white,
                                                 fontSize: 9,
@@ -561,7 +561,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Gráficas de Vistas, Likes, Comentarios y Retención',
+                                        langController.t('metricsSubtitle'),
                                         style: GoogleFonts.outfit(
                                           color: Colors.white.withOpacity(0.88),
                                           fontSize: 11,
@@ -604,7 +604,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 16),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Wallet Solana (Dynamic.xyz):',
+                                  '${langController.t("walletLabel")}:',
                                   style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -616,7 +616,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                'Activa ⚡',
+                                '${langController.t("activeBadge")} ⚡',
                                 style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                             ),
@@ -641,14 +641,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.emeraldGreen),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
-                              tooltip: 'Copiar Wallet',
+                              tooltip: langController.t('copyWallet'),
                               onPressed: () {
                                 Clipboard.setData(ClipboardData(text: widget.pet.dynamicWalletAddress));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: AppTheme.emeraldGreen,
                                     duration: const Duration(seconds: 2),
-                                    content: Text('⚡ ¡Wallet de @${widget.pet.name} copiada al portapapeles! (${widget.pet.dynamicWalletAddress})'),
+                                    content: Text(langController.t('copiedWalletToast')),
                                   ),
                                 );
                               },
@@ -674,7 +674,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           const Icon(Icons.verified_rounded, color: AppTheme.emeraldGreen, size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            'NFT de Solana Verificado 🐾',
+                            langController.t('nftVerifiedBadge'),
                             style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],
@@ -696,7 +696,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.solanaPurple))
                             : const Icon(Icons.verified_rounded, size: 18),
                         label: Text(
-                          _isVerifyingNft ? 'Escaneando Wallet...' : 'Verificar NFT de Solana en Wallet',
+                          _isVerifyingNft ? langController.t('scanningWallet') : langController.t('scanWalletForNft'),
                           style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                         onPressed: _isVerifyingNft ? null : () => _verifySolanaWalletNft(authController),
@@ -713,8 +713,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatColumn('PawtScore', '${widget.pet.totalSponsoredScore} pts', AppTheme.accentOrange),
-                          _buildStatColumn('Publicaciones', '$postsCount', AppTheme.primaryTerracotta),
+                          _buildStatColumn(langController.t('pawtScoreLabel'), '${widget.pet.totalSponsoredScore} pts', AppTheme.accentOrange),
+                          _buildStatColumn(langController.t('posts'), '$postsCount', AppTheme.primaryTerracotta),
                         ],
                       );
                     },
@@ -783,7 +783,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Publicaciones de ${widget.pet.name}',
+                  '${langController.t("petPostsHeader")} ${widget.pet.name}',
                   style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                 ),
               ),
@@ -831,7 +831,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            '¡@${widget.pet.name} aún no tiene publicaciones!',
+                            '@${widget.pet.name} ${langController.t("petHasNoPostsYet")}',
                             style: GoogleFonts.fredoka(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -842,8 +842,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           const SizedBox(height: 6),
                           Text(
                             isOwner
-                                ? 'Sube el primer video o foto de ${widget.pet.name} para comenzar a interactuar con la comunidad y acumular vistas y likes.'
-                                : 'Esta mascota aún no ha compartido publicaciones.',
+                                ? langController.t('uploadFirstPostOwner')
+                                : langController.t('uploadFirstPostGuest'),
                             style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                             textAlign: TextAlign.center,
                           ),
@@ -859,7 +859,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               ),
                               icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                               label: Text(
-                                'Subir Primer Video / Foto',
+                                langController.t('uploadFirstMediaBtn'),
                                 style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                               onPressed: () async {
@@ -982,12 +982,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                         context: context,
                                         builder: (ctx) => AlertDialog(
                                           backgroundColor: AppTheme.surfaceWarm,
-                                          title: Text('Eliminar publicación', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
-                                          content: Text('¿Estás seguro de que quieres eliminar esta publicación?', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark)),
+                                          title: Text(langController.t('deletePostTitle'), style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                                          content: Text(langController.t('deletePostConfirm'), style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark)),
                                           actions: [
                                             TextButton(
                                               onPressed: () => Navigator.pop(ctx),
-                                              child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                                              child: Text(langController.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
                                             ),
                                             TextButton(
                                               onPressed: () {
@@ -997,7 +997,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                                   _postsFuture = feedController.getPostsForPet(widget.pet.id, currentUserId: authController.currentProfile?.id);
                                                 });
                                               },
-                                              child: Text('Eliminar', style: GoogleFonts.fredoka(color: Colors.redAccent)),
+                                              child: Text(langController.t('deleteComment'), style: GoogleFonts.fredoka(color: Colors.redAccent)),
                                             ),
                                           ],
                                         ),
@@ -1032,7 +1032,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     } else {
       Clipboard.setData(ClipboardData(text: url));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enlace de Solscan copiado al portapapeles')),
+        const SnackBar(content: Text('Solscan URL copied to clipboard')),
       );
     }
   }
@@ -1044,7 +1044,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     );
   }
 
-  Future<void> _confirmResetPetLedger() async {
+  Future<void> _confirmResetPetLedger(LanguageController langController) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1056,20 +1056,20 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Reiniciar Historial a 0',
+                langController.t('resetLedgerTitle'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         content: Text(
-          '¿Deseas eliminar todos los registros de abonos y retiros de prueba de ${widget.pet.name} para comenzar de cero?',
+          langController.t('resetLedgerConfirm'),
           style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+            child: Text(langController.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1077,7 +1077,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Sí, Reiniciar a 0', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(langController.t('resetLedgerBtn'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1092,7 +1092,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         SnackBar(
           backgroundColor: AppTheme.emeraldGreen,
           content: Text(
-            '✅ Historial de patrocinios y balance de ${widget.pet.name} reiniciados a 0.',
+            '✅ ${langController.t("resetLedgerSuccess")}',
             style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -1113,20 +1113,20 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            const Color(0xFF0F2027),
-            const Color(0xFF203A43),
-            const Color(0xFF2C5364),
+            Color(0xFF0F2027),
+            Color(0xFF203A43),
+            Color(0xFF2C5364),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.4), width: 1.5),
+        border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.emeraldGreen.withOpacity(0.2),
+            color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1143,7 +1143,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.emeraldGreen.withOpacity(0.25),
+                    color: AppTheme.emeraldGreen.withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 22),
@@ -1154,7 +1154,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Billetera & Patrocinios',
+                        langController.t('walletAndSponsorshipsTitle'),
                         style: GoogleFonts.fredoka(
                           color: Colors.white,
                           fontSize: 16,
@@ -1162,7 +1162,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         ),
                       ),
                       Text(
-                        'Abonos recibidos y registro auditable en Solana',
+                        langController.t('walletAndSponsorshipsSubtitle'),
                         style: GoogleFonts.outfit(
                           color: Colors.white70,
                           fontSize: 11,
@@ -1173,12 +1173,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.restart_alt_rounded, color: Colors.white70, size: 20),
-                  tooltip: 'Reiniciar a 0 (Limpiar pruebas)',
-                  onPressed: _confirmResetPetLedger,
+                  tooltip: langController.t('resetToZeroTooltip'),
+                  onPressed: () => _confirmResetPetLedger(langController),
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                  tooltip: 'Actualizar balance',
+                  tooltip: langController.t('refreshBalanceTooltip'),
                   onPressed: _loadPetLedger,
                 ),
               ],
@@ -1190,9 +1190,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.12)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1201,7 +1201,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'BALANCE DISPONIBLE (UNCLAIMED)',
+                        langController.t('unclaimedBalanceLabel'),
                         style: GoogleFonts.fredoka(
                           color: AppTheme.emeraldGreen,
                           fontSize: 11,
@@ -1212,11 +1212,11 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppTheme.emeraldGreen.withOpacity(0.2),
+                          color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          'Solana Ledger',
+                          langController.t('solanaLedgerBadge'),
                           style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -1266,13 +1266,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Total Histórico', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        Text(langController.t('lifetimeTotal'), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
                         const SizedBox(height: 2),
                         Text('$_lifetimeSkr \$SKR', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                       ],
@@ -1284,13 +1284,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Total Retirado', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        Text(langController.t('totalWithdrawn'), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
                         const SizedBox(height: 2),
                         Text('$_withdrawnSkr \$SKR', style: GoogleFonts.fredoka(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
                       ],
@@ -1302,13 +1302,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Abonos', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+                        Text(langController.t('payoutsCount'), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
                         const SizedBox(height: 2),
                         Text('${_petSponsorships.length}', style: GoogleFonts.fredoka(color: Colors.lightBlueAccent, fontSize: 13, fontWeight: FontWeight.bold)),
                       ],
@@ -1333,7 +1333,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   ),
                   icon: const Icon(Icons.diamond_rounded, size: 20),
                   label: Text(
-                    'Retirar Patrocinios (Claim Payout)',
+                    langController.t('claimPayoutBtn'),
                     style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () async {
@@ -1373,7 +1373,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Historial de Abonos & Solscan (${_petSponsorships.length})',
+                          '${langController.t("payoutsHistoryHeader")} (${_petSponsorships.length})',
                           style: GoogleFonts.fredoka(
                             color: Colors.white,
                             fontSize: 13,
@@ -1383,7 +1383,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       ],
                     ),
                     Text(
-                      _showSponsorshipsList ? 'Ocultar' : 'Ver detalle',
+                      _showSponsorshipsList ? langController.t('hide') : langController.t('viewDetails'),
                       style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -1405,7 +1405,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -1413,7 +1413,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       const Icon(Icons.pets_rounded, color: Colors.white38, size: 32),
                       const SizedBox(height: 6),
                       Text(
-                        'No hay abonos registrados aún para esta mascota.',
+                        langController.t('noPayoutsYet'),
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
                       ),
@@ -1440,12 +1440,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isWithdrawn
-                              ? Colors.white.withOpacity(0.08)
-                              : AppTheme.emeraldGreen.withOpacity(0.3),
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : AppTheme.emeraldGreen.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -1455,7 +1455,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: AppTheme.emeraldGreen.withOpacity(0.2),
+                                backgroundColor: AppTheme.emeraldGreen.withValues(alpha: 0.2),
                                 backgroundImage: s.sponsorAvatar != null && s.sponsorAvatar!.isNotEmpty
                                     ? NetworkImage(s.sponsorAvatar!)
                                     : null,
@@ -1484,7 +1484,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
+                                    Text(
                                     '+${s.netAmount} \$SKR',
                                     style: GoogleFonts.fredoka(
                                       color: isWithdrawn ? Colors.white60 : AppTheme.emeraldGreen,
@@ -1497,8 +1497,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: isWithdrawn
-                                          ? Colors.amber.withOpacity(0.15)
-                                          : AppTheme.emeraldGreen.withOpacity(0.2),
+                                          ? Colors.amber.withValues(alpha: 0.15)
+                                          : AppTheme.emeraldGreen.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Row(
@@ -1511,7 +1511,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                         ),
                                         const SizedBox(width: 3),
                                         Text(
-                                          isWithdrawn ? 'Retirado' : 'Disponible',
+                                          isWithdrawn ? langController.t('statusWithdrawn') : langController.t('statusAvailable'),
                                           style: GoogleFonts.outfit(
                                             color: isWithdrawn ? Colors.amberAccent : AppTheme.emeraldGreen,
                                             fontSize: 9,
@@ -1530,7 +1530,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -1557,15 +1557,15 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.solanaPurple.withOpacity(0.3),
+                                        color: AppTheme.solanaPurple.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: Row(
+                                      child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text('Solscan', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                                          const SizedBox(width: 2),
-                                          const Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
+                                          Text('Solscan', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                          SizedBox(width: 2),
+                                          Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
                                         ],
                                       ),
                                     ),
@@ -1585,7 +1585,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               if (_petWithdrawals.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 Text(
-                  'Retiros Realizados (${_petWithdrawals.length})',
+                  '${langController.t("completedWithdrawalsHeader")} (${_petWithdrawals.length})',
                   style: GoogleFonts.fredoka(color: Colors.amberAccent, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
@@ -1604,9 +1604,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     return Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
@@ -1616,8 +1616,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${w.amountSkr} \$SKR retirados', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                                Text('$dateStr • Destino: $walletDisplay', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
+                                Text('${w.amountSkr} \$SKR ${langController.t("withdrawnAmount")}', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text('$dateStr • ${langController.t("destination")}: $walletDisplay', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
                               ],
                             ),
                           ),
@@ -1627,15 +1627,15 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.solanaPurple.withOpacity(0.3),
+                                  color: AppTheme.solanaPurple.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('Solscan', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9)),
-                                    const SizedBox(width: 2),
-                                    const Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
+                                    Text('Solscan', style: TextStyle(color: Colors.white, fontSize: 9)),
+                                    SizedBox(width: 2),
+                                    Icon(Icons.open_in_new_rounded, color: Colors.white, size: 9),
                                   ],
                                 ),
                               ),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../services/dynamic_auth_service.dart';
 import '../../theme/app_theme.dart';
@@ -78,7 +79,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: AppTheme.emeraldGreen,
-            content: Text('✅ Dirección de $walletType conectada y completada.', style: GoogleFonts.fredoka()),
+            content: Text('✅ $walletType: ${res.walletAddress!.substring(0, 8)}...', style: GoogleFonts.fredoka()),
           ),
         );
       } else if (res.errorMessage != null) {
@@ -93,7 +94,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
     }
   }
 
-  Future<void> _processWithdrawal(AuthController authController, OracleController oracleController) async {
+  Future<void> _processWithdrawal(AuthController authController, OracleController oracleController, LanguageController langController) async {
     final dest = _destinationWalletController.text.trim();
     final amountText = _amountController.text.trim();
     final messenger = ScaffoldMessenger.of(context);
@@ -102,7 +103,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('⚠️ Por favor ingresa una dirección válida de Solana Base58 (ej. tu wallet de Solflare).', style: GoogleFonts.fredoka()),
+          content: Text(langController.t('enterValidSolanaAddress'), style: GoogleFonts.fredoka()),
         ),
       );
       return;
@@ -113,7 +114,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('⚠️ Ingresa un monto de SOL válido mayor a 0.', style: GoogleFonts.fredoka()),
+          content: Text('⚠️ SOL > 0', style: GoogleFonts.fredoka()),
         ),
       );
       return;
@@ -134,7 +135,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
           messenger.showSnackBar(
             SnackBar(
               backgroundColor: AppTheme.primaryTerracotta,
-              content: Text('ℹ️ Cancelaste la transacción en $_selectedTargetWallet.', style: GoogleFonts.fredoka()),
+              content: Text(langController.t('txCancelledMsg'), style: GoogleFonts.fredoka()),
             ),
           );
           return;
@@ -163,11 +164,11 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '🚀 ¡Retiro a $_selectedTargetWallet enviado!',
+                        '🚀 $amount SOL ➔ $_selectedTargetWallet',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       Text(
-                        '$amount SOL transferidos hacia: ${dest.substring(0, 10)}...',
+                        '${langController.t("destination")}: ${dest.substring(0, 10)}...',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
                       ),
                     ],
@@ -197,7 +198,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
       SnackBar(
         backgroundColor: AppTheme.surfaceDark,
         duration: const Duration(seconds: 2),
-        content: Text('📋 $label copiado al portapapeles', style: GoogleFonts.fredoka()),
+        content: Text('📋 $label', style: GoogleFonts.fredoka()),
       ),
     );
   }
@@ -215,6 +216,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthController>(context);
     final oracle = Provider.of<OracleController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final usdSolEstimate = (_solBalance * 155.0).toStringAsFixed(2);
     final pawtScore = auth.currentProfile?.pawtScore ?? 100;
     final skrTokenEstimate = (pawtScore * 1.0).toStringAsFixed(0);
@@ -273,7 +275,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Mi Billetera Solana & Dynamic',
+                            langController.t('solanaWalletDashboardTitle'),
                             style: GoogleFonts.fredoka(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -281,7 +283,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             ),
                           ),
                           Text(
-                            'Cuentas Web3 y Saldo en Tiempo Real',
+                            langController.t('web3AccountsSubtitle'),
                             style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                           ),
                         ],
@@ -296,7 +298,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldGreen),
                           )
                         : const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
-                    tooltip: 'Actualizar Saldo',
+                    tooltip: langController.t('refreshBalance'),
                     onPressed: _isLoadingBalance ? null : _loadBalance,
                   ),
                 ],
@@ -371,7 +373,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    Text('Saldo Disponible:', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
+                    Text(langController.t('availableBalance'), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
                     const SizedBox(height: 4),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -404,7 +406,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             children: [
                               const Icon(Icons.bolt_rounded, color: Color(0xFF14F195), size: 18),
                               const SizedBox(width: 6),
-                              Text('Tokens \$SKR / PawtScore:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                              Text(langController.t('tokensSkrPawtScore'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
                             ],
                           ),
                           Text(
@@ -440,8 +442,8 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             icon: const Icon(Icons.copy_rounded, color: Color(0xFF14F195), size: 16),
-                            tooltip: 'Copiar Dirección',
-                            onPressed: () => _copyToClipboard(widget.walletAddress, 'Dirección de Wallet'),
+                            tooltip: langController.t('copyWallet'),
+                            onPressed: () => _copyToClipboard(widget.walletAddress, langController.t('copiedWalletToast')),
                           ),
                         ],
                       ),
@@ -468,7 +470,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       ),
                       icon: Icon(_showWithdrawForm ? Icons.visibility_rounded : Icons.send_rounded, size: 18),
                       label: Text(
-                        _showWithdrawForm ? 'Ver Resumen' : '💸 Retirar a Solflare',
+                        _showWithdrawForm ? langController.t('viewSummary') : langController.t('withdrawToWalletBtn'),
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       onPressed: () {
@@ -489,9 +491,9 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       elevation: 0,
                     ),
                     icon: const Icon(Icons.qr_code_rounded, size: 18),
-                    label: Text('Recibir SOL', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13)),
+                    label: Text(langController.t('receiveSolBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13)),
                     onPressed: () {
-                      _copyToClipboard(widget.walletAddress, 'Dirección pública para recibir SOL');
+                      _copyToClipboard(widget.walletAddress, langController.t('copiedWalletToast'));
                     },
                   ),
                 ],
@@ -518,7 +520,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                               const Icon(Icons.file_upload_outlined, color: AppTheme.primaryTerracotta, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                'Retirar Fondos a Wallet Externa',
+                                langController.t('withdrawExternalTitle'),
                                 style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                               ),
                             ],
@@ -526,7 +528,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: AppTheme.emeraldGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                            child: Text('Red Solana', style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+                            child: Text(langController.t('solanaNetwork'), style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -539,13 +541,13 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           const SizedBox(width: 8),
                           _buildTargetWalletChip('Phantom', Icons.shield_rounded, const Color(0xFFAB9FF2)),
                           const SizedBox(width: 8),
-                          _buildTargetWalletChip('Otra', Icons.account_balance_wallet_outlined, AppTheme.textMutedWarm),
+                          _buildTargetWalletChip(langController.t('otherWallet'), Icons.account_balance_wallet_outlined, AppTheme.textMutedWarm),
                         ],
                       ),
                       const SizedBox(height: 12),
 
                       // Auto-detect wallet button
-                      if (_selectedTargetWallet != 'Otra')
+                      if (_selectedTargetWallet != 'Otra' && _selectedTargetWallet != 'Other' && _selectedTargetWallet != '其他' && _selectedTargetWallet != 'その他')
                         InkWell(
                           onTap: () => _detectExternalWallet(_selectedTargetWallet),
                           child: Container(
@@ -562,7 +564,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                                 const Icon(Icons.bolt_rounded, color: AppTheme.emeraldGreen, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '⚡ Detectar y rellenar mi $_selectedTargetWallet',
+                                  '${langController.t("detectWalletBtn")} $_selectedTargetWallet',
                                   style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -571,13 +573,13 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                         ),
 
                       // Destination Address Input
-                      Text('Dirección de destino de Solana:', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(langController.t('destinationSolanaAddress'), style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _destinationWalletController,
                         style: GoogleFonts.outfit(fontSize: 13),
                         decoration: InputDecoration(
-                          hintText: 'Pega tu dirección pública de Solflare (Base58)...',
+                          hintText: langController.t('destinationAddressHint'),
                           hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                           filled: true,
                           fillColor: AppTheme.bgWarmCream,
@@ -597,7 +599,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       const SizedBox(height: 12),
 
                       // Amount Input
-                      Text('Monto a retirar en SOL:', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(langController.t('withdrawAmountSol'), style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _amountController,
@@ -630,10 +632,10 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                          onPressed: _isWithdrawing ? null : () => _processWithdrawal(auth, oracle),
+                          onPressed: _isWithdrawing ? null : () => _processWithdrawal(auth, oracle, langController),
                           child: _isWithdrawing
                               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text('Confirmar Retiro a $_selectedTargetWallet 🚀', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
+                              : Text('${langController.t("confirmWithdrawBtn")} $_selectedTargetWallet 🚀', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
                         ),
                       ),
                     ],

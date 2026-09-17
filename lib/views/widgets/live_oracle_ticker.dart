@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../theme/app_theme.dart';
 
@@ -87,6 +88,8 @@ class LiveOracleTicker extends StatelessWidget {
   }
 
   void _showOracleDetailsModal(BuildContext context, OracleController oracle) {
+    final langController = Provider.of<LanguageController>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -128,7 +131,7 @@ class LiveOracleTicker extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '🔮 Oráculo Solana \$SKR en Vivo',
+                          langController.t('oracleSolanaLiveTitle'),
                           style: GoogleFonts.fredoka(
                             color: AppTheme.primaryTerracotta,
                             fontSize: 18,
@@ -136,7 +139,7 @@ class LiveOracleTicker extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Alimentado por ${oracle.oracleProvider}',
+                          '${langController.t("poweredBy")} ${oracle.oracleProvider}',
                           style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                         ),
                       ],
@@ -154,13 +157,13 @@ class LiveOracleTicker extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildRow('Precio en USD:', oracle.formattedPriceUsd, isHighlight: true),
+                    _buildRow(langController.t('priceInUsd'), oracle.formattedPriceUsd, isHighlight: true),
                     const Divider(height: 16),
-                    _buildRow('Precio en SOL:', '${oracle.priceSol.toStringAsFixed(6)} SOL'),
+                    _buildRow(langController.t('priceInSol'), '${oracle.priceSol.toStringAsFixed(6)} SOL'),
                     const Divider(height: 16),
-                    _buildRow('Variación 24h:', oracle.formattedChange, isPositive: oracle.change24h >= 0),
+                    _buildRow(langController.t('variation24h'), oracle.formattedChange, isPositive: oracle.change24h >= 0),
                     const Divider(height: 16),
-                    _buildRow('Actualización:', '${DateTime.now().difference(oracle.lastUpdated).inSeconds}s atrás (Auto 10s)'),
+                    _buildRow(langController.t('oracleUpdated'), '${DateTime.now().difference(oracle.lastUpdated).inSeconds}${langController.t("secondsAgoAuto")}'),
                   ],
                 ),
               ),
@@ -174,7 +177,7 @@ class LiveOracleTicker extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  label: Text('Actualizar Oráculo Ahora', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                  label: Text(langController.t('refreshOracleNow'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
                   onPressed: () {
                     oracle.fetchLiveSkrPrice();
                     Navigator.pop(ctx);

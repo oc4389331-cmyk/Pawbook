@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../models/pet_analytics_model.dart';
 import '../../services/supabase_service.dart';
@@ -45,6 +46,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
         authController.activePet?.id == widget.pet.id ||
         authController.userPets.any((p) => p.id == widget.pet.id);
@@ -65,19 +67,19 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.12),
+                color: Colors.redAccent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.lock_rounded, size: 48, color: Colors.redAccent),
             ),
             const SizedBox(height: 16),
             Text(
-              'Estadísticas Privadas',
+              langController.t('privateStatsTitle'),
               style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
             ),
             const SizedBox(height: 8),
             Text(
-              'Las métricas y estadísticas detalladas de video de @${widget.pet.name} son privadas y exclusivas para su tutor creador.',
+              langController.t('privateStatsDesc'),
               style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
               textAlign: TextAlign.center,
             ),
@@ -89,7 +91,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () => Navigator.pop(context),
-              child: Text('Entendido', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+              child: Text(langController.t('understood'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -139,7 +141,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         children: [
                           Flexible(
                             child: Text(
-                              'Métricas de @${widget.pet.name}',
+                              '${langController.t("metricsOf")}${widget.pet.name}',
                               style: GoogleFonts.fredoka(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -152,11 +154,11 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.emeraldGreen.withOpacity(0.15),
+                              color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'En Vivo',
+                              langController.t('liveBadge'),
                               style: GoogleFonts.fredoka(
                                 color: AppTheme.emeraldGreen,
                                 fontSize: 10,
@@ -167,7 +169,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         ],
                       ),
                       Text(
-                        'Métricas Globales y por Video Individual',
+                        langController.t('metricsGlobalAndIndividual'),
                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                       ),
                     ],
@@ -230,7 +232,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Video Mode Selector Carousel (Global vs Individual Video)
-                      _buildVideoFilterSelector(data),
+                      _buildVideoFilterSelector(data, langController),
                       const SizedBox(height: 16),
 
                       // Selected View Banner
@@ -238,9 +240,9 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentOrange.withOpacity(0.12),
+                            color: AppTheme.accentOrange.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.accentOrange.withOpacity(0.3)),
+                            border: Border.all(color: AppTheme.accentOrange.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -273,7 +275,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            '🎬 Métrica Individual',
+                                            langController.t('individualMetric'),
                                             style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                           ),
                                         ),
@@ -296,7 +298,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                               TextButton.icon(
                                 onPressed: () => setState(() => _selectedPostId = null),
                                 icon: const Icon(Icons.public_rounded, size: 14, color: AppTheme.primaryTerracotta),
-                                label: Text('Ver Global', style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
+                                label: Text(langController.t('viewGlobalBtn'), style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -314,7 +316,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isGlobal ? '🌐 Resumen Global (${data.totalPosts} videos)' : '🎬 Rendimiento del Video',
+                            isGlobal ? '${langController.t("globalSummary")} (${data.totalPosts})' : langController.t('videoPerformance'),
                             style: GoogleFonts.fredoka(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -322,7 +324,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             ),
                           ),
                           Row(
-                            children: ['7D', '30D', 'Todo'].map((range) {
+                            children: ['7D', '30D', 'All'].map((range) {
                               final isSel = _selectedRange == range;
                               return Padding(
                                 padding: const EdgeInsets.only(left: 6),
@@ -354,23 +356,23 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         children: [
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Vistas Totales',
+                              title: langController.t('totalViewsKpi'),
                               value: '$displayViews',
-                              subtitle: isGlobal ? 'Total acumulado' : 'Este video',
+                              subtitle: isGlobal ? 'Total' : 'Video',
                               icon: Icons.remove_red_eye_rounded,
                               color: const Color(0xFF3B82F6),
-                              badge: 'Alcance',
+                              badge: langController.t('reachBadge'),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Me Gustas',
+                              title: langController.t('totalLikesKpi'),
                               value: '$displayLikes',
-                              subtitle: isGlobal ? 'En todos los videos' : 'Reacciones',
+                              subtitle: isGlobal ? 'Total' : 'Video',
                               icon: Icons.favorite_rounded,
                               color: const Color(0xFFEF4444),
-                              badge: 'Interacción',
+                              badge: langController.t('interactionBadge'),
                             ),
                           ),
                         ],
@@ -380,23 +382,23 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         children: [
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Comentarios',
+                              title: langController.t('totalCommentsKpi'),
                               value: '$displayComments',
-                              subtitle: isGlobal ? 'Comunidad global' : 'En este video',
+                              subtitle: isGlobal ? 'Total' : 'Video',
                               icon: Icons.chat_bubble_rounded,
                               color: const Color(0xFF10B981),
-                              badge: 'Comunidad',
+                              badge: langController.t('communityBadge'),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildKpiCard(
-                              title: 'Tiempo de Vista',
+                              title: langController.t('watchTimeKpi'),
                               value: displayWatchTime,
-                              subtitle: isGlobal ? 'Prom: $displayAvgTime/vid' : 'Prom: $displayAvgTime',
+                              subtitle: 'Avg: $displayAvgTime',
                               icon: Icons.timer_rounded,
                               color: AppTheme.accentOrange,
-                              badge: 'Retención',
+                              badge: langController.t('retentionBadge'),
                             ),
                           ),
                         ],
@@ -409,12 +411,12 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppTheme.primaryTerracotta.withOpacity(0.08),
-                              AppTheme.accentOrange.withOpacity(0.08),
+                              AppTheme.primaryTerracotta.withValues(alpha: 0.08),
+                              AppTheme.accentOrange.withValues(alpha: 0.08),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.primaryTerracotta.withOpacity(0.2)),
+                          border: Border.all(color: AppTheme.primaryTerracotta.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +424,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryTerracotta.withOpacity(0.15),
+                                color: AppTheme.primaryTerracotta.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.insights_rounded, color: AppTheme.primaryTerracotta, size: 20),
@@ -433,7 +435,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '📊 Estadísticas en Tiempo Real',
+                                    langController.t('realTimeStatsTitle'),
                                     style: GoogleFonts.fredoka(
                                       color: AppTheme.primaryTerracotta,
                                       fontWeight: FontWeight.bold,
@@ -442,14 +444,14 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Visualiza las reproducciones, reacciones de la comunidad y el tiempo total de retención para medir el impacto de tu mascota creadora.',
+                                    langController.t('realTimeStatsDesc'),
                                     style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12),
                                   ),
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       Text(
-                                        'Tasa de Retención Promedio: ',
+                                        '${langController.t("avgRetentionRate")} ',
                                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                                       ),
                                       Text(
@@ -475,7 +477,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isGlobal ? '📈 Tendencia Global (7 Días)' : '📈 Tendencia del Video (7 Días)',
+                            isGlobal ? langController.t('globalTrend7d') : langController.t('videoTrend7d'),
                             style: GoogleFonts.fredoka(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -495,13 +497,13 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            _buildChartTabButton(0, 'Vistas', Icons.remove_red_eye_rounded, const Color(0xFF3B82F6)),
+                            _buildChartTabButton(0, langController.t('viewsTab'), Icons.remove_red_eye_rounded, const Color(0xFF3B82F6)),
                             const SizedBox(width: 8),
-                            _buildChartTabButton(1, 'Me Gustas', Icons.favorite_rounded, const Color(0xFFEF4444)),
+                            _buildChartTabButton(1, langController.t('likesTab'), Icons.favorite_rounded, const Color(0xFFEF4444)),
                             const SizedBox(width: 8),
-                            _buildChartTabButton(2, 'Comentarios', Icons.chat_bubble_rounded, const Color(0xFF10B981)),
+                            _buildChartTabButton(2, langController.t('commentsTab'), Icons.chat_bubble_rounded, const Color(0xFF10B981)),
                             const SizedBox(width: 8),
-                            _buildChartTabButton(3, 'Tiempo (Min)', Icons.timer_rounded, AppTheme.accentOrange),
+                            _buildChartTabButton(3, langController.t('timeMinTab'), Icons.timer_rounded, AppTheme.accentOrange),
                           ],
                         ),
                       ),
@@ -517,7 +519,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           border: Border.all(color: AppTheme.borderWarm),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryTerracotta.withOpacity(0.06),
+                              color: AppTheme.primaryTerracotta.withValues(alpha: 0.06),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -530,7 +532,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  _getChartTitle(),
+                                  _getChartTitle(langController),
                                   style: GoogleFonts.fredoka(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -538,7 +540,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   ),
                                 ),
                                 Text(
-                                  'Total periodo: ${_getChartPeriodTotal(displayHistory)}',
+                                  '${langController.t("periodTotal")} ${_getChartPeriodTotal(displayHistory)}',
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -559,7 +561,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
 
                       // Detailed Table / Day-by-Day Breakdown
                       Text(
-                        '📋 Historial por Día',
+                        langController.t('dailyHistoryTitle'),
                         style: GoogleFonts.fredoka(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -580,11 +582,11 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               child: Row(
                                 children: [
-                                  Expanded(flex: 3, child: Text('Día', style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
-                                  Expanded(flex: 2, child: Text('Vistas', textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
-                                  Expanded(flex: 2, child: Text('Likes', textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
-                                  Expanded(flex: 2, child: Text('Cmts', textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
-                                  Expanded(flex: 3, child: Text('Tiempo', textAlign: TextAlign.end, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 3, child: Text(langController.t('dayCol'), style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 2, child: Text(langController.t('viewsCol'), textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 2, child: Text(langController.t('likesCol'), textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 2, child: Text(langController.t('cmtsCol'), textAlign: TextAlign.center, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 3, child: Text(langController.t('timeCol'), textAlign: TextAlign.end, style: GoogleFonts.fredoka(fontSize: 12, color: AppTheme.textMutedWarm, fontWeight: FontWeight.bold))),
                                 ],
                               ),
                             ),
@@ -617,7 +619,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                               const Icon(Icons.video_library_rounded, color: AppTheme.primaryTerracotta, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                '🎬 Desglose por Video (${data.videoBreakdown.length})',
+                                '${langController.t("videoBreakdownTitle")} (${data.videoBreakdown.length})',
                                 style: GoogleFonts.fredoka(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -627,7 +629,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             ],
                           ),
                           Text(
-                            'Toca para filtrar',
+                            langController.t('tapToFilter'),
                             style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
                           ),
                         ],
@@ -644,7 +646,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           ),
                           child: Center(
                             child: Text(
-                              'Aún no hay videos publicados para este perro.',
+                              langController.t('noVideosPublishedYet'),
                               style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
                             ),
                           ),
@@ -652,7 +654,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                       else
                         ...data.videoBreakdown.map((video) {
                           final isSelected = _selectedPostId == video.postId;
-                          return _buildVideoBreakdownCard(video, isSelected: isSelected);
+                          return _buildVideoBreakdownCard(video, isSelected: isSelected, langController: langController);
                         }),
 
                       const SizedBox(height: 30),
@@ -668,7 +670,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   }
 
   // Top Video Filter Selector: "🌐 Global" chip + individual video chips
-  Widget _buildVideoFilterSelector(PetAnalyticsModel data) {
+  Widget _buildVideoFilterSelector(PetAnalyticsModel data, LanguageController langController) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -690,7 +692,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                 boxShadow: _selectedPostId == null
                     ? [
                         BoxShadow(
-                          color: AppTheme.primaryTerracotta.withOpacity(0.3),
+                          color: AppTheme.primaryTerracotta.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -707,7 +709,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '🌐 Todos los Videos (${data.totalPosts})',
+                    '${langController.t("allVideosChip")} (${data.totalPosts})',
                     style: GoogleFonts.fredoka(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -747,7 +749,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppTheme.accentOrange.withOpacity(0.3),
+                              color: AppTheme.accentOrange.withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -775,7 +777,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.white.withOpacity(0.25) : AppTheme.surfaceWarm,
+                          color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppTheme.surfaceWarm,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -799,7 +801,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   }
 
   // Individual Video Card in the Breakdown List
-  Widget _buildVideoBreakdownCard(VideoAnalyticsItem video, {required bool isSelected}) {
+  Widget _buildVideoBreakdownCard(VideoAnalyticsItem video, {required bool isSelected, required LanguageController langController}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -811,7 +813,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
         ),
         boxShadow: [
           BoxShadow(
-            color: isSelected ? AppTheme.accentOrange.withOpacity(0.12) : Colors.black.withOpacity(0.03),
+            color: isSelected ? AppTheme.accentOrange.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -858,7 +860,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           child: Container(
                             padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
+                              color: Colors.black.withValues(alpha: 0.65),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 12),
@@ -877,7 +879,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             children: [
                               Expanded(
                                 child: Text(
-                                  video.caption.isNotEmpty ? video.caption : 'Publicación de video #Pawtbook',
+                                  video.caption.isNotEmpty ? video.caption : 'Video #Pawtbook',
                                   style: GoogleFonts.fredoka(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -894,16 +896,16 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                     color: AppTheme.accentOrange,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Text(
-                                    'Seleccionado',
-                                    style: GoogleFonts.fredoka(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  child: const Text(
+                                    'Selected',
+                                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                             ],
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'Publicado el ${video.createdAt.day}/${video.createdAt.month}/${video.createdAt.year}',
+                            '${video.createdAt.day}/${video.createdAt.month}/${video.createdAt.year}',
                             style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
                           ),
                           const SizedBox(height: 8),
@@ -913,7 +915,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             spacing: 6,
                             runSpacing: 4,
                             children: [
-                              _buildMetricBadge('👁️ ${video.viewsCount} vistas', const Color(0xFF3B82F6)),
+                              _buildMetricBadge('👁️ ${video.viewsCount}', const Color(0xFF3B82F6)),
                               _buildMetricBadge('❤️ ${video.likesCount}', const Color(0xFFEF4444)),
                               _buildMetricBadge('💬 ${video.commentsCount}', const Color(0xFF10B981)),
                               _buildMetricBadge('⏱️ ${video.formattedTotalWatchTime}', AppTheme.accentOrange),
@@ -928,7 +930,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                 const Divider(height: 1, color: AppTheme.borderWarm),
                 const SizedBox(height: 8),
 
-                // Footer with Retention and Action Button
+                // Footer with Retention
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -937,7 +939,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                         const Icon(Icons.timer_outlined, size: 14, color: AppTheme.textMutedWarm),
                         const SizedBox(width: 4),
                         Text(
-                          'Retención: ',
+                          '${langController.t("retentionBadge")}: ',
                           style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
                         ),
                         Text(
@@ -949,14 +951,6 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                           ),
                         ),
                       ],
-                    ),
-                    Text(
-                      isSelected ? '👈 Ver métricas arriba' : 'Ver gráfica de este video →',
-                      style: GoogleFonts.fredoka(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? AppTheme.accentOrange : AppTheme.primaryTerracotta,
-                      ),
                     ),
                   ],
                 ),
@@ -972,7 +966,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -1002,7 +996,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
         border: Border.all(color: AppTheme.borderWarm),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.06),
+            color: color.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1017,7 +1011,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 18),
@@ -1025,7 +1019,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1090,18 +1084,18 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
     );
   }
 
-  String _getChartTitle() {
+  String _getChartTitle(LanguageController langController) {
     switch (_selectedChartTab) {
       case 0:
-        return '👁️ Vistas Totales';
+        return '👁️ ${langController.t("viewsTab")}';
       case 1:
-        return '❤️ Me Gustas Obtenidos';
+        return '❤️ ${langController.t("likesTab")}';
       case 2:
-        return '💬 Comentarios';
+        return '💬 ${langController.t("commentsTab")}';
       case 3:
-        return '⏱️ Minutos de Retención';
+        return '⏱️ ${langController.t("timeMinTab")}';
       default:
-        return 'Métricas';
+        return langController.t('metricsAndStatsTitle');
     }
   }
 
@@ -1123,11 +1117,11 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   String _getChartPeriodTotal(List<DailyMetricPoint> history) {
     switch (_selectedChartTab) {
       case 0:
-        return '${history.fold<int>(0, (s, p) => s + p.views)} vistas';
+        return '${history.fold<int>(0, (s, p) => s + p.views)}';
       case 1:
-        return '${history.fold<int>(0, (s, p) => s + p.likes)} likes';
+        return '${history.fold<int>(0, (s, p) => s + p.likes)}';
       case 2:
-        return '${history.fold<int>(0, (s, p) => s + p.comments)} comentarios';
+        return '${history.fold<int>(0, (s, p) => s + p.comments)}';
       case 3:
         final mins = history.fold<double>(0.0, (s, p) => s + p.watchMinutes);
         return '${mins.toStringAsFixed(1)} min';
@@ -1186,14 +1180,14 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        color.withOpacity(0.4),
+                        color.withValues(alpha: 0.4),
                         color,
                       ],
                     ),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.2),
+                        color: color.withValues(alpha: 0.2),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),

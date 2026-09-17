@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../controllers/pet_controller.dart';
 import '../../theme/app_theme.dart';
 
@@ -28,11 +30,18 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final petController = Provider.of<PetController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final userScore = authController.currentProfile?.pawtScore ?? 0;
 
     return Scaffold(
+      backgroundColor: AppTheme.bgWarmCream,
       appBar: AppBar(
-        title: const Text('Tienda de Recompensas Pawtbook'),
+        backgroundColor: AppTheme.bgWarmCream,
+        elevation: 0,
+        title: Text(
+          langController.t('rewardsStoreTitle'),
+          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -45,12 +54,12 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.solanaPurple, Color(0xFF6B21A8)],
+                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
                 ),
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.solanaPurple.withValues(alpha: 0.3),
+                    color: AppTheme.primaryTerracotta.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -58,15 +67,15 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.stars, size: 40, color: AppTheme.solanaGreen),
+                  const Icon(Icons.stars, size: 40, color: Colors.white),
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Tu PawtScore Acumulado', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      Text(langController.t('accumulatedScoreLabel'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
                       Text(
-                        ' 🐾 PawtScore',
-                        style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                        '$userScore 🐾 PawtScore',
+                        style: GoogleFonts.fredoka(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -75,9 +84,9 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
             ),
             const SizedBox(height: 24),
 
-            const Text(
-              'Recompensas Físicas Disponibles',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            Text(
+              langController.t('physicalRewardsAvailable'),
+              style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
             ),
             const SizedBox(height: 12),
 
@@ -92,6 +101,8 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 14),
+                  color: AppTheme.surfaceWarm,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
@@ -106,8 +117,8 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                             errorBuilder: (_, __, ___) => Container(
                               width: 70,
                               height: 70,
-                              color: AppTheme.surfaceDark,
-                              child: const Icon(Icons.card_giftcard, color: AppTheme.solanaPurple),
+                              color: AppTheme.bgWarmCream,
+                              child: const Icon(Icons.card_giftcard, color: AppTheme.primaryTerracotta),
                             ),
                           ),
                         ),
@@ -116,13 +127,13 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                              Text(item.title, style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 14)),
                               const SizedBox(height: 4),
-                              Text(item.description, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                              Text(item.description, style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
                               const SizedBox(height: 6),
                               Text(
-                                ' PawtScore',
-                                style: const TextStyle(color: AppTheme.solanaGreen, fontWeight: FontWeight.bold, fontSize: 13),
+                                '${item.pointsCost} PawtScore',
+                                style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ],
                           ),
@@ -130,7 +141,9 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                         const SizedBox(width: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: canAfford ? AppTheme.solanaPurple : AppTheme.surfaceDark,
+                            backgroundColor: canAfford ? AppTheme.primaryTerracotta : AppTheme.borderWarm,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
                           onPressed: !canAfford
@@ -147,14 +160,14 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                                     if (mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text('¡Canjeaste ! Tu pedido fue registrado.'),
-                                          backgroundColor: AppTheme.solanaGreen,
+                                          content: Text('${langController.t("redeemSuccessMsg")} (${item.title})'),
+                                          backgroundColor: AppTheme.emeraldGreen,
                                         ),
                                       );
                                     }
                                   }
                                 },
-                          child: const Text('Canjear', style: TextStyle(fontSize: 12)),
+                          child: Text(langController.t('redeem'), style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -165,14 +178,17 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
             const SizedBox(height: 24),
 
             // Order History Section
-            const Text(
-              'Historial de Pedidos (orders)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            Text(
+              langController.t('claimedRewardsTitle'),
+              style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
             ),
             const SizedBox(height: 12),
 
             if (petController.userOrders.isEmpty)
-              const Text('Aún no has realizado canjes de recompensas.', style: TextStyle(color: AppTheme.textMuted))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text('🐾', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm)),
+              )
             else
               ListView.builder(
                 shrinkWrap: true,
@@ -184,9 +200,9 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceDark,
+                      color: AppTheme.surfaceWarm,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.borderDark),
+                      border: Border.all(color: AppTheme.borderWarm),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -194,19 +210,19 @@ class _RewardsStoreScreenState extends State<RewardsStoreScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(order.rewardName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            Text('Costo:  pts', style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                            Text(order.rewardName, style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
+                            Text('${order.pointsCost} ${langController.t("points")}', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
                           ],
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.solanaGreen.withValues(alpha: 0.15),
+                            color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             order.status.toUpperCase(),
-                            style: const TextStyle(color: AppTheme.solanaGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

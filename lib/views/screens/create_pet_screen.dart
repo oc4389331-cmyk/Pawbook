@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/r2_storage_service.dart';
 import '../../services/render_backend_service.dart';
@@ -426,6 +427,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
+    final langController = Provider.of<LanguageController>(context);
     final availableBreeds = CreatePetScreen.speciesBreedsMap[_selectedSpecies] ?? ['Especie / Raza Única'];
 
     return Scaffold(
@@ -434,7 +436,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
         backgroundColor: AppTheme.bgWarmCream,
         elevation: 0,
         title: Text(
-          'Registrar Mascota 🐾',
+          langController.t('createPetTitle'),
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
       ),
@@ -481,7 +483,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Foto de tu Mascota',
+                      langController.t('photoLabel'),
                       style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
@@ -498,7 +500,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.cloud_upload_rounded, size: 20),
                       label: Text(
-                        _isUploadingToR2 ? 'Subiendo a Cloudflare R2...' : 'Subir Foto (Galería / Cámara) ☁️',
+                        _isUploadingToR2 ? 'Subiendo a Cloudflare R2...' : langController.t('uploadToR2Btn'),
                         style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                       onPressed: _isUploadingToR2 ? null : _showCustomPhotoOptionsModal,
@@ -507,7 +509,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
 
                     // Presets Carousel
                     Text(
-                      'O selecciona un avatar rápido:',
+                      langController.t('presetAvatars'),
                       style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                     ),
                     const SizedBox(height: 8),
@@ -547,21 +549,21 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
 
               // Pet Name Input
               Text(
-                'Nombre de la Mascota:',
+                langController.t('petNameLabel'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _nameController,
                 style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                decoration: _inputDecoration('Ej. Firulais, Michi, Rocky', Icons.pets_rounded),
+                decoration: _inputDecoration(langController.t('petNameHint'), Icons.pets_rounded),
                 validator: (v) => v == null || v.trim().isEmpty ? 'Por favor ingresa un nombre' : null,
               ),
               const SizedBox(height: 18),
 
               // Species Dropdown Selector
               Text(
-                'Tipo de Animal Doméstico:',
+                langController.t('speciesLabel'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
@@ -612,7 +614,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
 
               // Breed Dropdown Selector (Filtered by Species)
               Text(
-                'Raza del Animal:',
+                langController.t('breedLabel'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
@@ -649,7 +651,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
 
               // Bio / Description
               Text(
-                'Biografía / Descripción:',
+                langController.t('bioLabel'),
                 style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
@@ -657,7 +659,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 controller: _bioController,
                 maxLines: 2,
                 style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark),
-                decoration: _inputDecoration('¡Cuenta algo divertido de tu mascota!', Icons.description_rounded),
+                decoration: _inputDecoration(langController.t('bioHint'), Icons.description_rounded),
               ),
 
               const SizedBox(height: 20),
@@ -679,7 +681,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Billetera Receptora de Beneficios (\$SKR / SOL)',
+                            langController.t('benefitWalletTitle'),
                             style: GoogleFonts.fredoka(
                               color: AppTheme.textPrimaryDark,
                               fontWeight: FontWeight.bold,
@@ -691,7 +693,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Las donaciones, patrocinios y propinas de tu mascota se depositarán directamente en esta billetera de Solana:',
+                      langController.t('benefitWalletSubtitle'),
                       style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                     ),
                     const SizedBox(height: 10),
@@ -724,7 +726,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Vinculada',
+                              langController.t('linkedBadge'),
                               style: GoogleFonts.fredoka(
                                 color: AppTheme.emeraldGreen,
                                 fontSize: 10,
@@ -749,7 +751,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.check_circle_rounded, color: Colors.white),
                   label: Text(
-                    authController.isLoading ? 'Registrando Mascota...' : 'Crear Perfil de Mascota ✨',
+                    authController.isLoading ? langController.t('registeringPetProgress') : langController.t('createPetBtn'),
                     style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -792,7 +794,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                                 SnackBar(
                                   backgroundColor: AppTheme.emeraldGreen,
                                   content: Text(
-                                    '🎉 ¡${newPet.name} registrado exitosamente! La billetera receptora de beneficios ha sido configurada.',
+                                    langController.t('petRegisteredSuccess'),
                                     style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
                                   ),
                                 ),

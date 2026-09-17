@@ -72,17 +72,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  bool _validateTermsForSignUp() {
+  bool _validateTermsForSignUp(LanguageController langController) {
     if (_isSignUp && !_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
           content: Text(
-            'Por favor acepta los Términos y Condiciones de uso para crear tu cuenta.',
+            langController.t('termsRequiredNotice'),
             style: GoogleFonts.fredoka(color: Colors.white),
           ),
           action: SnackBarAction(
-            label: 'Ver Términos',
+            label: langController.t('viewTerms'),
             textColor: Colors.white,
             onPressed: () => TermsAndConditionsModal.show(context, showAuthButtons: false),
           ),
@@ -93,8 +93,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return true;
   }
 
-  Future<void> _handleGoogleSignIn(AuthController authController) async {
-    if (!_validateTermsForSignUp()) return;
+  Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
+    if (!_validateTermsForSignUp(langController)) return;
     await authController.loginWithGoogle(
       isSignUp: _isSignUp,
       fullName: _isSignUp && _nameController.text.trim().isNotEmpty
@@ -104,10 +104,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleWalletSignIn(
-    AuthController authController, {
+    AuthController authController,
+    LanguageController langController, {
     required String walletType,
   }) async {
-    if (!_validateTermsForSignUp()) return;
+    if (!_validateTermsForSignUp(langController)) return;
     final success = await authController.loginWithSolanaWallet(
       walletType: walletType,
       isSignUp: _isSignUp,
@@ -120,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  void _showOtherWalletsModal(AuthController authController) {
+  void _showOtherWalletsModal(AuthController authController, LanguageController langController) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -149,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryTerracotta, size: 24),
                   const SizedBox(width: 8),
                   Text(
-                    'Seleccionar Billetera de Solana',
+                    langController.t('selectSolanaWalletModalTitle'),
                     style: GoogleFonts.fredoka(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -160,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 8),
               Text(
-                'Conecta tu billetera para recibir donaciones y recompensas',
+                langController.t('selectSolanaWalletModalSubtitle'),
                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -168,8 +169,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
               // Option 1: Solana Mobile / Seeker Seed Vault
               _buildModalWalletOption(
-                title: 'Solana Seeker / Mobile Vault',
-                subtitle: 'Hardware Seed Vault para Solana Mobile',
+                title: langController.t('seekerVaultTitle'),
+                subtitle: langController.t('seekerVaultSubtitle'),
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -180,15 +181,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, walletType: 'Seeker');
+                  _handleWalletSignIn(authController, langController, walletType: 'Seeker');
                 },
               ),
               const SizedBox(height: 10),
 
               // Option 2: Generic Solana In-App / Embedded Web3 Wallet
               _buildModalWalletOption(
-                title: 'Billetera Web3 Integrada (Solana)',
-                subtitle: 'Crear o conectar billetera instantánea de Solana',
+                title: langController.t('embeddedWeb3WalletTitle'),
+                subtitle: langController.t('embeddedWeb3WalletSubtitle'),
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -199,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, walletType: 'Dynamic');
+                  _handleWalletSignIn(authController, langController, walletType: 'Dynamic');
                 },
               ),
               const SizedBox(height: 16),
@@ -314,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildGoogleButton(AuthController authController) {
+  Widget _buildGoogleButton(AuthController authController, LanguageController langController) {
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -329,7 +330,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
           ),
         ),
-        onPressed: authController.isLoading ? null : () => _handleGoogleSignIn(authController),
+        onPressed: authController.isLoading ? null : () => _handleGoogleSignIn(authController, langController),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -350,7 +351,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             const SizedBox(width: 12),
             Text(
-              _isSignUp ? '✨ Continuar con Google' : '🔑 Iniciar Sesión con Google',
+              _isSignUp ? langController.t('signUpWithGoogle') : langController.t('loginWithGoogle'),
               style: GoogleFonts.fredoka(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -363,7 +364,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildPhantomButton(AuthController authController) {
+  Widget _buildPhantomButton(AuthController authController, LanguageController langController) {
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -379,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         onPressed: authController.isLoading
             ? null
-            : () => _handleWalletSignIn(authController, walletType: 'Phantom'),
+            : () => _handleWalletSignIn(authController, langController, walletType: 'Phantom'),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -396,7 +397,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             const SizedBox(width: 12),
             Text(
-              _isSignUp ? '✨ Crear Cuenta con Phantom' : '👻 Iniciar Sesión con Phantom',
+              _isSignUp ? langController.t('signUpWithPhantom') : langController.t('loginWithPhantom'),
               style: GoogleFonts.fredoka(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -409,7 +410,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildSolflareButton(AuthController authController) {
+  Widget _buildSolflareButton(AuthController authController, LanguageController langController) {
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -425,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         onPressed: authController.isLoading
             ? null
-            : () => _handleWalletSignIn(authController, walletType: 'Solflare'),
+            : () => _handleWalletSignIn(authController, langController, walletType: 'Solflare'),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -442,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             const SizedBox(width: 12),
             Text(
-              _isSignUp ? '✨ Crear Cuenta con Solflare' : '🔥 Iniciar Sesión con Solflare',
+              _isSignUp ? langController.t('signUpWithSolflare') : langController.t('loginWithSolflare'),
               style: GoogleFonts.fredoka(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -455,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildOtherWalletsButton(AuthController authController) {
+  Widget _buildOtherWalletsButton(AuthController authController, LanguageController langController) {
     return SizedBox(
       width: double.infinity,
       height: 48,
@@ -468,14 +469,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             borderRadius: BorderRadius.circular(22),
           ),
         ),
-        onPressed: authController.isLoading ? null : () => _showOtherWalletsModal(authController),
+        onPressed: authController.isLoading ? null : () => _showOtherWalletsModal(authController, langController),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppTheme.primaryTerracotta),
             const SizedBox(width: 8),
             Text(
-              '⚡ Otras Billeteras de Solana',
+              langController.t('otherSolanaWallets'),
               style: GoogleFonts.fredoka(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -644,7 +645,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '🔑 Iniciar Sesión',
+                                          langController.t('loginTab'),
                                           style: GoogleFonts.fredoka(
                                             color: !_isSignUp ? Colors.white : AppTheme.textMutedWarm,
                                             fontWeight: FontWeight.bold,
@@ -677,7 +678,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '✨ Crear Cuenta',
+                                          langController.t('signUpTab'),
                                           style: GoogleFonts.fredoka(
                                             color: _isSignUp ? Colors.white : AppTheme.textMutedWarm,
                                             fontWeight: FontWeight.bold,
@@ -694,7 +695,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                           // Título y Subtítulo según el modo
                           Text(
-                            _isSignUp ? '✨ Crea tu cuenta en Pawbook' : '🔐 Inicia Sesión en Pawbook',
+                            _isSignUp ? langController.t('signUpTitle') : langController.t('loginTitle'),
                             style: GoogleFonts.fredoka(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -704,8 +705,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           const SizedBox(height: 6),
                           Text(
                             _isSignUp
-                                ? 'Usa tu cuenta de Google o conecta tu billetera de Solana para registrarte.'
-                                : 'Accede fácilmente con tu cuenta de Google o tu billetera de Solana.',
+                                ? langController.t('signUpSubtitle')
+                                : langController.t('loginSubtitle'),
                             style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
                             textAlign: TextAlign.center,
                           ),
@@ -718,7 +719,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               keyboardType: TextInputType.name,
                               textCapitalization: TextCapitalization.words,
                               decoration: InputDecoration(
-                                hintText: 'Tu nombre o apodo de tutor (opcional)',
+                                hintText: langController.t('tutorNameHint'),
                                 hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                                 prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.accentOrange),
                                 filled: true,
@@ -735,7 +736,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ],
 
                           // --- BOTÓN GOOGLE ---
-                          _buildGoogleButton(authController),
+                          _buildGoogleButton(authController, langController),
                           const SizedBox(height: 20),
 
                           // Divisor Solana Web3
@@ -745,7 +746,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'o accede con tu Wallet de Solana',
+                                  langController.t('orAccessWithSolanaWallet'),
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     color: AppTheme.textMutedWarm,
@@ -759,15 +760,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           const SizedBox(height: 20),
 
                           // --- BOTÓN PHANTOM WALLET ---
-                          _buildPhantomButton(authController),
+                          _buildPhantomButton(authController, langController),
                           const SizedBox(height: 12),
 
                           // --- BOTÓN SOLFLARE WALLET ---
-                          _buildSolflareButton(authController),
+                          _buildSolflareButton(authController, langController),
                           const SizedBox(height: 12),
 
                           // --- BOTÓN OTRAS WALLETS DE SOLANA ---
-                          _buildOtherWalletsButton(authController),
+                          _buildOtherWalletsButton(authController, langController),
                           const SizedBox(height: 24),
 
                           // Tarjeta informativa sobre la billetera de beneficios
@@ -784,7 +785,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'Tu billetera de Solana quedará vinculada para recibir patrocinios, propinas (\$SKR / SOL) y beneficios para tus mascotas.',
+                                    langController.t('walletBenefitsNotice'),
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
                                       color: AppTheme.textPrimaryDark,
@@ -862,7 +863,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      '🐾 Conectando...',
+                      langController.t('connectingWalletProgress'),
                       style: GoogleFonts.fredoka(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -871,7 +872,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Verificando tu cuenta y wallet en Solana...',
+                      langController.t('verifyingWalletProgress'),
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 13,

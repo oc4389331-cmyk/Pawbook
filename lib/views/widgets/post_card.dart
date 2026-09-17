@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/post_model.dart';
 import '../../theme/app_theme.dart';
 import 'pet_badge.dart';
@@ -36,6 +38,7 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
+    final langController = Provider.of<LanguageController>(context);
     final formattedTime = DateFormat.yMMMd().add_jm().format(widget.post.createdAt);
 
     return Card(
@@ -43,27 +46,24 @@ class _PostCardState extends State<PostCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Pet Avatar & Solana NFT Mint Badge
+          // Header: Pet Info & Report Option
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppTheme.solanaPurple,
-                  backgroundImage: NetworkImage(
-                    widget.post.petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
-                  ),
+                  backgroundColor: AppTheme.solanaPurple.withValues(alpha: 0.2),
+                  child: const Icon(Icons.pets, color: AppTheme.solanaPurple),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       PetBadge(
-                        petName: widget.post.petName ?? 'Mascota Creadora',
+                        petName: widget.post.petName ?? 'Mascota',
                         nftMintAddress: widget.post.nftMintAddress,
-                        avatarUrl: null,
+                        avatarUrl: widget.post.petAvatarUrl,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -75,13 +75,13 @@ class _PostCardState extends State<PostCard> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.textMuted),
-                  tooltip: 'Denunciar publicación',
+                  tooltip: langController.t('reportPostTooltip'),
                   onPressed: () {
                     if (widget.onReport != null) {
                       widget.onReport!(widget.post.id);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Publicación denunciada. La comunidad revisará el contenido.'),
+                        SnackBar(
+                          content: Text(langController.t('postReportedNotice')),
                           backgroundColor: Colors.orange,
                         ),
                       );
@@ -169,7 +169,7 @@ class _PostCardState extends State<PostCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       ),
                       icon: const Icon(Icons.volunteer_activism, size: 16, color: AppTheme.solanaGreen),
-                      label: const Text('Patrocinar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      label: Text(langController.t('sponsorAction'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                       onPressed: () {
                         showDialog(
                           context: context,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 
 class SponsorDialog extends StatefulWidget {
@@ -21,6 +23,8 @@ class _SponsorDialogState extends State<SponsorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final langController = Provider.of<LanguageController>(context);
+
     return AlertDialog(
       backgroundColor: AppTheme.cardDark,
       shape: RoundedRectangleBorder(
@@ -33,7 +37,7 @@ class _SponsorDialogState extends State<SponsorDialog> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Patrocinar a ${widget.petName}',
+              langController.t('sponsorPetTitle').replaceAll('{name}', widget.petName),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
@@ -43,9 +47,9 @@ class _SponsorDialogState extends State<SponsorDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Elige la cantidad de PawtScore / Tokens \$SCP para apoyar el contenido de esta mascota:',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+          Text(
+            langController.t('choosePawtScoreAmount'),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 16),
           Row(
@@ -74,17 +78,21 @@ class _SponsorDialogState extends State<SponsorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
+          child: Text(langController.t('cancel'), style: const TextStyle(color: AppTheme.textMuted)),
         ),
         ElevatedButton.icon(
           icon: const Icon(Icons.bolt, color: AppTheme.solanaGreen),
-          label: Text('Enviar $_selectedAmount PawtScore'),
+          label: Text(langController.t('sendPawtScore').replaceAll('{amount}', _selectedAmount.toString())),
           onPressed: () {
             widget.onSponsor(_selectedAmount);
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('¡Has patrocinado a ${widget.petName} con $_selectedAmount PawtScore! 💖'),
+                content: Text(
+                  langController.t('sponsoredSuccess')
+                      .replaceAll('{name}', widget.petName)
+                      .replaceAll('{amount}', _selectedAmount.toString()),
+                ),
                 backgroundColor: AppTheme.solanaPurple,
               ),
             );

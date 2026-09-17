@@ -26,6 +26,7 @@ class SponsorshipModal extends StatefulWidget {
 
   static void show(BuildContext context, {required PetModel pet, required String userId}) {
     final auth = Provider.of<AuthController>(context, listen: false);
+    final langController = Provider.of<LanguageController>(context, listen: false);
 
     if (!auth.isAuthenticated) {
       TermsAndConditionsModal.show(context);
@@ -44,7 +45,7 @@ class SponsorshipModal extends StatefulWidget {
           backgroundColor: AppTheme.primaryTerracotta,
           duration: const Duration(seconds: 3),
           content: Text(
-            '🐾 No puedes auto-patrocinar a tu propia mascota (${pet.name}). Los patrocinios son otorgados por otros tutores y miembros de la comunidad.',
+            langController.t('sponsorSelfWarning').replaceAll('{name}', pet.name),
             style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -118,7 +119,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'No se detectó la extensión de $walletName en tu navegador o la conexión fue cancelada.\n\n¿Deseas pagar directamente usando tu Wallet Dynamic de Pawtbook (sin extensiones)?',
+              langController.t('walletNotInstalledDesc').replaceAll('{wallet}', walletName),
               style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimaryDark, height: 1.4),
             ),
           ],
@@ -131,7 +132,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 js.context.callMethod('open', [downloadUrl, '_blank']);
               } catch (_) {}
             },
-            child: Text('Instalar $walletName', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+            child: Text(langController.t('installWalletBtn').replaceAll('{wallet}', walletName), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -140,7 +141,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             icon: const Icon(Icons.bolt_rounded, size: 18),
-            label: Text('🐾 Pagar con Wallet Dynamic', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            label: Text(langController.t('payWithDynamicWallet'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
             onPressed: () {
               Navigator.pop(ctx);
               setState(() => _selectedWallet = 'Dynamic');
@@ -182,7 +183,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '⚠️ Saldo insuficiente en tu cuenta Dynamic ($userSkrBalance \$SKR). Necesitas $totalSkr \$SKR. Selecciona pagar en SOL o recarga \$SKR.',
+                    langController.t('insufficientDynamicBalance')
+                        .replaceAll('{balance}', userSkrBalance.toString())
+                        .replaceAll('{total}', totalSkr.toString()),
                     style: GoogleFonts.fredoka(color: Colors.white),
                   ),
                 ),
@@ -204,8 +207,10 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
     setState(() {
       _isProcessing = true;
       _processingStep = isDynamic
-          ? '⚡ Procesando patrocinio de $totalSkr \$SKR con tu Wallet Dynamic...'
-          : '✍️ Abre tu wallet $_selectedWallet y confirma la transacción de ${isSkr ? "$totalSkr \$SKR" : "${totalSol.toStringAsFixed(4)} SOL"}...';
+          ? langController.t('processingDynamicSponsorship').replaceAll('{total}', totalSkr.toString())
+          : langController.t('confirmInWallet')
+              .replaceAll('{wallet}', _selectedWallet)
+              .replaceAll('{amount}', isSkr ? "$totalSkr \$SKR" : "${totalSol.toStringAsFixed(4)} SOL");
     });
 
     try {
@@ -232,7 +237,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 backgroundColor: AppTheme.primaryTerracotta,
                 duration: const Duration(seconds: 4),
                 content: Text(
-                  'ℹ️ Transacción cancelada en $_selectedWallet.',
+                  langController.t('txCancelledInWallet').replaceAll('{wallet}', _selectedWallet),
                   style: GoogleFonts.fredoka(color: Colors.white),
                 ),
               ),
@@ -242,7 +247,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
         }
 
         final errStr = txResult.errorMessage ?? '';
-        final isMissing = txResult.isNotInstalled || errStr.toLowerCase().contains('no está instalada');
+        final isMissing = txResult.isNotInstalled || errStr.toLowerCase().contains('no está instalada') || errStr.toLowerCase().contains('not installed');
         if (isMissing && !isDynamic) {
           if (mounted) {
             setState(() => _isProcessing = false);
@@ -251,12 +256,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           return;
         }
 
-        throw Exception(errStr.isNotEmpty ? errStr : 'Error al procesar el pago con $_selectedWallet');
+        throw Exception(errStr.isNotEmpty ? errStr : 'Error: $_selectedWallet');
       }
 
       // Step 2: Transaction broadcasted successfully on Solana
       if (mounted) {
-        setState(() => _processingStep = '🚀 Confirmando patrocinio en la blockchain de Solana...');
+        setState(() => _processingStep = langController.t('confirmingOnSolana'));
       }
 
       final txHash = txResult.signature ?? 'sol_${_selectedWallet.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
@@ -318,11 +323,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '⚡ ¡Patrocinio Confirmado en $_selectedWallet!',
+                        langController.t('sponsorshipConfirmed').replaceAll('{wallet}', _selectedWallet),
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                       ),
                       Text(
-                        '• Creador (@${widget.pet.name}): $netSkr \$SKR (~${netSol.toStringAsFixed(5)} SOL)\n• Comisión (10%): $feeSkr \$SKR (~${feeSol.toStringAsFixed(5)} SOL)\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
+                        '• ${langController.t("creatorLabel")} (@${widget.pet.name}): $netSkr \$SKR (~${netSol.toStringAsFixed(5)} SOL)\n• ${langController.t("platformFeeLabel")} (10%): $feeSkr \$SKR (~${feeSol.toStringAsFixed(5)} SOL)\nTx: ${txHash.length > 20 ? "${txHash.substring(0, 16)}..." : txHash}',
                         style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
                       ),
                     ],
@@ -412,7 +417,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Patrocinar a @${widget.pet.name} 🐾',
+                          langController.t('sponsorPetModalTitle').replaceAll('{name}', widget.pet.name),
                           style: GoogleFonts.fredoka(
                             color: AppTheme.primaryTerracotta,
                             fontSize: 19,
@@ -424,7 +429,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                             const Icon(Icons.verified_rounded, size: 12, color: AppTheme.emeraldGreen),
                             const SizedBox(width: 4),
                             Text(
-                              'Creador Verificado en Solana 🐾',
+                              langController.t('verifiedCreatorSolana'),
                               style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -460,12 +465,12 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '1. Método de Pago:',
+                    langController.t('paymentMethodStep'),
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     _selectedWallet == 'Dynamic'
-                        ? 'Saldo: $userSkrBalance \$SKR'
+                        ? '${langController.t("availableBalance")} $userSkrBalance \$SKR'
                         : 'SPL Token / SOL',
                     style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
@@ -498,7 +503,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Tokens \$SKR',
+                                  langController.t('skrTokensSpl'),
                                   style: GoogleFonts.fredoka(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -506,7 +511,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                                   ),
                                 ),
                                 Text(
-                                  'SPL Token Nativo',
+                                  langController.t('nativeSplToken'),
                                   style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm),
                                 ),
                               ],
@@ -540,7 +545,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Solana SOL',
+                                  langController.t('solanaSol'),
                                   style: GoogleFonts.fredoka(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -548,7 +553,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                                   ),
                                 ),
                                 Text(
-                                  'Conversión Oráculo',
+                                  langController.t('oracleConversion'),
                                   style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMutedWarm),
                                 ),
                               ],
@@ -567,11 +572,11 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '2. Selecciona el Paquete de \$SKR:',
+                    langController.t('selectSkrPackage'),
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'Oráculo DEX ⚡',
+                    langController.t('dexOracle'),
                     style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -579,13 +584,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildAmountOption(100, oracleController.convertSkrToUsd(100), 'Snack 🦴'),
+                  _buildAmountOption(100, oracleController.convertSkrToUsd(100), langController.t('packageSnack')),
                   const SizedBox(width: 8),
-                  _buildAmountOption(250, oracleController.convertSkrToUsd(250), 'Favorito ⭐'),
+                  _buildAmountOption(250, oracleController.convertSkrToUsd(250), langController.t('packageFavorite')),
                   const SizedBox(width: 8),
-                  _buildAmountOption(500, oracleController.convertSkrToUsd(500), 'Super 👑'),
+                  _buildAmountOption(500, oracleController.convertSkrToUsd(500), langController.t('packageSuper')),
                   const SizedBox(width: 8),
-                  _buildAmountOption(1000, oracleController.convertSkrToUsd(1000), 'VIP 💎'),
+                  _buildAmountOption(1000, oracleController.convertSkrToUsd(1000), langController.t('packageVip')),
                 ],
               ),
               const SizedBox(height: 14),
@@ -595,7 +600,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '3. Selecciona tu Wallet de Solana:',
+                    langController.t('selectSolanaWalletStep'),
                     style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   Container(
@@ -606,7 +611,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      '⚡ Red Solana',
+                      '⚡ ${langController.t("solanaNetwork")}',
                       style: GoogleFonts.outfit(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -625,13 +630,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                         subtitle: 'Pawtbook Wallet',
                         iconData: Icons.account_balance_wallet_rounded,
                         color: AppTheme.emeraldGreen,
-                        badge: 'Directo 🐾',
+                        badge: langController.t('directBadge'),
                       ),
                       const SizedBox(width: 8),
                       _buildWalletOption(
                         id: 'Phantom',
                         title: 'Phantom',
-                        subtitle: 'Extensión / Web3',
+                        subtitle: langController.t('extensionWeb3'),
                         iconData: Icons.shield_rounded,
                         color: const Color(0xFFAB9FF2),
                       ),
@@ -643,7 +648,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                       _buildWalletOption(
                         id: 'Solflare',
                         title: 'Solflare',
-                        subtitle: 'Web / Extensión',
+                        subtitle: langController.t('webExtension'),
                         iconData: Icons.wb_sunny_rounded,
                         color: const Color(0xFFFC8C03),
                       ),
@@ -679,7 +684,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           children: [
                             const Icon(Icons.swap_horizontal_circle_rounded, color: AppTheme.emeraldGreen, size: 18),
                             const SizedBox(width: 6),
-                            Text('Patrocinio Total:', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(langController.t('totalSponsorship'), style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         Container(
@@ -709,7 +714,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           children: [
                             const Icon(Icons.pets_rounded, size: 14, color: AppTheme.primaryTerracotta),
                             const SizedBox(width: 4),
-                            Text('Recibe Creador (90%):', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text(langController.t('creatorReceives'), style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         Text(
@@ -728,7 +733,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                           children: [
                             const Icon(Icons.account_balance_rounded, size: 14, color: AppTheme.accentOrange),
                             const SizedBox(width: 4),
-                            Text('Comisión Plataforma (10%):', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11)),
+                            Text(langController.t('platformFeePercent'), style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11)),
                           ],
                         ),
                         Text(
@@ -804,9 +809,9 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _selectedCurrency == 'SKR'
-                                  ? 'Pagar $_selectedSkrAmount \$SKR con $_selectedWallet'
-                                  : 'Pagar $currentSolPrice SOL con $_selectedWallet',
+                              langController.t('payWithWallet')
+                                  .replaceAll('{amount}', _selectedCurrency == 'SKR' ? '$_selectedSkrAmount \$SKR' : '$currentSolPrice SOL')
+                                  .replaceAll('{wallet}', _selectedWallet),
                               style: GoogleFonts.fredoka(
                                 color: Colors.white,
                                 fontSize: 14,
