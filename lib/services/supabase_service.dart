@@ -1106,6 +1106,19 @@ class SupabaseService {
     return _mockPets.values.where((p) => followedPetIds.contains(p.id) || _mockFollows.contains('${humanId}_${p.id}')).toList();
   }
 
+  Future<int> getFollowersCountForPet(String petId) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('follows')
+            .select('id')
+            .eq('following_pet_id', petId);
+        if (res is List) return res.length;
+      } catch (_) {}
+    }
+    return _mockFollows.where((f) => f.endsWith('_$petId')).length;
+  }
+
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {
     List<PostModel> posts = [];
 

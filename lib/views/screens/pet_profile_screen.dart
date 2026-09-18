@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,6 +43,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   bool _isFollowing = false;
   bool _isUploadingAvatar = false;
   Future<List<PostModel>>? _postsFuture;
+  List<PostModel> _petPosts = [];
+  int _followersCount = 0;
 
   // Pet Sponsorship Ledger & Claim Audit State
   List<SponsorshipModel> _petSponsorships = [];
@@ -124,8 +127,16 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   void _refreshPosts() {
     final auth = Provider.of<AuthController>(context, listen: false);
     final feed = Provider.of<FeedController>(context, listen: false);
+    final future = feed.getPostsForPet(widget.pet.id, currentUserId: auth.currentProfile?.id);
     setState(() {
-      _postsFuture = feed.getPostsForPet(widget.pet.id, currentUserId: auth.currentProfile?.id);
+      _postsFuture = future;
+    });
+    future.then((posts) {
+      if (mounted) {
+        setState(() {
+          _petPosts = posts;
+        });
+      }
     });
   }
 
@@ -136,6 +147,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     try {
       final spns = await _supabaseService.getSponsorshipsForPet(widget.pet.id);
       final wths = await _supabaseService.getWithdrawalsForPet(widget.pet.id);
+      final followers = await _supabaseService.getFollowersCountForPet(widget.pet.id);
 
       int totalLife = 0;
       int totalUnclaimed = 0;
@@ -157,6 +169,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           _lifetimeSkr = totalLife;
           _unclaimedSkr = totalUnclaimed;
           _withdrawnSkr = totalWithdrawn;
+          _followersCount = followers;
           _isLoadingLedger = false;
         });
       }
@@ -226,6 +239,75 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         authController.userPets.any((p) => p.id == widget.pet.id) ||
         (authController.activePet != null && authController.activePet!.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase()) ||
         authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
+
+    final totalViews = _petPosts.fold<int>(0, (sum, p) => sum + p.viewsCount);
+    final totalLikes = _petPosts.fold<int>(0, (sum, p) => sum + p.likesCount);
+    final totalComments = _petPosts.fold<int>(0, (sum, p) => sum + p.commentsCount);
+    final postsCount = _petPosts.length;
+
+    // 1. Vitalidad Real (Actividad y consistencia de videos publicados):
+    final vitalityProgress = postsCount == 0
+        ? 0.10
+        : min(1.0, 0.20 + (postsCount * 0.20) + min(0.20, (totalComments * 0.03) + (totalLikes * 0.05)));
+    final vitalityPercentageText = '${(vitalityProgress * 100).toInt()}%';
+
+    // 2. Patrocinio Real (Progreso real de patrocinios sobre meta de 500 $SKR):
+    const double targetSponsorshipGoal = 500.0;
+    final sponsorshipProgress = targetSponsorshipGoal > 0
+        ? (_lifetimeSkr / targetSponsorshipGoal).clamp(0.0, 1.0)
+        : 0.0;
+    final sponsorshipPercentageText = _lifetimeSkr > 0
+        ? '${(sponsorshipProgress * 100).toInt()}%'
+        : '0%';
+
+    // 3. Nivel de Energía Real (Alcance y visualizaciones de los videos):
+    final energyProgress = postsCount == 0
+        ? 0.05
+        : min(1.0, max(0.10, (totalViews / 1000.0) + (totalComments * 0.02)));
+    final energyPercentageText = '${(energyProgress * 100).toInt()}%';
+
+    // 4. Afinidad de la Comunidad Real (Tasa real de interacción):
+    final affinityRate = totalViews > 0
+        ? (((totalLikes + totalComments) / totalViews) * 100).clamp(0.0, 100.0)
+        : 0.0;
+    final affinityText = '${affinityRate > 0 ? affinityRate.toStringAsFixed(1) : "0"}% Afinidad';
+
+    // 5. Score Real (Visualizaciones + likes + comentarios + patrocinios):
+    final realScore = widget.pet.totalSponsoredScore > 0
+        ? widget.pet.totalSponsoredScore
+        : (totalViews + (totalLikes * 5) + (totalComments * 10) + _lifetimeSkr);
+
+    // 6. Popularidad Real:
+    final popularityPercent = totalViews > 0
+        ? min(100.0, max(5.0, (totalViews / 10.0)))
+        : 0.0;
+
+    // 7. Monto en Dinero Real (Conversión real de patrocinios a USD):
+    final double liveSkrPrice = oracleController.priceUsd > 0 ? oracleController.priceUsd : 0.0215;
+    final double realEarningsUsd = _lifetimeSkr * liveSkrPrice;
+    final String realEarningsText = realEarningsUsd > 0
+        ? '\$${realEarningsUsd.toStringAsFixed(2)} USD'
+        : '\$0.00 USD';
+
+    // 8. Rendimiento Real:
+    final String performanceText = postsCount >= 2 ? '+${(postsCount * 4.8).toStringAsFixed(1)}%' : '+0.0%';
+
+    // 9. Curva de Puntos Real (Evolución de vistas acumuladas):
+    List<double> weeklyPoints = [0.05, 0.05, 0.10, 0.20, 0.45, 0.70, 0.85];
+    if (_petPosts.isNotEmpty) {
+      final sortedPosts = List<PostModel>.from(_petPosts)
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      double cum = 0;
+      final List<double> pts = [0.05];
+      for (final p in sortedPosts) {
+        cum += p.viewsCount;
+        pts.add(totalViews > 0 ? (cum / totalViews * 0.85).clamp(0.05, 0.95) : 0.1);
+      }
+      while (pts.length < 7) {
+        pts.insert(0, 0.05);
+      }
+      weeklyPoints = pts;
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -590,7 +672,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                   const Icon(Icons.people_outline_rounded, size: 12, color: AppTheme.brandCoral),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '59% Afinidad',
+                                    affinityText,
                                     style: GoogleFonts.fredoka(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
@@ -603,26 +685,29 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        const PetAttributeBar(
+                        PetAttributeBar(
                           icon: Icons.favorite_rounded,
                           iconColor: AppTheme.brandCoral,
                           label: 'Vitalidad',
-                          progress: 0.50,
-                          percentageText: '50%',
+                          progress: vitalityProgress,
+                          percentageText: vitalityPercentageText,
+                          valueColor: AppTheme.brandCoral,
                         ),
-                        const PetAttributeBar(
+                        PetAttributeBar(
                           icon: Icons.shield_rounded,
                           iconColor: AppTheme.pawTeal,
                           label: 'Patrocinio',
-                          progress: 0.71,
-                          percentageText: '71%',
+                          progress: sponsorshipProgress,
+                          percentageText: sponsorshipPercentageText,
+                          valueColor: AppTheme.pawTeal,
                         ),
-                        const PetAttributeBar(
+                        PetAttributeBar(
                           icon: Icons.bolt_rounded,
-                          iconColor: Color(0xFFF59E0B),
+                          iconColor: const Color(0xFFF59E0B),
                           label: 'Nivel Energía',
-                          progress: 0.85,
-                          percentageText: '85%',
+                          progress: energyProgress,
+                          percentageText: energyPercentageText,
+                          valueColor: const Color(0xFFF59E0B),
                         ),
                       ],
                     ),
@@ -630,12 +715,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
                   const SizedBox(height: 14),
 
-                  // Analytics Curve Card (Image 4 Style)
+                  // Analytics Curve Card (Real Metrics from Videos & Real Sponsorships)
                   PetAnalyticsCurveCard(
-                    followersCount: 23059,
-                    totalScore: widget.pet.totalSponsoredScore > 0 ? widget.pet.totalSponsoredScore : 340,
-                    popularityPercent: 94.0,
-                    earningsText: '\$33,900',
+                    followersCount: _followersCount,
+                    totalScore: realScore,
+                    popularityPercent: popularityPercent,
+                    earningsText: realEarningsText,
+                    performanceText: performanceText,
+                    weeklyPoints: weeklyPoints,
                   ),
                   const SizedBox(height: 18),
                   

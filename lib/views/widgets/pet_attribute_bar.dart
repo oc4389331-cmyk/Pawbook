@@ -8,6 +8,7 @@ class PetAttributeBar extends StatelessWidget {
   final String label;
   final double progress; // 0.0 to 1.0
   final String percentageText;
+  final Color? valueColor;
 
   const PetAttributeBar({
     super.key,
@@ -16,6 +17,7 @@ class PetAttributeBar extends StatelessWidget {
     required this.label,
     required this.progress,
     required this.percentageText,
+    this.valueColor,
   });
 
   @override
@@ -46,8 +48,8 @@ class PetAttributeBar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: AppTheme.pawTealLight,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.pawTeal),
+                backgroundColor: (valueColor ?? iconColor).withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(valueColor ?? iconColor),
               ),
             ),
           ),
