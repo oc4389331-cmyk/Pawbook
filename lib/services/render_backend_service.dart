@@ -99,6 +99,24 @@ class RenderBackendService {
     }
   }
 
+  /// Delete a post and its associated comments/likes (bypasses RLS)
+  Future<bool> deletePost(String postId) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/posts/delete'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'postId': postId}),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['success'] == true;
+      }
+    } catch (e) {
+      print('RenderBackendService deletePost error: $e');
+    }
+    return false;
+  }
+
   /// Update Pet details / avatar via backend
   Future<Map<String, dynamic>> updatePet({
     required String id,

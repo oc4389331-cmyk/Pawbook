@@ -1617,7 +1617,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () async {
                           Navigator.pop(ctx);
                           await feedController.deletePetPost(post.id);
-                          if (mounted) setState(() {});
+                          if (mounted) {
+                            setState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppTheme.brandCoral,
+                                content: Text(
+                                  '🗑️ Publicación eliminada con éxito',
+                                  style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            );
+                          }
                         },
                       )
                     else

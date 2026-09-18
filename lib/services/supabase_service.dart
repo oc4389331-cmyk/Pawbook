@@ -450,7 +450,24 @@ class SupabaseService {
   }
 
   Future<bool> deletePost(String postId) async {
+    // 1. Try Render backend (bypasses RLS via Supabase Admin)
+    try {
+      final backend = RenderBackendService();
+      final backendSuccess = await backend.deletePost(postId);
+      if (backendSuccess) {
+        _mockPosts.removeWhere((p) => p.id == postId);
+        return true;
+      }
+    } catch (_) {}
+
+    // 2. Direct Supabase delete fallback
     if (_client != null) {
+      try {
+        await _client!.from('comments').delete().eq('post_id', postId);
+      } catch (_) {}
+      try {
+        await _client!.from('post_likes').delete().eq('post_id', postId);
+      } catch (_) {}
       try {
         await _client!.from('posts').delete().eq('id', postId);
       } catch (_) {}

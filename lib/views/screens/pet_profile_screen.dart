@@ -1359,14 +1359,27 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                               child: Text(langController.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
                                             ),
                                             TextButton(
-                                              onPressed: () {
+                                              onPressed: () async {
                                                 Navigator.pop(ctx);
-                                                feedController.deletePetPost(post.id);
                                                 setState(() {
-                                                  _postsFuture = feedController.getPostsForPet(widget.pet.id, currentUserId: authController.currentProfile?.id);
+                                                  _petPosts.removeWhere((p) => p.id == post.id);
                                                 });
+                                                await feedController.deletePetPost(post.id);
+                                                if (mounted) {
+                                                  _refreshPosts();
+                                                  _loadPetLedger();
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      backgroundColor: AppTheme.brandCoral,
+                                                      content: Text(
+                                                        '🗑️ Publicación eliminada con éxito',
+                                                        style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
                                               },
-                                              child: Text(langController.t('deleteComment'), style: GoogleFonts.fredoka(color: Colors.redAccent)),
+                                              child: Text(langController.t('deletePost'), style: GoogleFonts.fredoka(color: Colors.redAccent)),
                                             ),
                                           ],
                                         ),

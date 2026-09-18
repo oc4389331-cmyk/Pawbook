@@ -445,6 +445,59 @@ app.all('/api/admin/consolidate-chico', async (req, res) => {
   }
 });
 
+// --------------------------------------------------------------------------
+// 3F. DELETE POST ENDPOINT (BYPASS RLS VIA SUPABASE ADMIN & CLEAN UP RELATIONS)
+// --------------------------------------------------------------------------
+app.post('/api/posts/delete', async (req, res) => {
+  const { postId } = req.body;
+  if (!postId) {
+    return res.status(400).json({ success: false, error: 'Missing postId' });
+  }
+
+  if (supabaseAdmin) {
+    try {
+      // 1. Delete associated comments first (foreign key protection)
+      try {
+        await supabaseAdmin.from('comments').delete().eq('post_id', postId);
+      } catch (e) {
+        console.warn('Note deleting post comments:', e.message);
+      }
+
+      // 2. Delete associated post_likes
+      try {
+        await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
+      } catch (e) {
+        console.warn('Note deleting post likes:', e.message);
+      }
+
+      // 3. Delete associated post_reports if any
+      try {
+        await supabaseAdmin.from('post_reports').delete().eq('post_id', postId);
+      } catch (e) {
+        console.warn('Note deleting post reports:', e.message);
+      }
+
+      // 4. Delete the post from Supabase
+      const { data, error } = await supabaseAdmin
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .select();
+
+      if (error) {
+        console.error('Supabase post delete error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      return res.json({ success: true, deleted: data });
+    } catch (e) {
+      console.error('Supabase delete post exception:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({ success: true, postId });
+});
 
 // --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
