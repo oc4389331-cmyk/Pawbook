@@ -1678,6 +1678,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ? authController.activePet!
         : post.toPetModel();
 
+    final bool isPostVerified = (post.nftMintAddress != null &&
+        post.nftMintAddress!.isNotEmpty &&
+        (post.nftMintAddress!.startsWith('SolVerified_') ||
+            post.nftMintAddress!.startsWith('Verified_') ||
+            (post.nftMintAddress!.length >= 32 &&
+                !post.nftMintAddress!.startsWith('SolMint') &&
+                !post.nftMintAddress!.startsWith('PawSol')))) ||
+        (isOwner &&
+            authController.activePet?.nftMintAddress != null &&
+            (authController.activePet!.nftMintAddress!.startsWith('SolVerified_') ||
+                authController.activePet!.nftMintAddress!.startsWith('Verified_') ||
+                (authController.activePet!.nftMintAddress!.length >= 32 &&
+                    !authController.activePet!.nftMintAddress!.startsWith('SolMint') &&
+                    !authController.activePet!.nftMintAddress!.startsWith('PawSol'))));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1702,13 +1717,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.verified_rounded, color: Color(0xFF38BDF8), size: 16),
+                  if (isPostVerified) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded, color: Color(0xFF38BDF8), size: 16),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            if (post.nftMintAddress != null)
+            if (isPostVerified) ...[
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
@@ -1730,6 +1747,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+            ],
           ],
         ),
         const SizedBox(height: 6),

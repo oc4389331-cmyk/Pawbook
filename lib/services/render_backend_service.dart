@@ -117,6 +117,37 @@ class RenderBackendService {
     return false;
   }
 
+  /// Official Verified Pet Badge ($10 USD / SOL / SKR)
+  Future<Map<String, dynamic>> verifyPetBadge({
+    required String petId,
+    required String paymentMethod,
+    String? txHash,
+    double? usdAmount,
+    double? solAmount,
+    num? skrAmount,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/pet/verify'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'petId': petId,
+          'paymentMethod': paymentMethod,
+          'txHash': txHash,
+          'usdAmount': usdAmount ?? 10.0,
+          'solAmount': solAmount,
+          'skrAmount': skrAmount,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'error': 'Server response: ${res.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Update Pet details / avatar via backend
   Future<Map<String, dynamic>> updatePet({
     required String id,

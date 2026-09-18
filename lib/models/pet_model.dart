@@ -23,6 +23,16 @@ class PetModel {
     required this.createdAt,
   });
 
+  /// Whether this pet holds an official verified blue star badge
+  bool get isVerified {
+    if (nftMintAddress == null || nftMintAddress!.isEmpty) return false;
+    return nftMintAddress!.startsWith('SolVerified_') ||
+        nftMintAddress!.startsWith('Verified_') ||
+        (nftMintAddress!.length >= 32 &&
+            !nftMintAddress!.startsWith('SolMint') &&
+            !nftMintAddress!.startsWith('PawSol'));
+  }
+
   /// Deterministic or on-chain Dynamic Solana Wallet Address for this pet
   String get dynamicWalletAddress {
     if (nftMintAddress != null &&

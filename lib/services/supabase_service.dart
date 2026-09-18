@@ -307,6 +307,53 @@ class SupabaseService {
     return pet;
   }
 
+  Future<PetModel?> verifyPetBadge(
+    String petId, {
+    required String paymentMethod,
+    String? txHash,
+    double? usdAmount,
+    double? solAmount,
+    num? skrAmount,
+  }) async {
+    // 1. Try Render Backend first (bypasses RLS with supabaseAdmin and updates posts in cascade)
+    try {
+      final backend = RenderBackendService();
+      final res = await backend.verifyPetBadge(
+        petId: petId,
+        paymentMethod: paymentMethod,
+        txHash: txHash,
+        usdAmount: usdAmount,
+        solAmount: solAmount,
+        skrAmount: skrAmount,
+      );
+      if (res['success'] == true && res['pet'] != null) {
+        final verifiedPet = PetModel.fromJson(res['pet']);
+        _mockPets[petId] = verifiedPet;
+        return verifiedPet;
+      }
+    } catch (_) {}
+
+    // 2. Direct Supabase update fallback
+    final verifiedAddress = 'SolVerified_${DateTime.now().millisecondsSinceEpoch}_${petId.substring(0, min(8, petId.length))}';
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('pets')
+            .update({'nft_mint_address': verifiedAddress})
+            .eq('id', petId)
+            .select()
+            .single();
+        return PetModel.fromJson(res);
+      } catch (_) {}
+    }
+
+    if (_mockPets.containsKey(petId)) {
+      _mockPets[petId] = _mockPets[petId]!.copyWith(nftMintAddress: verifiedAddress);
+      return _mockPets[petId];
+    }
+    return null;
+  }
+
   // --- User Animal Preference Tracking & Recommendation Algorithm ---
   Future<void> recordUserInteraction({
     required String userId,

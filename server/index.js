@@ -500,6 +500,61 @@ app.post('/api/posts/delete', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 3G. OFFICIAL PET VERIFICATION ENDPOINT ($10 USD / SOL / SKR BADGE)
+// --------------------------------------------------------------------------
+app.post('/api/pet/verify', async (req, res) => {
+  const { petId, paymentMethod, txHash, usdAmount, solAmount, skrAmount } = req.body;
+  if (!petId) {
+    return res.status(400).json({ success: false, error: 'Missing petId' });
+  }
+
+  const verifiedMintAddress = `SolVerified_${Date.now()}_${petId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10)}`;
+
+  if (supabaseAdmin) {
+    try {
+      // 1. Update pet with official verification mint
+      const { data: petData, error: petErr } = await supabaseAdmin
+        .from('pets')
+        .update({ nft_mint_address: verifiedMintAddress })
+        .eq('id', petId)
+        .select()
+        .single();
+
+      if (petErr) {
+        console.error('Error verifying pet in Supabase:', petErr);
+        return res.status(500).json({ success: false, error: petErr.message });
+      }
+
+      // 2. Cascade verification badge to all posts by this pet
+      try {
+        await supabaseAdmin
+          .from('posts')
+          .update({ nft_mint_address: verifiedMintAddress })
+          .eq('pet_id', petId);
+      } catch (postErr) {
+        console.warn('Note updating post verification addresses:', postErr.message);
+      }
+
+      return res.json({
+        success: true,
+        verifiedMintAddress,
+        pet: petData,
+        message: '¡Verificación oficial de cuenta activada con éxito!'
+      });
+    } catch (e) {
+      console.error('Exception in /api/pet/verify:', e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  return res.json({
+    success: true,
+    verifiedMintAddress,
+    message: 'Verificación simulada en modo local'
+  });
+});
+
+// --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
 // --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {

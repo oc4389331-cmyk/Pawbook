@@ -24,6 +24,7 @@ import '../widgets/terms_and_conditions_modal.dart';
 import '../widgets/pet_attribute_bar.dart';
 import '../widgets/pet_analytics_curve_card.dart';
 import '../widgets/follows_dashboard_modal.dart';
+import '../widgets/pet_verification_modal.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -250,6 +251,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         authController.userPets.any((p) => p.id == widget.pet.id) ||
         (authController.activePet != null && authController.activePet!.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase()) ||
         authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
+
+    final bool isPetVerified = (_verifiedNftAddress != null &&
+        _verifiedNftAddress!.isNotEmpty &&
+        (_verifiedNftAddress!.startsWith('SolVerified_') ||
+            _verifiedNftAddress!.startsWith('Verified_') ||
+            (_verifiedNftAddress!.length >= 32 &&
+                !_verifiedNftAddress!.startsWith('SolMint') &&
+                !_verifiedNftAddress!.startsWith('PawSol'))));
 
     final totalViews = _petPosts.fold<int>(0, (sum, p) => sum + p.viewsCount);
     final totalLikes = _petPosts.fold<int>(0, (sum, p) => sum + p.likesCount);
@@ -494,35 +503,36 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                   ),
                                 ),
                               ),
-                            // Holographic NFT Badge
-                            Positioned(
-                              top: -2,
-                              left: -2,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF67E8F9), Color(0xFFC084FC)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.white, width: 1.5),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF67E8F9).withValues(alpha: 0.4),
-                                      blurRadius: 6,
+                            // Holographic NFT / Verified Badge (only if verified)
+                            if (isPetVerified)
+                              Positioned(
+                                top: -2,
+                                left: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                                     ),
-                                  ],
-                                ),
-                                child: Text(
-                                  'NFT',
-                                  style: GoogleFonts.fredoka(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'VERIFICADO',
+                                    style: GoogleFonts.fredoka(
+                                      color: Colors.white,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                           ],
                         );
                       }),
@@ -547,12 +557,55 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const SizedBox(width: 5),
-                                const Icon(
-                                  Icons.verified_rounded,
-                                  color: Color(0xFF0284C7),
-                                  size: 20,
-                                ),
+                                if (isPetVerified) ...[
+                                  const SizedBox(width: 5),
+                                  const Tooltip(
+                                    message: 'Cuenta Oficial Verificada',
+                                    child: Icon(
+                                      Icons.verified_rounded,
+                                      color: Color(0xFF0284C7),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ] else if (isOwner) ...[
+                                  const SizedBox(width: 6),
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => PetVerificationModal.show(
+                                      context,
+                                      pet: widget.pet.copyWith(nftMintAddress: _verifiedNftAddress),
+                                      onVerified: (updated) {
+                                        setState(() {
+                                          _verifiedNftAddress = updated.nftMintAddress;
+                                        });
+                                        _refreshPosts();
+                                      },
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.verified_outlined, color: Color(0xFF0284C7), size: 13),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'Verificar (\$10)',
+                                            style: GoogleFonts.fredoka(
+                                              color: const Color(0xFF0284C7),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 2),
@@ -1027,47 +1080,55 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     ),
                   ),
 
-                  // Solana NFT Badge & Verification Button Section
-                  if (_verifiedNftAddress != null && _verifiedNftAddress!.isNotEmpty && !_verifiedNftAddress!.contains('SolMint')) ...[
+                  // Solana Verified Account & Verification Button Section ($10 USD / SOL / SKR)
+                  if (isPetVerified) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppTheme.emeraldGreen.withValues(alpha: 0.12),
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppTheme.emeraldGreen),
+                        border: Border.all(color: const Color(0xFF0284C7)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_rounded, color: AppTheme.emeraldGreen, size: 20),
+                          const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            langController.t('nftVerifiedBadge'),
-                            style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 13),
+                            'Cuenta Oficial Verificada en Solana',
+                            style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ] else ...[
-                    // Button to verify Solana NFT directly in wallet!
+                  ] else if (isOwner) ...[
+                    // Button to acquire official $10 USD Blue Star Badge
                     SizedBox(
                       width: double.infinity,
-                      height: 44,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.solanaPurple,
-                          side: const BorderSide(color: AppTheme.solanaPurple, width: 1.5),
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        icon: _isVerifyingNft
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.solanaPurple))
-                            : const Icon(Icons.verified_rounded, size: 18),
+                        icon: const Icon(Icons.verified_rounded, size: 18),
                         label: Text(
-                          _isVerifyingNft ? langController.t('scanningWallet') : langController.t('scanWalletForNft'),
+                          'Obtener Insignia Verificada (\$10 USD / SOL / \$SKR)',
                           style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
-                        onPressed: _isVerifyingNft ? null : () => _verifySolanaWalletNft(authController),
+                        onPressed: () => PetVerificationModal.show(
+                          context,
+                          pet: widget.pet.copyWith(nftMintAddress: _verifiedNftAddress),
+                          onVerified: (updated) {
+                            setState(() {
+                              _verifiedNftAddress = updated.nftMintAddress;
+                            });
+                            _refreshPosts();
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

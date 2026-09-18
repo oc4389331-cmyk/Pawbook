@@ -115,6 +115,14 @@ class OracleController extends ChangeNotifier {
     return usdAmount / _priceUsd;
   }
 
+  double get solUsdPrice => (_priceSol > 0) ? (_priceUsd / _priceSol) : 150.0;
+
+  double convertUsdToSol(double usdAmount) {
+    final solPrice = solUsdPrice;
+    if (solPrice <= 0) return 0.065;
+    return usdAmount / solPrice;
+  }
+
   double convertSkrToUsd(num skrAmount) {
     return skrAmount * _priceUsd;
   }
@@ -127,6 +135,7 @@ class OracleController extends ChangeNotifier {
   double skrToSol(num skrAmount) => convertSkrToSol(skrAmount);
 
   String get formattedPriceUsd => '\$${_priceUsd.toStringAsFixed(4)} USD';
+  String get formattedSolPriceUsd => '\$${solUsdPrice.toStringAsFixed(2)} USD';
   String get formattedChange => '${_change24h >= 0 ? '+' : ''}${_change24h.toStringAsFixed(2)}%';
 
   @override
