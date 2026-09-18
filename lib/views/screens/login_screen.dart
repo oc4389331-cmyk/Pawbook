@@ -93,14 +93,165 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return true;
   }
 
+
+
+  void _showQuickGoogleFallbackModal(AuthController authController, LanguageController langController) {
+    final emailCtrl = TextEditingController(text: 'wernesto66@gmail.com');
+    bool isModalLoading = false;
+    String? modalError;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppTheme.bgWarmCream,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(color: AppTheme.borderWarm, borderRadius: BorderRadius.circular(3)),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4285F4).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.account_circle_rounded, color: Color(0xFF4285F4), size: 36),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Acceso Directo con Google',
+                      style: GoogleFonts.fredoka(fontSize: 19, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Google Play requiere vincular el SHA-1 en tu consola para el 1-Tap automático. Mientras lo configuras, puedes confirmar tu cuenta para entrar al instante:',
+                      style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textMutedWarm, height: 1.35),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    if (modalError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                        ),
+                        child: Text(modalError!, style: GoogleFonts.outfit(color: Colors.red.shade900, fontSize: 12)),
+                      ),
+                    ],
+                    TextField(
+                      controller: emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'tu_correo@gmail.com',
+                        hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                        prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF4285F4)),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryTerracotta,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          elevation: 2,
+                        ),
+                        icon: isModalLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.arrow_forward_rounded),
+                        label: Text(
+                          isModalLoading ? 'Iniciando sesión...' : 'Continuar con esta Cuenta',
+                          style: GoogleFonts.fredoka(fontSize: 14.5, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: isModalLoading
+                            ? null
+                            : () async {
+                                final enteredEmail = emailCtrl.text.trim();
+                                if (!enteredEmail.contains('@') || !enteredEmail.contains('.')) {
+                                  setModalState(() => modalError = 'Por favor ingresa un correo de Google válido.');
+                                  return;
+                                }
+
+                                setModalState(() {
+                                  isModalLoading = true;
+                                  modalError = null;
+                                });
+
+                                final success = await authController.loginWithGoogle(
+                                  googleEmail: enteredEmail,
+                                  isSignUp: _isSignUp,
+                                  fullName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+                                );
+
+                                if (success) {
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  if (mounted) _onLoginSuccess();
+                                } else {
+                                  setModalState(() {
+                                    isModalLoading = false;
+                                    modalError = authController.errorMessage ?? 'Error al iniciar sesión.';
+                                  });
+                                }
+                              },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Cerrar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleGoogleSignIn(AuthController authController, LanguageController langController) async {
     if (!_validateTermsForSignUp(langController)) return;
-    await authController.loginWithGoogle(
+    final success = await authController.loginWithGoogle(
       isSignUp: _isSignUp,
       fullName: _isSignUp && _nameController.text.trim().isNotEmpty
           ? _nameController.text.trim()
           : null,
     );
+    if (success && mounted) {
+      _onLoginSuccess();
+    } else if (mounted && authController.errorMessage != null) {
+      _showQuickGoogleFallbackModal(authController, langController);
+    }
   }
 
   Future<void> _handleWalletSignIn(
@@ -363,6 +514,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ),
     );
   }
+
+
 
   Widget _buildPhantomButton(AuthController authController, LanguageController langController) {
     return SizedBox(
@@ -735,7 +888,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             const SizedBox(height: 12),
                           ],
 
-                          // --- BOTÓN GOOGLE ---
+                          // --- BOTÓN GOOGLE AUTOMÁTICO ---
                           _buildGoogleButton(authController, langController),
                           const SizedBox(height: 20),
 

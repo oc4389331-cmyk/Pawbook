@@ -11,10 +11,12 @@ const USERS_TO_PROVISION = [
     fullName: 'W. Ernesto',
     username: 'wernesto66',
     pet: {
+      id: 'pet_d1148fad',
       name: 'Chico',
-      species: 'Dog',
-      breed: 'French Bulldog',
-      bio: 'El creador estrella de Pawtbook 🐾',
+      species: 'Perro',
+      breed: 'Otro',
+      bio: 'Me gusta correr, caminar, salir a dar grandes paseos',
+      avatar_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400',
     }
   },
   {
@@ -170,7 +172,7 @@ async function runProvisioning() {
     // 3. Registrar / Asociar la Mascota (ej. Chico)
     if (user.pet) {
       const petWalletAddress = generateSolanaAddress(`pet_dynamic_solana_${user.pet.name}_${userId}`);
-      const petId = `pet_${user.pet.name.toLowerCase()}_${userId.substring(4, 10)}`;
+      const petId = user.pet.id || `pet_${user.pet.name.toLowerCase()}_${userId.substring(4, 10)}`;
 
       console.log(`🐾 Mascota Asociada: ${user.pet.name}`);
       console.log(`🔑 Solana Wallet (Mascota): ${petWalletAddress}`);
@@ -182,7 +184,7 @@ async function runProvisioning() {
         species: user.pet.species,
         breed: user.pet.breed,
         bio: user.pet.bio,
-        avatar_url: `https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400`,
+        avatar_url: user.pet.avatar_url || `https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400`,
         nft_mint_address: petWalletAddress,
         total_sponsored_score: 500
       };

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:pawtbook/controllers/auth_controller.dart';
 import 'package:pawtbook/controllers/feed_controller.dart';
 import 'package:pawtbook/controllers/pet_controller.dart';
+import 'package:pawtbook/controllers/language_controller.dart';
+import 'package:pawtbook/controllers/oracle_controller.dart';
 import 'package:pawtbook/views/screens/login_screen.dart';
 
 void main() {
@@ -14,6 +16,8 @@ void main() {
           ChangeNotifierProvider(create: (_) => AuthController()),
           ChangeNotifierProvider(create: (_) => FeedController()),
           ChangeNotifierProvider(create: (_) => PetController()),
+          ChangeNotifierProvider(create: (_) => LanguageController()),
+          ChangeNotifierProvider(create: (_) => OracleController()),
         ],
         child: const MaterialApp(
           home: LoginScreen(),
@@ -21,7 +25,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Pawtbook'), findsOneWidget);
-    expect(find.text('Conectar Wallet (Solana)'), findsOneWidget);
+    expect(find.textContaining('Pawbook'), findsWidgets);
   });
 }

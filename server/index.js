@@ -395,6 +395,58 @@ app.post('/api/pet/update', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
+// 3E. CONSOLIDATE & DELETE DUPLICATE CHICO PROFILE (BYPASS RLS VIA SUPABASE ADMIN)
+// --------------------------------------------------------------------------
+app.all('/api/admin/consolidate-chico', async (req, res) => {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ success: false, error: 'supabaseAdmin not initialized' });
+  }
+
+  try {
+    const results = {};
+
+    // 1. Reassign real Chico (pet_d1148fad) to wernesto66@gmail.com (usr_VL5CBAhr)
+    const { data: updateData, error: updateErr } = await supabaseAdmin
+      .from('pets')
+      .update({ owner_id: 'usr_VL5CBAhr' })
+      .eq('id', 'pet_d1148fad')
+      .select();
+    results.updateChicoReal = { success: !updateErr, data: updateData, error: updateErr?.message };
+
+    // 2. Delete any follows pointing to duplicate Chico
+    const { error: followErr } = await supabaseAdmin
+      .from('follows')
+      .delete()
+      .eq('following_pet_id', 'pet_chico_VL5CBA');
+    results.deleteFollows = { error: followErr?.message };
+
+    // 3. Delete duplicate Chico (pet_chico_VL5CBA)
+    const { data: deleteData, error: deleteErr } = await supabaseAdmin
+      .from('pets')
+      .delete()
+      .eq('id', 'pet_chico_VL5CBA')
+      .select();
+    results.deleteDuplicate = { success: !deleteErr, data: deleteData, error: deleteErr?.message };
+
+    // 4. Query current pets in database
+    const { data: remainingPets, error: fetchErr } = await supabaseAdmin
+      .from('pets')
+      .select('*');
+    results.remainingPets = remainingPets;
+
+    return res.json({
+      success: true,
+      message: 'Chico profiles successfully consolidated. Duplicate French Bulldog Chico deleted.',
+      results
+    });
+  } catch (err) {
+    console.error('Error consolidating Chico profile:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// --------------------------------------------------------------------------
 // 4. CLOUDFLARE R2 PRESIGNED UPLOAD URL ENDPOINT
 // --------------------------------------------------------------------------
 app.post('/api/media/upload-url', async (req, res) => {

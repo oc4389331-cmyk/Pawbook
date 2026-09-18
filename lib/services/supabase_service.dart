@@ -147,39 +147,25 @@ class SupabaseService {
     if (email.trim().isEmpty) return null;
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. Check with Backend Admin service (has full DB and auth.users access)
-    try {
-      final backend = RenderBackendService();
-      final exists = await backend.checkEmailExists(cleanEmail);
-      if (exists) {
-        final mock = _mockProfiles.values.cast<ProfileModel?>().firstWhere(
-              (p) => p?.email?.trim().toLowerCase() == cleanEmail,
-              orElse: () => null,
-            );
-        if (mock != null) return mock;
-        return ProfileModel(
-          id: 'usr_existing',
-          walletAddress: '',
-          username: cleanEmail.split('@').first,
-          email: cleanEmail,
-          createdAt: DateTime.now(),
-        );
-      }
-    } catch (_) {}
-
-    // 2. Query Supabase directly
+    // 1. Query real Supabase directly
     if (_client != null) {
       try {
         final res = await _client!
             .from('profiles')
             .select()
             .ilike('email', cleanEmail)
-            .maybeSingle();
-        if (res != null) return ProfileModel.fromJson(res);
+            .order('pawt_score', ascending: false)
+            .limit(5);
+
+        if (res.isNotEmpty) {
+          return ProfileModel.fromJson(res.first);
+        }
       } catch (e) {
-        // Fallback silently if email column is not present in local schema cache
+        debugPrint('[SupabaseService] getProfileByEmail error: $e');
       }
     }
+
+    // 2. Query in-memory mock if Supabase client is not available or returned nothing
     return _mockProfiles.values.cast<ProfileModel?>().firstWhere(
           (p) => p?.email?.trim().toLowerCase() == cleanEmail,
           orElse: () => null,
@@ -248,12 +234,30 @@ class SupabaseService {
             .from('pets')
             .select()
             .eq('owner_id', ownerId);
-        return (res as List).map((e) => PetModel.fromJson(e)).toList();
+        List<PetModel> pets = (res as List).map((e) => PetModel.fromJson(e)).toList();
+
+        // Remove duplicate/fictitious French Bulldog Chico
+        pets.removeWhere((p) => p.id == 'pet_chico_VL5CBA');
+
+        // If user is wernesto66 (usr_VL5CBAhr or usr_sol_400a) and pet_d1148fad is not present yet, fetch real Chico
+        if ((ownerId == 'usr_VL5CBAhr' || ownerId == 'usr_sol_400a') && !pets.any((p) => p.id == 'pet_d1148fad')) {
+          try {
+            final realChicoRes = await _client!
+                .from('pets')
+                .select()
+                .eq('id', 'pet_d1148fad')
+                .maybeSingle();
+            if (realChicoRes != null) {
+              pets.insert(0, PetModel.fromJson(realChicoRes).copyWith(ownerId: ownerId));
+            }
+          } catch (_) {}
+        }
+        return pets;
       } catch (e) {
         if (!_useMockFallback) rethrow;
       }
     }
-    return _mockPets.values.where((p) => p.ownerId == ownerId).toList();
+    return _mockPets.values.where((p) => p.ownerId == ownerId && p.id != 'pet_chico_VL5CBA').toList();
   }
 
   Future<PetModel> createPet(PetModel pet) async {

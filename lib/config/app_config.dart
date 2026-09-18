@@ -27,6 +27,12 @@ class AppConfig {
   // Solana Marketplace & Platform Treasury Wallet (Funds Receiver)
   static const String marketplaceTreasuryWallet = '8xi1HGz65ojQgXPU5AQd3uE6FqyhgdThvF2f2w8w5XtF';
 
+  // Solana $SKR (Seeker Token) SPL Token Mint Address
+  static const String skrTokenMintAddress = String.fromEnvironment(
+    'SKR_MINT_ADDRESS',
+    defaultValue: 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3',
+  );
+
   // Sponsorship Platform Fee Percentage (10%)
   static const double sponsorshipPlatformFeePercent = 10.0;
 

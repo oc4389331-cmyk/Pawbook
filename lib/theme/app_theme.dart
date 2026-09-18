@@ -30,6 +30,44 @@ class AppTheme {
   static const Color surfaceWarm = Color(0xFFFFF9F0);      // Superficie Melocotón Sutil
   static const Color cardWarm = Color(0xFFFFFFFF);         // Tarjetas Blancas con Sombra Pastel
   static const Color borderWarm = Color(0xFFFFE0B2);       // Borde Melocotón Suave
+  static const Color pawTeal = Color(0xFF14B8A6);          // Verde Menta/Turquesa de Barras
+  static const Color pawTealLight = Color(0xFFCCFBF1);     // Fondo de Barras Menta
+  static const Color pawPillBg = Color(0xFFF8FAFC);        // Píldoras y Badges
+
+  // Sombras y Gradientes para la Nueva UI
+  static List<BoxShadow> get softCardShadow => [
+        BoxShadow(
+          color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+        BoxShadow(
+          color: brandCoral.withValues(alpha: 0.04),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ];
+
+  static List<BoxShadow> get elevatedPawShadow => [
+        BoxShadow(
+          color: brandCoral.withValues(alpha: 0.4),
+          blurRadius: 18,
+          spreadRadius: 2,
+          offset: const Offset(0, 6),
+        ),
+      ];
+
+  static const LinearGradient pawButtonGradient = LinearGradient(
+    colors: [Color(0xFFFF8A65), Color(0xFFFF5722)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient sendTipGradient = LinearGradient(
+    colors: [Color(0xFFD1FAE5), Color(0xFFEDE9FE)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
 
   // 5. Tipografía de Alto Contraste
   static const Color textPrimaryDark = Color(0xFF2D3142);  // Carbón Suave Elegante

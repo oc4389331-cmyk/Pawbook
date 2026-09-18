@@ -1,5 +1,3 @@
-import 'dart:js' as js;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +9,7 @@ import '../../models/pet_model.dart';
 import '../../services/dynamic_auth_service.dart';
 import '../../services/render_backend_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 import 'terms_and_conditions_modal.dart';
 
@@ -129,7 +128,7 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
             onPressed: () {
               Navigator.pop(ctx);
               try {
-                js.context.callMethod('open', [downloadUrl, '_blank']);
+                UrlLauncherService.instance.openUrl(downloadUrl);
               } catch (_) {}
             },
             child: Text(langController.t('installWalletBtn').replaceAll('{wallet}', walletName), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
@@ -305,13 +304,13 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
           SnackBar(
             backgroundColor: AppTheme.emeraldGreen,
             duration: const Duration(seconds: 8),
-            action: (solscanUrl != null && kIsWeb)
+            action: (solscanUrl != null)
                 ? SnackBarAction(
                     label: 'SOLSCAN',
                     textColor: Colors.white,
                     onPressed: () {
                       try {
-                        js.context.callMethod('open', [solscanUrl, '_blank']);
+                        UrlLauncherService.instance.openUrl(solscanUrl);
                       } catch (_) {}
                     },
                   )
@@ -783,46 +782,54 @@ class _SponsorshipModalState extends State<SponsorshipModal> {
 
               const SizedBox(height: 18),
 
-              // Action Submit Button
-              SizedBox(
+              // Action Submit Button (Image 3 Send Tip Gradient)
+              Container(
                 width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isProcessing ? null : () => _processWalletSponsorship(authController, oracleController, langController),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _selectedCurrency == 'SKR' ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.sendTipGradient,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF7A59).withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
-                    elevation: 4,
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: _isProcessing ? null : () => _processWalletSponsorship(authController, oracleController, langController),
+                    child: Center(
+                      child: _isProcessing
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.volunteer_activism_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Send Tip • ${_selectedCurrency == 'SKR' ? '$_selectedSkrAmount \$SKR' : '$currentSolPrice SOL'}',
+                                  style: GoogleFonts.fredoka(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
-                  child: _isProcessing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _selectedCurrency == 'SKR' ? Icons.bolt_rounded : Icons.account_balance_wallet_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              langController.t('payWithWallet')
-                                  .replaceAll('{amount}', _selectedCurrency == 'SKR' ? '$_selectedSkrAmount \$SKR' : '$currentSolPrice SOL')
-                                  .replaceAll('{wallet}', _selectedWallet),
-                              style: GoogleFonts.fredoka(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
                 ),
               ),
             ],

@@ -5,6 +5,7 @@ class CommentModel {
   final String content;
   final DateTime createdAt;
   final String? username;
+  final String? avatarUrl;
   final String? parentId; // ID of the parent comment if this is a reply
   final String? replyToUsername; // Username being replied to
 
@@ -15,6 +16,7 @@ class CommentModel {
     required this.content,
     required this.createdAt,
     this.username,
+    this.avatarUrl,
     this.parentId,
     this.replyToUsername,
   });
@@ -51,6 +53,7 @@ class CommentModel {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       username: json['username'] ?? json['profiles']?['username'],
+      avatarUrl: json['avatar_url'] ?? json['profiles']?['avatar_url'],
       parentId: parentId,
       replyToUsername: replyToUsername,
     );

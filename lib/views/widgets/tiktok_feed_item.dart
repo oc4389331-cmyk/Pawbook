@@ -28,7 +28,8 @@ class TikTokFeedItem extends StatefulWidget {
   State<TikTokFeedItem> createState() => _TikTokFeedItemState();
 }
 
-class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProviderStateMixin {
+class _TikTokFeedItemState extends State<TikTokFeedItem>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final SupabaseService _supabaseService = SupabaseService();
   final Stopwatch _watchStopwatch = Stopwatch();
   bool _viewRecorded = false;
@@ -46,6 +47,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _watchStopwatch.start();
     _recordView();
 
@@ -56,6 +58,22 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
 
     if (widget.post.hasSound) {
       _initAudioPlayer();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      if (_audioPlayer != null && _isPlayingSound) {
+        _audioPlayer!.pause();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (widget.isCurrentPage && !_isMuted && widget.post.hasSound && widget.post.soundUrl != null) {
+        _audioPlayer?.play(widget.post.soundUrl!, loop: true);
+      }
     }
   }
 
@@ -118,6 +136,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _watchStopwatch.stop();
     final elapsedSeconds = _watchStopwatch.elapsed.inSeconds;
     if (elapsedSeconds > 0) {
@@ -202,7 +221,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem> with SingleTickerProvid
           AppVideoPlayerWidget(
             videoUrl: widget.post.mediaUrl,
             isCurrentPage: widget.isCurrentPage,
-            isMuted: _isMuted || widget.post.hasSound,
+            isMuted: _isMuted,
             loop: true,
             fit: BoxFit.contain,
             onPlayAttempt: widget.onPlayAttempt,

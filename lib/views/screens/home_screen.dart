@@ -18,6 +18,9 @@ import '../widgets/terms_and_conditions_modal.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/wallet_dashboard_modal.dart';
 import '../widgets/live_oracle_ticker.dart';
+import '../widgets/floating_bottom_nav_bar.dart';
+import '../widgets/live_comment_bubbles.dart';
+import '../widgets/spinning_vinyl_disc.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
 import 'login_screen.dart';
@@ -1114,41 +1117,24 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
 
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(top: BorderSide(color: AppTheme.pastelPeach, width: 1.2)),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.accentCoral.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          backgroundColor: Colors.white,
-          selectedItemColor: AppTheme.brandCoral,
-          unselectedItemColor: AppTheme.textMutedWarm,
-          selectedLabelStyle: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 12),
-          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          onTap: (idx) {
-            if (idx == 2 && !authController.isAuthenticated) {
-              _showTikTokRegistrationWall(context, authController);
-            } else {
-              setState(() => _currentIndex = idx);
-            }
-          },
-          items: [
-            BottomNavigationBarItem(icon: const Icon(Icons.movie_creation_outlined), activeIcon: const Icon(Icons.movie_creation_rounded), label: langController.t('feed')),
-            BottomNavigationBarItem(icon: const Icon(Icons.storefront_outlined), activeIcon: const Icon(Icons.storefront_rounded), label: langController.t('marketplace')),
-            BottomNavigationBarItem(icon: const Icon(Icons.pets_outlined), activeIcon: const Icon(Icons.pets_rounded), label: langController.t('profile')),
-            BottomNavigationBarItem(icon: const Icon(Icons.card_giftcard_outlined), activeIcon: const Icon(Icons.card_giftcard_rounded), label: langController.t('rewards')),
-          ],
-        ),
+      bottomNavigationBar: FloatingBottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (idx) {
+          if (idx == 2 && !authController.isAuthenticated) {
+            _showTikTokRegistrationWall(context, authController);
+          } else {
+            setState(() => _currentIndex = idx);
+          }
+        },
+        onPawPressed: () {
+          if (!authController.isAuthenticated) {
+            _showTikTokRegistrationWall(context, authController);
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+            );
+          }
+        },
       ),
     );
   }
@@ -1192,9 +1178,20 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: feedController.posts.length,
               onPageChanged: (index) {
                 setState(() => _currentFeedPage = index);
-                if (!authController.isAuthenticated && index >= 3 && !_hasShownRegisterWall) {
-                  setState(() => _hasShownRegisterWall = true);
-                  _showTikTokRegistrationWall(context, authController);
+                if (!authController.isAuthenticated && index > 0) {
+                  TermsAndConditionsModal.show(
+                    context,
+                    onAccepted: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(
+                            initialIsSignUp: true,
+                            termsAcceptedInitially: true,
+                          ),
+                        ),
+                      );
+                    },
+                  );
                 }
               },
               itemBuilder: (context, index) {
@@ -1203,25 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   post: post,
                   currentUserId: currentUserId,
                   isCurrentPage: _currentFeedPage == index,
-                  onPlayAttempt: () async {
-                    if (!authController.isAuthenticated) {
-                      TermsAndConditionsModal.show(
-                        context,
-                        onAccepted: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(
-                                initialIsSignUp: true,
-                                termsAcceptedInitially: true,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                      return false;
-                    }
-                    return true;
-                  },
+                  onPlayAttempt: () async => true,
                   onLikeToggled: () {
                     if (!authController.isAuthenticated) {
                       TermsAndConditionsModal.show(
@@ -1278,21 +1257,39 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // LIVE COMMENT BUBBLES (Real comments written on this post)
+            if (currentPost != null)
+              Positioned(
+                left: 16,
+                bottom: 140,
+                right: 90,
+                child: LiveCommentBubbles(
+                  postId: currentPost.id,
+                  onTap: () {
+                    if (!authController.isAuthenticated) {
+                      _showTikTokRegistrationWall(context, authController);
+                    } else {
+                      _showCommentsModal(context, currentPost, currentUserId, authController, langController);
+                    }
+                  },
+                ),
+              ),
+
             // ACTION SIDEBAR — rendered AFTER header so it appears on top
             if (currentPost != null)
               Positioned(
                 right: 14,
-                bottom: 110,
+                bottom: 95,
                 child: _buildActionSidebar(currentPost, currentUserId, authController, langController, feedController),
               ),
 
-            // BOTTOM LEFT INFO — also rendered after header
+            // BOTTOM LEFT INFO — creator details & spinning vinyl music pill
             if (currentPost != null)
               Positioned(
                 left: 16,
-                bottom: 30,
+                bottom: 25,
                 right: 90,
-                child: _buildBottomInfo(currentPost),
+                child: _buildBottomInfo(currentPost, authController),
               ),
           ],
         ),
@@ -1301,7 +1298,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionSidebar(PostModel post, String currentUserId, AuthController authController, LanguageController langController, FeedController feedController) {
-    final isOwner = authController.activePet?.id == post.petId;
+    final isOwner = authController.isAuthenticated && (
+      authController.activePet?.id == post.petId ||
+      authController.userPets.any((p) => p.id == post.petId) ||
+      (post.petName != null && authController.activePet != null && 
+       authController.activePet!.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
+      (post.petName != null && authController.userPets.any((p) => 
+       p.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()))
+    );
     final isLiked = post.isLikedByCurrentUser;
     final likesCount = post.likesCount;
     final isFollowing = feedController.isFollowingPet(post.petId) || _followedPetIds.contains(post.petId);
@@ -1317,22 +1321,35 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.topCenter,
             clipBehavior: Clip.none,
             children: [
-              // Avatar Tap -> Opens Pet Profile Screen
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
+                  final petToOpen = isOwner && authController.activePet != null
+                      ? authController.activePet!
+                      : post.toPetModel();
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
+                    MaterialPageRoute(builder: (_) => PetProfileScreen(pet: petToOpen)),
                   );
                 },
                 child: Container(
                   padding: const EdgeInsets.all(2.5),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.emeraldGreen,
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.accentOrange, AppTheme.brandCoral],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accentOrange.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: CircleAvatar(
-                    radius: 24,
+                    radius: 25,
                     backgroundImage: NetworkImage(petAvatar),
                   ),
                 ),
@@ -1341,7 +1358,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Plus (+) / Check (✓) Follow Button Badge
               if (!isOwner)
                 Positioned(
-                  bottom: 6,
+                  bottom: 4,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () async {
@@ -1379,20 +1396,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(3.5),
                       decoration: BoxDecoration(
-                        color: isFollowing ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
+                        color: isFollowing ? AppTheme.emeraldGreen : AppTheme.accentOrange,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 4,
+                            color: Colors.black.withOpacity(0.35),
+                            blurRadius: 5,
                           ),
                         ],
                       ),
                       child: Icon(
                         isFollowing ? Icons.check : Icons.add,
                         color: Colors.white,
-                        size: 14,
+                        size: 13,
                       ),
                     ),
                   ),
@@ -1400,9 +1417,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
 
-        // --- Like Button ---
+        // --- Like Button (Frosted 3D Card) ---
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
@@ -1415,19 +1432,44 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: Column(
             children: [
-              Icon(
-                isLiked ? Icons.favorite : Icons.favorite_border,
-                color: isLiked ? const Color(0xFFEF4444) : Colors.white,
-                size: 36,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.38),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.18), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isLiked ? const Color(0xFFFF4B6E) : Colors.white,
+                    size: 28,
+                  ),
+                ),
               ),
               const SizedBox(height: 4),
-              Text('$likesCount', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              Text(
+                '$likesCount',
+                style: GoogleFonts.fredoka(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
-        // --- Comment Button ---
+        // --- Comment Button (Frosted 3D Card) ---
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
@@ -1439,23 +1481,119 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: Column(
             children: [
-              const Icon(Icons.comment_rounded, color: Colors.white, size: 34),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.38),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.18), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('${post.commentsCount}', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              Text(
+                '${post.commentsCount}',
+                style: GoogleFonts.fredoka(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
-        // --- Views ---
+        // --- Views Counter ---
         Column(
           children: [
-            const Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 30),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+              ),
+              child: const Center(
+                child: Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 22),
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('${post.viewsCount}', style: GoogleFonts.fredoka(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 11)),
+            Text(
+              '${post.viewsCount}',
+              style: GoogleFonts.fredoka(
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
+
+        // --- Sponsor / Tip Button (Gradient Pill with Paw icon) ---
+        if (!isOwner) ...[
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!authController.isAuthenticated) {
+                _showTikTokRegistrationWall(context, authController);
+              } else {
+                SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
+              }
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF7A59), Color(0xFFFF9E7D)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF7A59).withOpacity(0.55),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: const Center(
+                child: Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 24),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            langController.t('sponsor'),
+            style: GoogleFonts.fredoka(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
 
         // --- More Options ---
         GestureDetector(
@@ -1498,107 +1636,162 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
-          child: const Column(
-            children: [
-              Icon(Icons.more_vert_rounded, color: Colors.white, size: 30),
-              SizedBox(height: 4),
-            ],
-          ),
-        ),
-        // --- Sponsor Button (Only for other pets, not own pet) ---
-        if (!(authController.isAuthenticated && (
-          post.petId == authController.activePet?.id ||
-          authController.userPets.any((p) => p.id == post.petId)
-        ))) ...[
-          const SizedBox(height: 22),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (!authController.isAuthenticated) {
-                _showTikTokRegistrationWall(context, authController);
-              } else {
-                SponsorshipModal.show(context, pet: post.toPetModel(), userId: currentUserId);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: AppTheme.primaryTerracotta.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)],
-              ),
-              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+            ),
+            child: const Center(
+              child: Icon(Icons.more_horiz_rounded, color: Colors.white, size: 22),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(langController.t('sponsor'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-        ],
+        ),
       ],
     );
   }
 
-  Widget _buildBottomInfo(PostModel post) {
+  Widget _buildBottomInfo(PostModel post, AuthController authController) {
     final petName = post.petName ?? 'Mascota';
+    final isOwner = authController.isAuthenticated && (
+      authController.activePet?.id == post.petId ||
+      authController.userPets.any((p) => p.id == post.petId) ||
+      (post.petName != null && authController.activePet != null && 
+       authController.activePet!.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
+      (post.petName != null && authController.userPets.any((p) => 
+       p.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()))
+    );
+    final petToOpen = isOwner && authController.activePet != null
+        ? authController.activePet!
+        : post.toPetModel();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Creator handle + Verified checkmark + Solana NFT Pill
         Row(
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => PetProfileScreen(pet: post.toPetModel())),
+                  MaterialPageRoute(builder: (_) => PetProfileScreen(pet: petToOpen)),
                 );
               },
-              child: Text(
-                '@$petName',
-                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              child: Row(
+                children: [
+                  Text(
+                    '@$petName',
+                    style: GoogleFonts.fredoka(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.verified_rounded, color: Color(0xFF38BDF8), size: 16),
+                ],
               ),
             ),
             const SizedBox(width: 8),
             if (post.nftMintAddress != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: AppTheme.solanaPurple.withOpacity(0.3),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF9945FF).withOpacity(0.35),
+                      const Color(0xFF14F195).withOpacity(0.35),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.solanaPurple),
+                  border: Border.all(color: const Color(0xFF14F195).withOpacity(0.8), width: 1),
                 ),
-                child: Text('Solana NFT 🐾', style: GoogleFonts.fredoka(color: AppTheme.solanaGreen, fontSize: 11, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'Solana NFT 🐾',
+                  style: GoogleFonts.fredoka(
+                    color: const Color(0xFF14F195),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
           ],
         ),
+        const SizedBox(height: 6),
+
+        // Caption text
+        Text(
+          post.caption,
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        // Hashtags
+        if (post.tags.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            children: post.tags.map((t) => Text(
+              '#$t',
+              style: GoogleFonts.fredoka(
+                color: const Color(0xFFFF9E7D),
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            )).toList(),
+          ),
+        ],
         const SizedBox(height: 8),
-        Text(post.caption, style: GoogleFonts.outfit(color: Colors.white, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
-        if (post.hasSound) ...[
-          const SizedBox(height: 6),
-          Row(
+
+        // Music Pill with Spinning Vinyl Disc (Image 2 style)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.48),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+              ),
+            ],
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              SpinningVinylDisc(
+                isPlaying: true,
+                size: 20,
+                albumArtUrl: post.petAvatarUrl,
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.music_note_rounded, color: AppTheme.accentOrange, size: 14),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
-                  post.soundTitle ?? 'Audio Original',
-                  style: GoogleFonts.fredoka(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.bold),
+                  post.soundTitle ?? 'Cute Puppy Melody - @${post.petName ?? "Chico"}',
+                  style: GoogleFonts.fredoka(
+                    color: Colors.white.withOpacity(0.95),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-        ],
-        if (post.tags.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            children: post.tags.map((t) => Text('#$t', style: GoogleFonts.fredoka(color: AppTheme.accentOrange, fontWeight: FontWeight.bold, fontSize: 12))).toList(),
-          ),
-        ],
+        ),
       ],
     );
   }

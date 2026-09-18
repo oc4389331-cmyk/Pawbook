@@ -1,5 +1,3 @@
-import 'dart:js' as js;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +12,7 @@ import '../../models/post_model.dart';
 import '../../models/sponsorship_model.dart';
 import '../../models/withdrawal_model.dart';
 import '../../services/supabase_service.dart';
+import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/pet_analytics_dashboard_modal.dart';
@@ -21,6 +20,8 @@ import '../widgets/claim_sponsorship_modal.dart';
 import '../widgets/post_card.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/terms_and_conditions_modal.dart';
+import '../widgets/pet_attribute_bar.dart';
+import '../widgets/pet_analytics_curve_card.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -222,7 +223,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final oracleController = Provider.of<OracleController>(context);
     final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
         authController.activePet?.id == widget.pet.id ||
-        authController.userPets.any((p) => p.id == widget.pet.id);
+        authController.userPets.any((p) => p.id == widget.pet.id) ||
+        (authController.activePet != null && authController.activePet!.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase()) ||
+        authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -315,130 +318,324 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   ],
                 ),
               ),
-            // Header Hero Card (Pawly Pastel Style)
+            // Header Hero Card (Pawly Pastel Style - Exact Image 1 & 4 Reference)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: AppTheme.borderWarm),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryTerracotta.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
+                boxShadow: AppTheme.softCardShadow,
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
               ),
               child: Column(
                 children: [
-                  // Interactive Pet Avatar with Edit Badge for Owner
-                  Builder(builder: (_) {
-                    final currentPetAvatar = (isOwner && authController.activePet?.id == widget.pet.id)
-                        ? (authController.activePet!.avatarUrl.isNotEmpty ? authController.activePet!.avatarUrl : widget.pet.avatarUrl)
-                        : (authController.userPets.any((p) => p.id == widget.pet.id)
-                            ? (authController.userPets.firstWhere((p) => p.id == widget.pet.id).avatarUrl)
-                            : widget.pet.avatarUrl);
+                  // Top Row with Avatar, Name, Handle, and Action Buttons (Like, Share)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Avatar with Camera Badge and Holographic NFT Badge
+                      Builder(builder: (_) {
+                        final currentPetAvatar = (isOwner && authController.activePet?.id == widget.pet.id)
+                            ? (authController.activePet!.avatarUrl.isNotEmpty ? authController.activePet!.avatarUrl : widget.pet.avatarUrl)
+                            : (authController.userPets.any((p) => p.id == widget.pet.id)
+                                ? (authController.userPets.firstWhere((p) => p.id == widget.pet.id).avatarUrl)
+                                : widget.pet.avatarUrl);
 
-                    return Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 54,
-                          backgroundColor: AppTheme.primaryTerracotta.withOpacity(0.15),
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: AppTheme.cardWarm,
-                            backgroundImage: NetworkImage(
-                              currentPetAvatar.isNotEmpty
-                                  ? currentPetAvatar
-                                  : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400',
+                        return Stack(
+                          alignment: Alignment.bottomRight,
+                          clipBehavior: Clip.none,
+                          children: [
+                            CircleAvatar(
+                              radius: 46,
+                              backgroundColor: AppTheme.pastelPeach,
+                              child: CircleAvatar(
+                                radius: 42,
+                                backgroundColor: AppTheme.surfaceWarm,
+                                backgroundImage: NetworkImage(
+                                  currentPetAvatar.isNotEmpty
+                                      ? currentPetAvatar
+                                      : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400',
+                                ),
+                                child: _isUploadingAvatar
+                                    ? Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(alpha: 0.55),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Center(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
                             ),
-                            child: _isUploadingAvatar
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.55),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: SizedBox(
-                                        width: 30,
-                                        height: 30,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            // Orange Camera Button
+                            if (isOwner)
+                              Positioned(
+                                bottom: -2,
+                                right: -2,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _isUploadingAvatar ? null : () => _pickAndChangePetAvatar(authController),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        gradient: AppTheme.pawButtonGradient,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2.5),
+                                        boxShadow: AppTheme.elevatedPawShadow,
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt_rounded,
+                                        color: Colors.white,
+                                        size: 15,
                                       ),
                                     ),
-                                  )
-                                : null,
-                          ),
-                        ),
-                        if (isOwner)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _isUploadingAvatar ? null : () => _pickAndChangePetAvatar(authController),
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [AppTheme.primaryTerracotta, AppTheme.accentOrange],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2.5),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppTheme.primaryTerracotta.withOpacity(0.4),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
+                                ),
+                              ),
+                            // Holographic NFT Badge
+                            Positioned(
+                              top: -2,
+                              left: -2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF67E8F9), Color(0xFFC084FC)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF67E8F9).withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'NFT',
+                                  style: GoogleFonts.fredoka(
                                     color: Colors.white,
-                                    size: 18,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ),
+                          ],
+                        );
+                      }),
+                      const SizedBox(width: 16),
+
+                      // Name, Verified Badge, Handle, Breed
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    widget.pet.name,
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimaryDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                const Icon(
+                                  Icons.verified_rounded,
+                                  color: Color(0xFF0284C7),
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '@${widget.pet.name.toLowerCase()} 💛',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 13,
+                                color: AppTheme.brandCoral,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, color: AppTheme.textMutedWarm, size: 14),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '${widget.pet.species} • ${widget.pet.breed}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: AppTheme.textMutedWarm,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Like and Share Action buttons in top-right
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.favorite_border_rounded, size: 18, color: AppTheme.brandCoral),
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('¡Le diste amor a ${widget.pet.name}! ❤️'),
+                                    backgroundColor: AppTheme.brandCoral,
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                      ],
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.pet.name,
-                    style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.pastelPeach,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTheme.brandCoral.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          '${widget.pet.species} • ${widget.pet.breed}',
-                          style: GoogleFonts.fredoka(color: AppTheme.brandCoral, fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
+                          const SizedBox(width: 6),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.share_outlined, size: 18, color: AppTheme.textMutedWarm),
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: 'https://pawbooklife.com/pet/${widget.pet.id}'));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('¡Enlace del perfil copiado! 🐾')),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.pet.bio,
-                    style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 14),
-                    textAlign: TextAlign.center,
+                  const SizedBox(height: 16),
+
+                  // Bio description if present
+                  if (widget.pet.bio.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        widget.pet.bio,
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12.5),
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Attribute Progress Bars (Exact Image 1 layout)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAF5EE),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Atributos de Bienestar',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimaryDark,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.brandCoral.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.people_outline_rounded, size: 12, color: AppTheme.brandCoral),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '59% Afinidad',
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.brandCoral,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const PetAttributeBar(
+                          icon: Icons.favorite_rounded,
+                          iconColor: AppTheme.brandCoral,
+                          label: 'Vitalidad',
+                          progress: 0.50,
+                          percentageText: '50%',
+                        ),
+                        const PetAttributeBar(
+                          icon: Icons.shield_rounded,
+                          iconColor: AppTheme.pawTeal,
+                          label: 'Patrocinio',
+                          progress: 0.71,
+                          percentageText: '71%',
+                        ),
+                        const PetAttributeBar(
+                          icon: Icons.bolt_rounded,
+                          iconColor: Color(0xFFF59E0B),
+                          label: 'Nivel Energía',
+                          progress: 0.85,
+                          percentageText: '85%',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Analytics Curve Card (Image 4 Style)
+                  PetAnalyticsCurveCard(
+                    followersCount: 23059,
+                    totalScore: widget.pet.totalSponsoredScore > 0 ? widget.pet.totalSponsoredScore : 340,
+                    popularityPercent: 94.0,
+                    earningsText: '\$33,900',
                   ),
                   const SizedBox(height: 18),
                   
@@ -1030,16 +1227,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final cleanHash = txHash.trim();
     if (cleanHash.isEmpty) return;
     final url = 'https://solscan.io/tx/$cleanHash';
-    if (kIsWeb) {
-      try {
-        js.context.callMethod('open', [url, '_blank']);
-      } catch (_) {}
-    } else {
-      Clipboard.setData(ClipboardData(text: url));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solscan URL copied to clipboard')),
-      );
-    }
+    try {
+      UrlLauncherService.instance.openUrl(url);
+    } catch (_) {}
   }
 
   void _copyToClipboard(String text, String message) {

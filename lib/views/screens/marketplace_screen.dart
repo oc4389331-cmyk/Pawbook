@@ -37,6 +37,12 @@ class MarketplaceScreen extends StatelessWidget {
     }
 
     bool isProcessing = false;
+    bool awaitingWalletConfirmation = false;
+    bool isVerifyingOnChain = false;
+    String? currentReferenceKey;
+    String? verificationError;
+    final TextEditingController manualSigController = TextEditingController();
+    bool showManualInput = false;
     String selectedToken = 'SOL'; // 'SOL' or 'SKR'
     String selectedWallet = 'Phantom';
     int selectedQuantity = 1;
@@ -54,6 +60,227 @@ class MarketplaceScreen extends StatelessWidget {
             final double totalUsd = item.priceUsd * selectedQuantity;
             final double totalSol = totalUsd / solRate;
             final double totalSkr = oracleController.convertUsdToSkr(totalUsd);
+
+            if (awaitingWalletConfirmation) {
+              final tokenPaidStr = selectedToken == 'SKR'
+                  ? '${totalSkr.toStringAsFixed(0)} \$SKR'
+                  : '${totalSol.toStringAsFixed(3)} SOL';
+
+              return Container(
+                decoration: const BoxDecoration(
+                  color: AppTheme.bgWarmCream,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(color: AppTheme.borderWarm, borderRadius: BorderRadius.circular(3)),
+                      ),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.emeraldGreen.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.3), width: 2),
+                        ),
+                        child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.emeraldGreen, size: 38),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Confirmación en Solana',
+                        style: GoogleFonts.fredoka(fontSize: 19, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.borderWarm),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '💡 Pasos para completar:',
+                              style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '1. Aprueba el pago de $tokenPaidStr en $selectedWallet.\n2. Vuelve a Pawtbook (botón Atrás o selector de apps).\n3. Pulsa "Verificar en Solana" para validar on-chain.',
+                              style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, height: 1.35),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (verificationError != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  verificationError!,
+                                  style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.redAccent.shade700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+
+                      // Botón Principal de Verificación On-Chain
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.emeraldGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            elevation: 2,
+                          ),
+                          icon: isVerifyingOnChain
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                )
+                              : const Icon(Icons.verified_rounded),
+                          label: Text(
+                            isVerifyingOnChain ? 'Verificando en Solana RPC...' : '🔍 Verificar Pago en Solana',
+                            style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: isVerifyingOnChain
+                              ? null
+                              : () async {
+                                  setModalState(() {
+                                    isVerifyingOnChain = true;
+                                    verificationError = null;
+                                  });
+
+                                  final verifyRes = await dynamicAuthService.verifySolanaPaymentOnChain(
+                                    recipientAddress: recipientWallet,
+                                    referenceAddress: currentReferenceKey,
+                                    transactionSignature: manualSigController.text.trim().isNotEmpty ? manualSigController.text.trim() : null,
+                                    expectedAmount: selectedToken == 'SKR' ? totalSkr : totalSol,
+                                    tokenType: selectedToken,
+                                  );
+
+                                  if (verifyRes.isSuccess) {
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                      marketplaceController.purchaseProduct(item.id, selectedQuantity);
+                                      authController.addPawtScore(AppConfig.pointsForMarketPurchase);
+
+                                      final shortSig = (verifyRes.signature != null && verifyRes.signature!.length > 16)
+                                          ? '${verifyRes.signature!.substring(0, 8)}...${verifyRes.signature!.substring(verifyRes.signature!.length - 8)}'
+                                          : (verifyRes.signature ?? 'Confirmado');
+
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppTheme.emeraldGreen,
+                                          duration: const Duration(seconds: 6),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${langController.t("paySuccessMsg")} ($tokenPaidStr • $selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")}) • +${AppConfig.pointsForMarketPurchase} PawtScore 🐾',
+                                                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '🔗 Solana Tx: $shortSig (Verificado On-Chain)',
+                                                style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    setModalState(() {
+                                      isVerifyingOnChain = false;
+                                      verificationError = verifyRes.errorMessage ?? 'Transacción no detectada aún.';
+                                    });
+                                  }
+                                },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Toggle Manual Hash input
+                      GestureDetector(
+                        onTap: () => setModalState(() => showManualInput = !showManualInput),
+                        child: Text(
+                          showManualInput ? '▲ Ocultar campo de firma manual' : '▼ ¿Pegar Tx Hash / Firma manualmente?',
+                          style: GoogleFonts.fredoka(color: AppTheme.solanaPurple, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      if (showManualInput) ...[
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: manualSigController,
+                          decoration: InputDecoration(
+                            hintText: 'Pega la firma de 88 caracteres de Solana...',
+                            hintStyle: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.borderWarm)),
+                          ),
+                          style: GoogleFonts.outfit(fontSize: 11),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 38,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppTheme.primaryTerracotta,
+                                duration: const Duration(seconds: 3),
+                                content: Text('Proceso cerrado. No se descontó el artículo.', style: GoogleFonts.fredoka(color: Colors.white)),
+                              ),
+                            );
+                          },
+                          child: Text('❌ Cancelar (No se realizó el pago)', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 12.5)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
 
             return Container(
               decoration: const BoxDecoration(
@@ -427,45 +654,18 @@ class MarketplaceScreen extends StatelessWidget {
                                   recipientAddress: recipientWallet,
                                   tokenType: selectedToken,
                                   skrAmount: totalSkr,
-                                  solAmount: totalSol,
+                                  solAmount: effectiveSol,
                                 );
 
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-
                                 if (res.isSuccess) {
-                                  // Deduct stock in real-time
-                                  marketplaceController.purchaseProduct(item.id, selectedQuantity);
-
-                                  // Award PawtScore points for buying in the market (+150 pts)
-                                  authController.addPawtScore(AppConfig.pointsForMarketPurchase);
-
-                                  if (context.mounted) {
-                                    final tokenPaidStr = selectedToken == 'SKR'
-                                        ? '${totalSkr.toStringAsFixed(0)} \$SKR'
-                                        : '${totalSol.toStringAsFixed(3)} SOL';
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: AppTheme.emeraldGreen,
-                                        duration: const Duration(seconds: 5),
-                                        content: Row(
-                                          children: [
-                                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                '${langController.t("paySuccessMsg")} ($tokenPaidStr • $selectedQuantity ${selectedQuantity == 1 ? langController.t("unit") : langController.t("units")}) • +${AppConfig.pointsForMarketPurchase} PawtScore 🐾',
-                                                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }
+                                  // Prompt user confirmation after returning from wallet
+                                  setModalState(() {
+                                    isProcessing = false;
+                                    currentReferenceKey = res.referenceKey;
+                                    awaitingWalletConfirmation = true;
+                                  });
                                 } else if (res.userCancelled) {
+                                  setModalState(() => isProcessing = false);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -476,6 +676,7 @@ class MarketplaceScreen extends StatelessWidget {
                                     );
                                   }
                                 } else {
+                                  setModalState(() => isProcessing = false);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -1380,9 +1581,44 @@ class MarketplaceScreen extends StatelessWidget {
                 ),
               ),
             ),
+          // Cart Button with badge (Image 5 style)
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_bag_outlined, color: AppTheme.textPrimaryDark, size: 24),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Carrito de compras Pawtbook (2 artículos)'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.accentOrange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text(
+                      '2',
+                      style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
             margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: AppTheme.surfaceWarm,
               borderRadius: BorderRadius.circular(20),
@@ -1390,11 +1626,11 @@ class MarketplaceScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 18),
-                const SizedBox(width: 6),
+                const Icon(Icons.stars_rounded, color: AppTheme.accentOrange, size: 16),
+                const SizedBox(width: 4),
                 Text(
                   '$userScore pts',
-                  style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ],
             ),
@@ -1406,6 +1642,54 @@ class MarketplaceScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Search & Filter Bar (Image 5 style)
+            Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: AppTheme.softCardShadow,
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, color: AppTheme.textMutedWarm, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Buscar bandanas, collares...',
+                      style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.pastelPeach.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.tune_rounded, color: AppTheme.accentOrange, size: 18),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Category Filter Pills (Image 5 style)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildCategoryChip('Todos', isSelected: true),
+                  _buildCategoryChip('Bandanas'),
+                  _buildCategoryChip('Collares'),
+                  _buildCategoryChip('Juguetes'),
+                  _buildCategoryChip('NFT Merch'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Banner (Pawly Warm Gradient)
             Container(
               width: double.infinity,
@@ -1474,7 +1758,7 @@ class MarketplaceScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1508,10 +1792,11 @@ class MarketplaceScreen extends StatelessWidget {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceWarm,
-                    borderRadius: BorderRadius.circular(22),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: AppTheme.softCardShadow,
                     border: Border.all(
-                      color: isSoldOut ? Colors.red.withOpacity(0.35) : AppTheme.borderWarm,
+                      color: isSoldOut ? Colors.red.withOpacity(0.35) : const Color(0xFFF1F5F9),
                       width: isSoldOut ? 1.5 : 1.2,
                     ),
                   ),
@@ -1715,6 +2000,29 @@ class MarketplaceScreen extends StatelessWidget {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String title, {bool isSelected = false}) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.accentOrange : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? AppTheme.accentOrange : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: isSelected ? AppTheme.softCardShadow : [],
+      ),
+      child: Text(
+        title,
+        style: GoogleFonts.fredoka(
+          color: isSelected ? Colors.white : AppTheme.textPrimaryDark,
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         ),
       ),
     );

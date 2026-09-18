@@ -1,4 +1,3 @@
-import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +7,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/language_controller.dart';
 import '../../controllers/oracle_controller.dart';
 import '../../services/dynamic_auth_service.dart';
+import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 
 class WalletDashboardModal extends StatefulWidget {
@@ -205,11 +205,9 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
 
   void _openSolscan(String address) {
     final url = 'https://solscan.io/account/$address';
-    if (kIsWeb) {
-      try {
-        js.context.callMethod('open', [url, '_blank']);
-      } catch (_) {}
-    }
+    try {
+      UrlLauncherService.instance.openUrl(url);
+    } catch (_) {}
   }
 
   @override

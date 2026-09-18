@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pawtbook/controllers/auth_controller.dart';
+import 'package:pawtbook/models/profile_model.dart';
 import 'package:pawtbook/models/pet_model.dart';
 
 void main() {
@@ -11,7 +12,14 @@ void main() {
     });
 
     test('New authenticated user starts as Human Only (Sponsor) role', () async {
-      await authController.loginWithSolanaWallet();
+      authController.setProfileForTesting(
+        ProfileModel(
+          id: 'usr_test_1',
+          walletAddress: 'sol_test_1',
+          username: 'tester',
+          createdAt: DateTime.now(),
+        ),
+      );
       expect(authController.isAuthenticated, isTrue);
       expect(authController.hasPet, isFalse);
       expect(authController.isHumanOnly, isTrue);
@@ -19,7 +27,14 @@ void main() {
     });
 
     test('Registering a pet upgrades user to Pet Creator role', () async {
-      await authController.loginWithSolanaWallet();
+      authController.setProfileForTesting(
+        ProfileModel(
+          id: 'usr_test_1',
+          walletAddress: 'sol_test_1',
+          username: 'tester',
+          createdAt: DateTime.now(),
+        ),
+      );
       expect(authController.hasPet, isFalse);
 
       final newPet = PetModel(

@@ -1,4 +1,3 @@
-import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +10,7 @@ import '../../controllers/oracle_controller.dart';
 import '../../models/pet_model.dart';
 import '../../services/dynamic_auth_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/url_launcher_service.dart';
 import '../../theme/app_theme.dart';
 
 class ClaimSponsorshipModal extends StatefulWidget {
@@ -136,13 +136,13 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
           SnackBar(
             backgroundColor: AppTheme.emeraldGreen,
             duration: const Duration(seconds: 8),
-            action: (txResult.solscanUrl != null && kIsWeb)
+            action: (txResult.solscanUrl != null)
                 ? SnackBarAction(
                     label: 'SOLSCAN',
                     textColor: Colors.white,
                     onPressed: () {
                       try {
-                        js.context.callMethod('open', [txResult.solscanUrl!, '_blank']);
+                        UrlLauncherService.instance.openUrl(txResult.solscanUrl!);
                       } catch (_) {}
                     },
                   )
