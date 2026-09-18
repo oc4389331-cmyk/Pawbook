@@ -1678,20 +1678,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ? authController.activePet!
         : post.toPetModel();
 
-    final bool isPostVerified = (post.nftMintAddress != null &&
-        post.nftMintAddress!.isNotEmpty &&
-        (post.nftMintAddress!.startsWith('SolVerified_') ||
-            post.nftMintAddress!.startsWith('Verified_') ||
-            (post.nftMintAddress!.length >= 32 &&
-                !post.nftMintAddress!.startsWith('SolMint') &&
-                !post.nftMintAddress!.startsWith('PawSol')))) ||
-        (isOwner &&
-            authController.activePet?.nftMintAddress != null &&
-            (authController.activePet!.nftMintAddress!.startsWith('SolVerified_') ||
-                authController.activePet!.nftMintAddress!.startsWith('Verified_') ||
-                (authController.activePet!.nftMintAddress!.length >= 32 &&
-                    !authController.activePet!.nftMintAddress!.startsWith('SolMint') &&
-                    !authController.activePet!.nftMintAddress!.startsWith('PawSol'))));
+    final bool isPostVerified = PetModel.checkVerificationAddress(post.nftMintAddress, post.createdAt) ||
+        (isOwner && authController.activePet != null && authController.activePet!.isVerified);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

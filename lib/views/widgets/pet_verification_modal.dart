@@ -266,7 +266,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Insignia de Cuenta Verificada Oficial 🌟',
+                          'Insignia de Cuenta Verificada • 40 días 🌟',
                           style: GoogleFonts.fredoka(
                             fontSize: 14,
                             color: const Color(0xFF0369A1),
@@ -352,7 +352,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'USD (Pago único)',
+                              'USD / 40 días',
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -492,8 +492,15 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                         _buildBenefitItem(
                           Icons.verified_rounded,
                           const Color(0xFF0284C7),
-                          'Estrellita azul oficial permanente',
-                          'Visible en tu perfil, en el feed global y en todos tus comentarios.',
+                          'Estrellita azul oficial por 40 días',
+                          'Visible en tu perfil, en el feed global y en comentarios. Renovable periódicamente.',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildBenefitItem(
+                          Icons.history_rounded,
+                          Colors.orange.shade700,
+                          'Vigencia de 40 días con renovación',
+                          'Si no se renueva al vencer los 40 días, la estrellita se desactiva de forma automática.',
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
@@ -507,7 +514,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                           Icons.token_rounded,
                           AppTheme.accentOrange,
                           'Certificación NFT en la red Solana',
-                          'Acreditación oficial grabada de forma inmutable en la blockchain.',
+                          'Acreditación oficial grabada en la blockchain con timestamp de renovación.',
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
@@ -613,10 +620,12 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                               children: [
                                 const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Verificar a ${widget.pet.name} por \$10 USD',
-                                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
+                                  Text(
+                                    widget.pet.isVerificationExpired
+                                        ? 'Renovar Verificación (40 días) por \$10 USD'
+                                        : 'Verificar a ${widget.pet.name} (40 días) por \$10 USD',
+                                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
                               ],
                             ),
                     ),

@@ -45,13 +45,16 @@ void main() {
       );
       expect(mockMintPet.isVerified, isFalse);
 
-      final solVerifiedPet = unverifiedPet.copyWith(
-        nftMintAddress: 'SolVerified_1720000000_pet_chico',
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final recentVerifiedPet = unverifiedPet.copyWith(
+        nftMintAddress: 'SolVerified_${nowMs}_pet_chico',
       );
-      expect(solVerifiedPet.isVerified, isTrue);
+      expect(recentVerifiedPet.isVerified, isTrue);
+      expect(recentVerifiedPet.isVerificationExpired, isFalse);
+      expect(recentVerifiedPet.verificationDaysRemaining, greaterThanOrEqualTo(39));
 
       final standardVerifiedPet = unverifiedPet.copyWith(
-        nftMintAddress: 'Verified_sol_chico_badge',
+        nftMintAddress: 'Verified_${nowMs}_chico_badge',
       );
       expect(standardVerifiedPet.isVerified, isTrue);
 
@@ -59,6 +62,47 @@ void main() {
         nftMintAddress: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // 44-char base58 Solana mint
       );
       expect(realSolanaNftPet.isVerified, isTrue);
+    });
+
+    test('PetModel 40-day expiration deactivates verified badge when older than 40 days', () {
+      final unverifiedPet = PetModel(
+        id: 'pet_chico',
+        ownerId: 'usr_owner_1',
+        name: 'Chico',
+        bio: 'Mi perrito',
+        avatarUrl: 'https://example.com/chico.jpg',
+        nftMintAddress: null,
+        createdAt: DateTime.now().subtract(const Duration(days: 45)),
+      );
+
+      // Verified 41 days ago -> EXPIRED!
+      final expiredMs = DateTime.now().subtract(const Duration(days: 41)).millisecondsSinceEpoch;
+      final expiredPet = unverifiedPet.copyWith(
+        nftMintAddress: 'SolVerified_${expiredMs}_pet_chico',
+      );
+      expect(expiredPet.isVerifiedBase, isTrue);
+      expect(expiredPet.isVerificationExpired, isTrue);
+      expect(expiredPet.isVerified, isFalse); // Deactivated automatically!
+      expect(expiredPet.verificationDaysRemaining, equals(0));
+
+      // Verified 15 days ago -> ACTIVE with ~25 days remaining
+      final activeMs = DateTime.now().subtract(const Duration(days: 15)).millisecondsSinceEpoch;
+      final activePet = unverifiedPet.copyWith(
+        nftMintAddress: 'SolVerified_${activeMs}_pet_chico',
+      );
+      expect(activePet.isVerifiedBase, isTrue);
+      expect(activePet.isVerificationExpired, isFalse);
+      expect(activePet.isVerified, isTrue);
+      expect(activePet.verificationDaysRemaining, inInclusiveRange(24, 25));
+
+      // Renewing (new timestamp) -> ACTIVE again for 40 days
+      final renewedMs = DateTime.now().millisecondsSinceEpoch;
+      final renewedPet = expiredPet.copyWith(
+        nftMintAddress: 'SolVerified_${renewedMs}_pet_chico',
+      );
+      expect(renewedPet.isVerificationExpired, isFalse);
+      expect(renewedPet.isVerified, isTrue);
+      expect(renewedPet.verificationDaysRemaining, greaterThanOrEqualTo(39));
     });
   });
 }

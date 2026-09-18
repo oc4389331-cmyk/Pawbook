@@ -252,13 +252,10 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         (authController.activePet != null && authController.activePet!.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase()) ||
         authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
 
-    final bool isPetVerified = (_verifiedNftAddress != null &&
-        _verifiedNftAddress!.isNotEmpty &&
-        (_verifiedNftAddress!.startsWith('SolVerified_') ||
-            _verifiedNftAddress!.startsWith('Verified_') ||
-            (_verifiedNftAddress!.length >= 32 &&
-                !_verifiedNftAddress!.startsWith('SolMint') &&
-                !_verifiedNftAddress!.startsWith('PawSol'))));
+    final currentPetInstance = widget.pet.copyWith(nftMintAddress: _verifiedNftAddress);
+    final bool isPetVerified = currentPetInstance.isVerified;
+    final bool isVerificationExpired = currentPetInstance.isVerificationExpired;
+    final int daysRemaining = currentPetInstance.verificationDaysRemaining;
 
     final totalViews = _petPosts.fold<int>(0, (sum, p) => sum + p.viewsCount);
     final totalLikes = _petPosts.fold<int>(0, (sum, p) => sum + p.likesCount);
@@ -559,21 +556,53 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 ),
                                 if (isPetVerified) ...[
                                   const SizedBox(width: 5),
-                                  const Tooltip(
-                                    message: 'Cuenta Oficial Verificada',
-                                    child: Icon(
+                                  Tooltip(
+                                    message: 'Cuenta Oficial Verificada (Vence en $daysRemaining días)',
+                                    child: const Icon(
                                       Icons.verified_rounded,
                                       color: Color(0xFF0284C7),
                                       size: 20,
                                     ),
                                   ),
+                                  if (isOwner && daysRemaining <= 7) ...[
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () => PetVerificationModal.show(
+                                        context,
+                                        pet: currentPetInstance,
+                                        onVerified: (updated) {
+                                          setState(() {
+                                            _verifiedNftAddress = updated.nftMintAddress;
+                                          });
+                                          _refreshPosts();
+                                        },
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                                        ),
+                                        child: Text(
+                                          'Renovar ($daysRemaining d)',
+                                          style: GoogleFonts.fredoka(
+                                            color: Colors.amber.shade900,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ] else if (isOwner) ...[
                                   const SizedBox(width: 6),
                                   InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () => PetVerificationModal.show(
                                       context,
-                                      pet: widget.pet.copyWith(nftMintAddress: _verifiedNftAddress),
+                                      pet: currentPetInstance,
                                       onVerified: (updated) {
                                         setState(() {
                                           _verifiedNftAddress = updated.nftMintAddress;
@@ -584,19 +613,23 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                                        color: (isVerificationExpired ? Colors.orange : const Color(0xFF0284C7)).withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                                        border: Border.all(color: (isVerificationExpired ? Colors.orange : const Color(0xFF0284C7)).withValues(alpha: 0.3)),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.verified_outlined, color: Color(0xFF0284C7), size: 13),
+                                          Icon(
+                                            isVerificationExpired ? Icons.replay_rounded : Icons.verified_outlined,
+                                            color: isVerificationExpired ? Colors.orange.shade800 : const Color(0xFF0284C7),
+                                            size: 13,
+                                          ),
                                           const SizedBox(width: 3),
                                           Text(
-                                            'Verificar (\$10)',
+                                            isVerificationExpired ? 'Renovar (\$10)' : 'Verificar (\$10)',
                                             style: GoogleFonts.fredoka(
-                                              color: const Color(0xFF0284C7),
+                                              color: isVerificationExpired ? Colors.orange.shade800 : const Color(0xFF0284C7),
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -1095,7 +1128,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            'Cuenta Oficial Verificada en Solana',
+                            'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
                             style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],
@@ -1103,25 +1136,27 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                   ] else if (isOwner) ...[
-                    // Button to acquire official $10 USD Blue Star Badge
+                    // Button to acquire or renew official $10 USD Blue Star Badge (40 days)
                     SizedBox(
                       width: double.infinity,
                       height: 46,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0284C7),
+                          backgroundColor: isVerificationExpired ? Colors.orange.shade700 : const Color(0xFF0284C7),
                           foregroundColor: Colors.white,
                           elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        icon: const Icon(Icons.verified_rounded, size: 18),
+                        icon: Icon(isVerificationExpired ? Icons.replay_rounded : Icons.verified_rounded, size: 18),
                         label: Text(
-                          'Obtener Insignia Verificada (\$10 USD / SOL / \$SKR)',
+                          isVerificationExpired
+                              ? 'Renovar Verificación (40 días) • \$10 USD / SOL / \$SKR'
+                              : 'Obtener Insignia Verificada (40 días) • \$10 USD',
                           style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                         onPressed: () => PetVerificationModal.show(
                           context,
-                          pet: widget.pet.copyWith(nftMintAddress: _verifiedNftAddress),
+                          pet: currentPetInstance,
                           onVerified: (updated) {
                             setState(() {
                               _verifiedNftAddress = updated.nftMintAddress;

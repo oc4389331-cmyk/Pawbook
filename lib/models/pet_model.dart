@@ -23,14 +23,104 @@ class PetModel {
     required this.createdAt,
   });
 
-  /// Whether this pet holds an official verified blue star badge
-  bool get isVerified {
+  /// Official badge validity duration in days (deactivates if not renewed)
+  static const int verificationValidityDays = 40;
+
+  /// Base check whether this pet has ever had a verification certificate
+  bool get isVerifiedBase {
     if (nftMintAddress == null || nftMintAddress!.isEmpty) return false;
     return nftMintAddress!.startsWith('SolVerified_') ||
         nftMintAddress!.startsWith('Verified_') ||
         (nftMintAddress!.length >= 32 &&
             !nftMintAddress!.startsWith('SolMint') &&
             !nftMintAddress!.startsWith('PawSol'));
+  }
+
+  /// Extracted verification timestamp if verified with timestamp
+  DateTime? get verifiedAt {
+    if (nftMintAddress == null || nftMintAddress!.isEmpty) return null;
+    try {
+      if (nftMintAddress!.startsWith('SolVerified_') || nftMintAddress!.startsWith('Verified_')) {
+        final parts = nftMintAddress!.split('_');
+        if (parts.length >= 2) {
+          final timestamp = int.tryParse(parts[1]);
+          if (timestamp != null && timestamp > 0) {
+            return DateTime.fromMillisecondsSinceEpoch(timestamp);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Expiration date of the verification badge (verifiedAt + 40 days)
+  DateTime? get verificationExpiresAt {
+    final vAt = verifiedAt;
+    if (vAt != null) {
+      return vAt.add(const Duration(days: verificationValidityDays));
+    }
+    if (isVerifiedBase) {
+      return createdAt.add(const Duration(days: verificationValidityDays));
+    }
+    return null;
+  }
+
+  /// Days remaining until the verification badge deactivates
+  int get verificationDaysRemaining {
+    final expires = verificationExpiresAt;
+    if (expires == null) return 0;
+    final diff = expires.difference(DateTime.now()).inDays;
+    return diff >= 0 ? diff : 0;
+  }
+
+  /// Whether the verification badge has exceeded the 40-day validity window
+  bool get isVerificationExpired {
+    if (!isVerifiedBase) return false;
+    final expires = verificationExpiresAt;
+    if (expires != null) {
+      return DateTime.now().isAfter(expires);
+    }
+    return false;
+  }
+
+  /// Whether this pet holds an ACTIVE official verified blue star badge
+  /// (Deactivates automatically after 40 days if not renewed)
+  bool get isVerified {
+    if (!isVerifiedBase) return false;
+    return !isVerificationExpired;
+  }
+
+  /// Static helper to check whether an nftMintAddress is verified and not expired
+  static bool checkVerificationAddress(String? address, [DateTime? fallbackDate]) {
+    if (address == null || address.isEmpty) return false;
+    final isBase = address.startsWith('SolVerified_') ||
+        address.startsWith('Verified_') ||
+        (address.length >= 32 &&
+            !address.startsWith('SolMint') &&
+            !address.startsWith('PawSol'));
+    if (!isBase) return false;
+
+    // Check 40-day expiration
+    try {
+      if (address.startsWith('SolVerified_') || address.startsWith('Verified_')) {
+        final parts = address.split('_');
+        if (parts.length >= 2) {
+          final timestamp = int.tryParse(parts[1]);
+          if (timestamp != null && timestamp > 0) {
+            final verifiedDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+            final expires = verifiedDate.add(const Duration(days: verificationValidityDays));
+            return DateTime.now().isBefore(expires);
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (fallbackDate != null) {
+      final expires = fallbackDate.add(const Duration(days: verificationValidityDays));
+      return DateTime.now().isBefore(expires);
+    }
+
+    return true;
   }
 
   /// Deterministic or on-chain Dynamic Solana Wallet Address for this pet
