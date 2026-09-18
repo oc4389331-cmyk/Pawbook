@@ -168,13 +168,17 @@ class AuthController extends ChangeNotifier {
     String walletType = 'Phantom',
     bool isSignUp = false,
     String? fullName,
+    bool forceNew = false,
   }) async {
     _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      final res = await _dynamicAuthService.authenticateWithSolanaWallet(walletType: walletType);
+      final res = await _dynamicAuthService.authenticateWithSolanaWallet(
+        walletType: walletType,
+        forceNew: forceNew,
+      );
       if (!res.isSuccess || res.walletAddress == null) {
         _errorMessage = res.errorMessage ?? 'No se pudo conectar con la wallet $walletType.';
         _setLoading(false);
@@ -584,13 +588,23 @@ class AuthController extends ChangeNotifier {
     }
     _currentProfile = profile;
 
-    // Provision / sync with Dynamic.xyz Cloud Dashboard
-    if (_currentProfile != null && _currentProfile!.email != null && _currentProfile!.email!.isNotEmpty) {
+    // Provision / sync with Dynamic.xyz Cloud Dashboard (For ALL accounts: Email, Google, or Solana Wallet)
+    if (_currentProfile != null) {
+      final syncEmail = (_currentProfile!.email != null && _currentProfile!.email!.isNotEmpty)
+          ? _currentProfile!.email!
+          : '${_currentProfile!.username.toLowerCase()}@pawtbooklife.com';
+
       _renderBackendService.provisionDynamicUser(
-        email: _currentProfile!.email!,
+        email: syncEmail,
         username: _currentProfile!.username,
         fullName: _currentProfile!.fullName,
         walletAddress: _currentProfile!.walletAddress,
+      ).ignore();
+
+      _dynamicAuthService.syncWalletWithDynamic(
+        walletAddress: _currentProfile!.walletAddress,
+        email: syncEmail,
+        username: _currentProfile!.username,
       ).ignore();
     }
 

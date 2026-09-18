@@ -6,6 +6,7 @@ import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/terms_and_conditions_modal.dart';
+import '../../services/auth_storage_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -258,6 +259,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     AuthController authController,
     LanguageController langController, {
     required String walletType,
+    bool forceNew = false,
   }) async {
     if (!_validateTermsForSignUp(langController)) return;
     final success = await authController.loginWithSolanaWallet(
@@ -266,6 +268,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       fullName: _isSignUp && _nameController.text.trim().isNotEmpty
           ? _nameController.text.trim()
           : null,
+      forceNew: forceNew,
     );
     if (success && mounted) {
       _onLoginSuccess();
@@ -273,9 +276,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   void _showOtherWalletsModal(AuthController authController, LanguageController langController) {
+    final savedSeeker = AuthStorageService.instance.getItem('pawtbook_seeker_wallet_address') ??
+                        AuthStorageService.instance.getItem('pawtbook_device_wallet_address');
+    final shortSeeker = (savedSeeker != null && savedSeeker.length > 10)
+        ? '${savedSeeker.substring(0, 6)}...${savedSeeker.substring(savedSeeker.length - 4)}'
+        : null;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
@@ -310,18 +320,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                langController.t('selectSolanaWalletModalSubtitle'),
+                'Selecciona con qué billetera de Solana deseas acceder:',
                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
 
-              // Option 1: Solana Mobile / Seeker Seed Vault (Primary)
+              // Option 1: Solana Mobile / Seeker Seed Vault (Primary, in first place!)
               _buildModalWalletOption(
                 title: langController.t('seekerVaultTitle'),
-                subtitle: langController.t('seekerVaultSubtitle'),
+                subtitle: shortSeeker != null
+                    ? 'Billetera vinculada: $shortSeeker (Toca para entrar)'
+                    : langController.t('seekerVaultSubtitle'),
+                badgeText: shortSeeker != null ? 'Vinculada' : 'Seeker',
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -340,7 +353,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               // Option 2: Phantom Wallet
               _buildModalWalletOption(
                 title: 'Phantom Wallet',
-                subtitle: 'Conectar con extensión o app de Phantom (👻)',
+                subtitle: 'Conectar con extensión o app de Phantom en Solana',
+                badgeText: 'Phantom',
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -359,7 +373,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               // Option 3: Solflare Wallet
               _buildModalWalletOption(
                 title: 'Solflare Wallet',
-                subtitle: 'Conectar con Solflare Flame (🔥)',
+                subtitle: 'Conectar con Solflare Flame en Solana',
+                badgeText: 'Solflare',
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -375,10 +390,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 10),
 
-              // Option 4: Generic Solana In-App / Embedded Web3 Wallet
+              // Option 4: Generic Solana In-App / Nueva Wallet
               _buildModalWalletOption(
-                title: langController.t('embeddedWeb3WalletTitle'),
-                subtitle: langController.t('embeddedWeb3WalletSubtitle'),
+                title: 'Nueva Wallet / Billetera Web3',
+                subtitle: 'Crear o conectar una nueva dirección de Solana',
+                badgeText: 'Nueva',
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -389,10 +405,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, langController, walletType: 'Dynamic');
+                  _handleWalletSignIn(authController, langController, walletType: 'Dynamic', forceNew: true);
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // Reset / Switch option if user wants to use a different Seeker wallet
+              if (shortSeeker != null) ...[
+                TextButton.icon(
+                  icon: const Icon(Icons.refresh_rounded, size: 16, color: AppTheme.textMutedWarm),
+                  label: Text(
+                    'Usar una nueva dirección para Seeker',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppTheme.textMutedWarm,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Seeker', forceNew: true);
+                  },
+                ),
+              ],
+              const SizedBox(height: 10),
             ],
           ),
         );
@@ -405,6 +441,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     required String subtitle,
     required Widget iconWidget,
     required VoidCallback onTap,
+    String? badgeText,
   }) {
     return InkWell(
       onTap: onTap,
@@ -424,13 +461,35 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.fredoka(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimaryDark,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.fredoka(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimaryDark,
+                        ),
+                      ),
+                      if (badgeText != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryTerracotta.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryTerracotta,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -556,118 +615,88 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
 
   Widget _buildUnifiedWalletButton(AuthController authController, LanguageController langController) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6A5ACD), // Web3 Solana Purple
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shadowColor: const Color(0xFF6A5ACD).withOpacity(0.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-            ),
-            onPressed: authController.isLoading
-                ? null
-                : () => _handleWalletSignIn(authController, langController, walletType: 'Seeker'),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        langController.t('connectSolanaWallet'),
-                        style: GoogleFonts.fredoka(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        langController.t('connectWalletSubtitle'),
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF14F195)),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Solana',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF6A5ACD), // Web3 Solana Purple
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shadowColor: const Color(0xFF6A5ACD).withOpacity(0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
-        const SizedBox(height: 6),
-        TextButton(
-          onPressed: authController.isLoading
-              ? null
-              : () => _showOtherWalletsModal(authController, langController),
-          style: TextButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                langController.t('selectSolanaWalletModalTitle'),
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  color: AppTheme.textMutedWarm,
-                  decoration: TextDecoration.underline,
-                ),
+        onPressed: authController.isLoading
+            ? null
+            : () => _showOtherWalletsModal(authController, langController),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 4),
-              const Icon(Icons.tune_rounded, size: 13, color: AppTheme.textMutedWarm),
-            ],
-          ),
+              child: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    langController.t('connectSolanaWallet'),
+                    style: GoogleFonts.fredoka(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    langController.t('connectWalletSubtitle'),
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF14F195)),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Solana',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

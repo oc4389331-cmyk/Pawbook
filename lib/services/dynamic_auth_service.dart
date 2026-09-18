@@ -103,18 +103,23 @@ class DynamicAuthService {
   Future<DynamicAuthResult> authenticateWithSolanaWallet({
     String walletType = 'Phantom',
     String? providedAddress,
+    bool forceNew = false,
   }) async {
-    return connectSpecificWallet(walletType, providedAddress: providedAddress);
+    return connectSpecificWallet(walletType, providedAddress: providedAddress, forceNew: forceNew);
   }
 
   /// Connects to a specific Solana Wallet Provider (Phantom, Solflare, Seeker Native, Dynamic)
-  Future<DynamicAuthResult> connectSpecificWallet(String walletType, {String? providedAddress}) async {
+  Future<DynamicAuthResult> connectSpecificWallet(
+    String walletType, {
+    String? providedAddress,
+    bool forceNew = false,
+  }) async {
     String? realSolanaAddress = providedAddress;
     final type = walletType.toLowerCase();
 
     // 1. Dynamic In-App / Embedded Wallet (Instant zero-extension connection)
-    if (type.contains('dynamic') || type.contains('embedded') || type.contains('pawtbook')) {
-      final dynAddress = providedAddress ?? _generateRealSolanaAddress('dynamic_${DateTime.now().millisecondsSinceEpoch}');
+    if (type.contains('dynamic') || type.contains('embedded') || type.contains('pawtbook') || type.contains('nueva')) {
+      final dynAddress = providedAddress ?? _generateRealSolanaAddress('dynamic_${Random().nextInt(999999)}_${DateTime.now().millisecondsSinceEpoch}');
       return DynamicAuthResult(
         isSuccess: true,
         walletAddress: dynAddress,
@@ -122,7 +127,7 @@ class DynamicAuthService {
       );
     }
 
-    // 2. External Browser Extensions / Native MWA
+    // 2. External Browser Extensions / Native MWA on Web
     if (kIsWeb && realSolanaAddress == null) {
       try {
         String methodName = 'connectPhantom';
@@ -150,26 +155,36 @@ class DynamicAuthService {
       }
     }
 
-    // 3. Persistent Mobile / Native Device Wallet (Seeker, MWA, Hardware Seed Vault)
+    // 3. Persistent Mobile / Native Device Wallet per wallet provider
     if (realSolanaAddress == null || realSolanaAddress.isEmpty) {
-      String? persistentAddress = AuthStorageService.instance.getItem('pawtbook_device_wallet_address');
+      final providerKey = 'pawtbook_${type}_wallet_address';
+      String? persistentAddress = forceNew ? null : AuthStorageService.instance.getItem(providerKey);
       if (persistentAddress == null || persistentAddress.isEmpty) {
-        persistentAddress = AuthStorageService.instance.getItem('pawtbook_logged_wallet');
+        if (!forceNew && type.contains('seeker')) {
+          persistentAddress = AuthStorageService.instance.getItem('pawtbook_device_wallet_address');
+        }
       }
 
       if (persistentAddress != null && persistentAddress.isNotEmpty) {
         realSolanaAddress = persistentAddress;
       } else {
-        // First-time wallet initialization on this device: generate a permanent Base58 Solana address
-        final deviceSeed = 'seeker_device_wallet_${Random().nextInt(9999999)}_${DateTime.now().millisecondsSinceEpoch}';
+        // Generate a permanent Base58 Solana address for this specific wallet provider
+        final deviceSeed = '${type}_device_wallet_${Random().nextInt(9999999)}_${DateTime.now().millisecondsSinceEpoch}';
         realSolanaAddress = _generateRealSolanaAddress(deviceSeed);
-        AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
+        AuthStorageService.instance.setItem(providerKey, realSolanaAddress);
+        if (type.contains('seeker')) {
+          AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
+        }
       }
     }
 
     // Always ensure persistent storage remembers this device wallet address
     if (realSolanaAddress != null && realSolanaAddress.isNotEmpty) {
-      AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
+      final providerKey = 'pawtbook_${type}_wallet_address';
+      AuthStorageService.instance.setItem(providerKey, realSolanaAddress);
+      if (type.contains('seeker')) {
+        AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
+      }
     }
 
     return DynamicAuthResult(
@@ -177,6 +192,33 @@ class DynamicAuthService {
       walletAddress: realSolanaAddress,
       jwtToken: 'dyn_jwt_${walletType.toLowerCase()}_$realSolanaAddress',
     );
+  }
+
+  /// Syncs any wallet user with Dynamic.xyz Cloud API
+  Future<void> syncWalletWithDynamic({
+    required String walletAddress,
+    required String email,
+    String? username,
+    String? walletType,
+  }) async {
+    final envId = environmentId;
+    if (envId.isEmpty || envId.contains('dynamic-env-id')) return;
+    try {
+      final url = Uri.parse('https://api.dynamic.xyz/v1/sdk/$envId/users');
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'walletPublicKey': walletAddress,
+          'chain': 'SOL',
+          'alias': username,
+          'walletProvider': walletType ?? 'Seeker',
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('[DynamicAuthService] Dynamic user sync notice: $e');
+    }
   }
 
   final Map<String, String> _pendingOtps = {};
