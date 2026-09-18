@@ -12,6 +12,7 @@ class PetAnalyticsCurveCard extends StatefulWidget {
   final List<double>? weeklyPoints;
   final List<double>? monthlyPoints;
   final List<double>? yearlyPoints;
+  final VoidCallback? onTapFollowers;
 
   const PetAnalyticsCurveCard({
     super.key,
@@ -23,6 +24,7 @@ class PetAnalyticsCurveCard extends StatefulWidget {
     this.weeklyPoints,
     this.monthlyPoints,
     this.yearlyPoints,
+    this.onTapFollowers,
   });
 
   @override
@@ -53,7 +55,13 @@ class _PetAnalyticsCurveCardState extends State<PetAnalyticsCurveCard> {
           // Row of Stat Metrics (Real Data)
           Row(
             children: [
-              _buildStatBox('Followers', formattedFollowers),
+              _buildStatBox(
+                'Followers', 
+                formattedFollowers, 
+                onTap: widget.onTapFollowers, 
+                isClickable: widget.onTapFollowers != null,
+                icon: Icons.people_alt_rounded,
+              ),
               const SizedBox(width: 8),
               _buildStatBox('Popularidad', '${widget.popularityPercent.toInt()}%'),
               const SizedBox(width: 8),
@@ -136,40 +144,72 @@ class _PetAnalyticsCurveCardState extends State<PetAnalyticsCurveCard> {
     );
   }
 
-  Widget _buildStatBox(String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                color: AppTheme.textMutedWarm,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: GoogleFonts.fredoka(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimaryDark,
-              ),
-            ),
-          ],
+  Widget _buildStatBox(String label, String value, {VoidCallback? onTap, bool isClickable = false, IconData? icon}) {
+    final content = Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isClickable ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isClickable ? AppTheme.primaryTerracotta.withValues(alpha: 0.35) : const Color(0xFFE2E8F0), 
+          width: isClickable ? 1.4 : 1,
         ),
       ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 12, color: isClickable ? AppTheme.primaryTerracotta : AppTheme.textMutedWarm),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: isClickable ? AppTheme.primaryTerracotta : AppTheme.textMutedWarm,
+                    fontWeight: isClickable ? FontWeight.bold : FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isClickable) ...[
+                const SizedBox(width: 2),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppTheme.primaryTerracotta),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.fredoka(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimaryDark,
+            ),
+          ),
+        ],
+      ),
     );
+
+    if (onTap != null) {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            child: content,
+          ),
+        ),
+      );
+    }
+
+    return Expanded(child: content);
   }
 
   Widget _buildPeriodTab(String title, int index) {

@@ -23,6 +23,7 @@ import '../widgets/language_selector.dart';
 import '../widgets/terms_and_conditions_modal.dart';
 import '../widgets/pet_attribute_bar.dart';
 import '../widgets/pet_analytics_curve_card.dart';
+import '../widgets/follows_dashboard_modal.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -45,6 +46,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   Future<List<PostModel>>? _postsFuture;
   List<PostModel> _petPosts = [];
   int _followersCount = 0;
+  int _followingCount = 0;
 
   // Pet Sponsorship Ledger & Claim Audit State
   List<SponsorshipModel> _petSponsorships = [];
@@ -148,6 +150,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
       final spns = await _supabaseService.getSponsorshipsForPet(widget.pet.id);
       final wths = await _supabaseService.getWithdrawalsForPet(widget.pet.id);
       final followers = await _supabaseService.getFollowersCountForPet(widget.pet.id);
+      final auth = Provider.of<AuthController>(context, listen: false);
+      int following = 0;
+      if (auth.currentProfile != null) {
+        try {
+          final followedPets = await _supabaseService.getFollowedPets(auth.currentProfile!.id);
+          following = followedPets.length;
+        } catch (_) {}
+      }
 
       int totalLife = 0;
       int totalUnclaimed = 0;
@@ -170,6 +180,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
           _unclaimedSkr = totalUnclaimed;
           _withdrawnSkr = totalWithdrawn;
           _followersCount = followers;
+          _followingCount = following;
           _isLoadingLedger = false;
         });
       }
@@ -723,6 +734,75 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     earningsText: realEarningsText,
                     performanceText: performanceText,
                     weeklyPoints: weeklyPoints,
+                    onTapFollowers: () {
+                      FollowsDashboardModal.show(
+                        context,
+                        pet: widget.pet,
+                        currentUserId: authController.currentProfile?.id,
+                        initialTabIndex: 0,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Community & Follows Quick Stat Chip
+                  Center(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        FollowsDashboardModal.show(
+                          context,
+                          pet: widget.pet,
+                          currentUserId: authController.currentProfile?.id,
+                          initialTabIndex: 0,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite_rounded, size: 15, color: AppTheme.brandCoral),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$_followersCount ${_followersCount == 1 ? "Suscriptor" : "Suscriptores"}',
+                              style: GoogleFonts.fredoka(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.textPrimaryDark,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('•', style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.pets_rounded, size: 15, color: Color(0xFF0284C7)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$_followingCount Siguiendo',
+                              style: GoogleFonts.fredoka(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.textPrimaryDark,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppTheme.textMutedWarm),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   

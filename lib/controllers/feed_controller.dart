@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/post_model.dart';
 import '../models/pet_model.dart';
+import '../models/profile_model.dart';
 import '../services/supabase_service.dart';
 import '../services/r2_storage_service.dart';
 import '../services/render_backend_service.dart';
@@ -60,6 +61,10 @@ class FeedController extends ChangeNotifier {
     final pets = await _supabaseService.getFollowedPets(humanId);
     _followedPetIds.addAll(pets.map((p) => p.id));
     return pets;
+  }
+
+  Future<List<ProfileModel>> getFollowersForPet(String petId) async {
+    return await _supabaseService.getFollowersForPet(petId);
   }
 
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {

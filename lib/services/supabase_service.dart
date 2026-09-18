@@ -172,6 +172,22 @@ class SupabaseService {
         );
   }
 
+  Future<ProfileModel?> getProfileById(String id) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('profiles')
+            .select()
+            .eq('id', id)
+            .maybeSingle();
+        if (res != null) return ProfileModel.fromJson(res);
+      } catch (e) {
+        if (!_useMockFallback) rethrow;
+      }
+    }
+    return _mockProfiles[id];
+  }
+
   Future<ProfileModel?> getProfileByWallet(String walletAddress) async {
     if (_client != null) {
       try {
@@ -1117,6 +1133,42 @@ class SupabaseService {
       } catch (_) {}
     }
     return _mockFollows.where((f) => f.endsWith('_$petId')).length;
+  }
+
+  Future<List<ProfileModel>> getFollowersForPet(String petId) async {
+    final List<ProfileModel> followers = [];
+    if (!_useMockFallback && _client != null) {
+      try {
+        final res = await _client!
+            .from('follows')
+            .select('follower_id, profiles:follower_id(*)')
+            .eq('following_pet_id', petId);
+        if (res is List) {
+          for (final item in res) {
+            final profData = item['profiles'];
+            if (profData != null && profData is Map<String, dynamic>) {
+              followers.add(ProfileModel.fromJson(profData));
+            } else if (item['follower_id'] != null) {
+              final p = await getProfileById(item['follower_id']);
+              if (p != null) followers.add(p);
+            }
+          }
+          return followers;
+        }
+      } catch (e) {
+        print('Note on getFollowersForPet: $e');
+      }
+    }
+
+    final mockFollowerIds = _mockFollows
+        .where((f) => f.endsWith('_$petId'))
+        .map((f) => f.substring(0, f.length - petId.length - 1))
+        .toList();
+    for (final fid in mockFollowerIds) {
+      final prof = _mockProfiles[fid];
+      if (prof != null) followers.add(prof);
+    }
+    return followers;
   }
 
   Future<List<PostModel>> getPostsForPet(String petId, {String? currentUserId}) async {

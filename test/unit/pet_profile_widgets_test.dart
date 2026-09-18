@@ -47,4 +47,29 @@ void main() {
     expect(find.text('Score'), findsOneWidget);
     expect(find.text('\$33,900'), findsOneWidget);
   });
+
+  testWidgets('PetAnalyticsCurveCard triggers onTapFollowers callback when tapped', (WidgetTester tester) async {
+    bool wasTapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PetAnalyticsCurveCard(
+              followersCount: 1,
+              totalScore: 100,
+              onTapFollowers: () {
+                wasTapped = true;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Followers'), findsOneWidget);
+    await tester.tap(find.text('Followers'));
+    await tester.pumpAndSettle();
+
+    expect(wasTapped, isTrue);
+  });
 }
