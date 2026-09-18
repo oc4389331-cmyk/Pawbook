@@ -1041,6 +1041,133 @@ class SupabaseService {
     return true;
   }
 
+  /// Get all sponsorships received by pets belonging to an owner
+  Future<List<SponsorshipModel>> getSponsorshipsForOwner(String ownerId) async {
+    final pets = await getPetsForOwner(ownerId);
+    final petIds = pets.map((p) => p.id).toList();
+
+    if (_client != null && petIds.isNotEmpty) {
+      try {
+        final res = await _client!
+            .from('sponsorships')
+            .select('*, profiles:sponsor_id (full_name, username, avatar_url)')
+            .inFilter('pet_id', petIds)
+            .order('created_at', ascending: false);
+
+        if (res is List) {
+          return (res as List)
+              .map((json) => SponsorshipModel.fromJson(Map<String, dynamic>.from(json)))
+              .toList();
+        }
+      } catch (e) {
+        debugPrint('Error fetching sponsorships for owner: $e');
+      }
+    }
+
+    return _mockSponsorships
+        .where((s) => petIds.contains(s.petId))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Get withdrawals made by owner or across their pets
+  Future<List<WithdrawalModel>> getWithdrawalsForOwner(String ownerId) async {
+    final pets = await getPetsForOwner(ownerId);
+    final petIds = pets.map((p) => p.id).toList();
+
+    if (_client != null) {
+      try {
+        var query = _client!.from('withdrawals').select();
+        final res = petIds.isNotEmpty
+            ? await query.or('user_id.eq.$ownerId,pet_id.in.(${petIds.join(",")})').order('created_at', ascending: false)
+            : await query.eq('user_id', ownerId).order('created_at', ascending: false);
+
+        if (res is List) {
+          return (res as List)
+              .map((json) => WithdrawalModel.fromJson(Map<String, dynamic>.from(json)))
+              .toList();
+        }
+      } catch (e) {
+        debugPrint('Error fetching withdrawals for owner: $e');
+      }
+    }
+
+    return _mockWithdrawals
+        .where((w) => w.userId == ownerId || petIds.contains(w.petId))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Process owner withdrawal across all their pets: lock sponsorships and register withdrawal record
+  Future<bool> processOwnerWithdrawal({
+    required String userId,
+    required String destinationWallet,
+    required int amountSkr,
+    double amountSol = 0.0,
+    double amountUsd = 0.0,
+    String? txHash,
+  }) async {
+    final pets = await getPetsForOwner(userId);
+    final petIds = pets.map((p) => p.id).toList();
+    final withdrawalId = 'wth_owner_${DateTime.now().millisecondsSinceEpoch}';
+    final payoutHash = txHash ?? 'payout_sol_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 1. Identify all unclaimed sponsorships for this owner's pets
+    final unclaimedSpns = _mockSponsorships
+        .where((s) => petIds.contains(s.petId) && !s.isClaimed && s.status != 'withdrawn')
+        .toList();
+
+    final sponsorshipIds = unclaimedSpns.map((s) => s.id).toList();
+
+    // 2. Lock them in local memory mock
+    for (int i = 0; i < _mockSponsorships.length; i++) {
+      if (petIds.contains(_mockSponsorships[i].petId) && !_mockSponsorships[i].isClaimed) {
+        _mockSponsorships[i] = _mockSponsorships[i].copyWith(
+          isClaimed: true,
+          status: 'withdrawn',
+          withdrawalId: withdrawalId,
+          claimedAt: DateTime.now(),
+        );
+      }
+    }
+
+    // 3. Register withdrawal model
+    final withdrawal = WithdrawalModel(
+      id: withdrawalId,
+      petId: petIds.isNotEmpty ? petIds.first : 'owner_pets',
+      userId: userId,
+      amountSkr: amountSkr,
+      amountSol: amountSol,
+      amountUsd: amountUsd,
+      destinationWallet: destinationWallet,
+      txHash: payoutHash,
+      status: 'completed',
+      sponsorshipIds: sponsorshipIds,
+      createdAt: DateTime.now(),
+    );
+    _mockWithdrawals.insert(0, withdrawal);
+
+    // 4. Update Supabase if connected
+    if (_client != null) {
+      try {
+        await _client!.from('withdrawals').insert(withdrawal.toJson());
+
+        if (sponsorshipIds.isNotEmpty) {
+          await _client!.from('sponsorships').update({
+            'is_claimed': true,
+            'status': 'withdrawn',
+            'withdrawal_id': withdrawalId,
+            'claimed_at': DateTime.now().toIso8601String(),
+          }).inFilter('id', sponsorshipIds);
+        }
+      } catch (e) {
+        debugPrint('Error updating owner withdrawal in Supabase: $e');
+      }
+    }
+
+    return true;
+  }
+
   Future<void> updatePostStatus(String postId, PostStatus newStatus) async {
     final idx = _mockPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
