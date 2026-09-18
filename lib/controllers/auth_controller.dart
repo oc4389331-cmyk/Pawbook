@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -57,6 +58,7 @@ class AuthController extends ChangeNotifier {
         _dynamicAuthService = dynamicAuthService ?? DynamicAuthService(),
         _renderBackendService = renderBackendService ?? RenderBackendService() {
     _initSupabaseAuthListener();
+    restoreSession();
   }
 
   void _initSupabaseAuthListener() {
@@ -619,7 +621,110 @@ class AuthController extends ChangeNotifier {
     } else {
       _activePet = null;
     }
+
+    // 4. Save persistent session to device storage (Auto-Login across restarts)
+    try {
+      final storage = AuthStorageService.instance;
+      storage.setItem('pawtbook_logged_user_id', _currentProfile!.id);
+      storage.setItem('pawtbook_logged_wallet', _currentProfile!.walletAddress);
+      if (_currentProfile!.email != null && _currentProfile!.email!.isNotEmpty) {
+        storage.setItem('pawtbook_logged_email', _currentProfile!.email!);
+      }
+      storage.setItem('pawtbook_cached_profile', jsonEncode(_currentProfile!.toJson()));
+      storage.setItem('pawtbook_logged_out', 'false');
+      _userLoggedOutExplicitly = false;
+      debugPrint('[Auth] 💾 Sesión guardada de forma persistente: ${_currentProfile!.username} (${_currentProfile!.id})');
+    } catch (e) {
+      debugPrint('[Auth] Error guardando sesión en almacenamiento persistente: $e');
+    }
+
     notifyListeners();
+  }
+
+  /// Restaura la sesión guardada del usuario al abrir la app (Auto-Login instantáneo)
+  Future<bool> restoreSession() async {
+    try {
+      final storage = AuthStorageService.instance;
+      final isLoggedOut = storage.getItem('pawtbook_logged_out') == 'true';
+      if (isLoggedOut || _userLoggedOutExplicitly) {
+        debugPrint('[Auth] No se restaura sesión: usuario cerró sesión explícitamente.');
+        return false;
+      }
+
+      final savedUserId = storage.getItem('pawtbook_logged_user_id');
+      final savedWallet = storage.getItem('pawtbook_logged_wallet');
+      final savedEmail = storage.getItem('pawtbook_logged_email');
+      final cachedProfileStr = storage.getItem('pawtbook_cached_profile');
+
+      if ((savedUserId == null || savedUserId.isEmpty) &&
+          (savedWallet == null || savedWallet.isEmpty) &&
+          (savedEmail == null || savedEmail.isEmpty)) {
+        return false;
+      }
+
+      debugPrint('[Auth] 🔄 Auto-Login: Restaurando sesión para $savedUserId / $savedEmail / $savedWallet');
+
+      // 1. Restauración instantánea desde caché local (0 ms de espera)
+      if (cachedProfileStr != null && cachedProfileStr.isNotEmpty) {
+        try {
+          final jsonMap = jsonDecode(cachedProfileStr) as Map<String, dynamic>;
+          _currentProfile = ProfileModel.fromJson(jsonMap);
+          notifyListeners();
+        } catch (_) {}
+      }
+
+      // 2. Consulta y sincronización en segundo plano con Supabase
+      ProfileModel? freshProfile;
+      if (savedUserId != null && savedUserId.isNotEmpty) {
+        freshProfile = await _supabaseService.getProfileById(savedUserId);
+      }
+      if (freshProfile == null && savedEmail != null && savedEmail.isNotEmpty) {
+        freshProfile = await _supabaseService.getProfileByEmail(savedEmail);
+      }
+      if (freshProfile == null && savedWallet != null && savedWallet.isNotEmpty) {
+        freshProfile = await _supabaseService.getProfileByWallet(savedWallet);
+      }
+
+      if (freshProfile != null) {
+        _currentProfile = freshProfile;
+        storage.setItem('pawtbook_cached_profile', jsonEncode(freshProfile.toJson()));
+      }
+
+      if (_currentProfile == null) {
+        debugPrint('[Auth] ⚠️ No se pudo resolver perfil para sesión guardada.');
+        return false;
+      }
+
+      // 3. Carga de mascotas del usuario
+      final rawPets = await _supabaseService.getPetsForOwner(_currentProfile!.id);
+      _userPets = rawPets.map((p) {
+        if (p.nftMintAddress == null || p.nftMintAddress!.isEmpty) {
+          return p.copyWith(nftMintAddress: p.dynamicWalletAddress);
+        }
+        return p;
+      }).toList();
+
+      if (_userPets.isNotEmpty) {
+        _activePet = _userPets.first;
+      } else {
+        _activePet = null;
+      }
+
+      // 4. Refresco silencioso de Google en Android si aplica
+      if (!kIsWeb) {
+        try {
+          final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+          googleSignIn.signInSilently().catchError((_) => null);
+        } catch (_) {}
+      }
+
+      notifyListeners();
+      debugPrint('[Auth] ✅ Auto-Login completado: ${_currentProfile!.username} | Mascota activa: ${_activePet?.name}');
+      return true;
+    } catch (e) {
+      debugPrint('[Auth] Error al restaurar sesión: $e');
+      return false;
+    }
   }
 
   void setProfileForTesting(ProfileModel? profile, [List<PetModel>? pets]) {
@@ -922,13 +1027,32 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    // Marcar que el usuario cerró sesión ANTES de limpiar Supabase
-    // para que el listener no restaure la sesión
     _userLoggedOutExplicitly = true;
     _currentProfile = null;
     _userPets = [];
     _activePet = null;
     _errorMessage = null;
+
+    try {
+      final storage = AuthStorageService.instance;
+      storage.removeItem('pawtbook_logged_user_id');
+      storage.removeItem('pawtbook_logged_wallet');
+      storage.removeItem('pawtbook_logged_email');
+      storage.removeItem('pawtbook_cached_profile');
+      storage.removeItem('pawtbook_auth_provider');
+      storage.setItem('pawtbook_logged_out', 'true');
+      debugPrint('[Auth] 🧹 Almacenamiento persistente de sesión limpiado.');
+    } catch (e) {
+      debugPrint('[Auth] Error limpiando almacenamiento persistente: $e');
+    }
+
+    if (!kIsWeb) {
+      try {
+        final googleSignIn = GoogleSignIn();
+        await googleSignIn.signOut();
+      } catch (_) {}
+    }
+
     notifyListeners();
 
     try {

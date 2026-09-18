@@ -12,11 +12,19 @@ import 'services/r2_storage_service.dart';
 import 'services/render_backend_service.dart';
 import 'services/dynamic_auth_service.dart';
 import 'controllers/marketplace_controller.dart';
+import 'services/auth_storage_service.dart';
 import 'theme/app_theme.dart';
 import 'views/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize persistent device storage for sessions (Auto-Login)
+  try {
+    await AuthStorageService.instance.init();
+  } catch (e) {
+    debugPrint('Storage init fallback: $e');
+  }
 
   try {
     await Supabase.initialize(
@@ -33,15 +41,20 @@ void main() async {
   final renderBackendService = RenderBackendService();
   final dynamicAuthService = DynamicAuthService();
 
+  final authController = AuthController(
+    supabaseService: supabaseService,
+    dynamicAuthService: dynamicAuthService,
+    renderBackendService: renderBackendService,
+  );
+
+  // Restore previous session (Google, Solana Wallet, Email) before rendering UI
+  await authController.restoreSession();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => AuthController(
-            supabaseService: supabaseService,
-            dynamicAuthService: dynamicAuthService,
-            renderBackendService: renderBackendService,
-          ),
+        ChangeNotifierProvider<AuthController>.value(
+          value: authController,
         ),
         ChangeNotifierProvider(
           create: (_) => FeedController(

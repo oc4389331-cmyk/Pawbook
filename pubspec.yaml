@@ -23,6 +23,7 @@ dependencies:
   video_player: ^2.9.2
   url_launcher: ^6.3.0
   google_sign_in: 6.2.2
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

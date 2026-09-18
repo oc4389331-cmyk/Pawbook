@@ -4,6 +4,9 @@ import 'auth_storage_service.dart';
 
 class WebAuthStorage implements AuthStorageService {
   @override
+  Future<void> init() async {}
+
+  @override
   void setItem(String key, String value) {
     try {
       html.window.localStorage[key] = value;
