@@ -187,27 +187,14 @@ class AuthController extends ChangeNotifier {
       // Validar existencia de perfil en Supabase
       final existingProfile = await _supabaseService.getProfileByWallet(walletAddr);
 
-      if (isSignUp) {
-        if (existingProfile != null) {
-          _errorMessage = '⚠️ Esta wallet (${walletAddr.length > 12 ? walletAddr.substring(0, 6) + "..." + walletAddr.substring(walletAddr.length - 4) : walletAddr}) ya está registrada en Pawbook. Por favor selecciona "Iniciar Sesión".';
-          _setLoading(false);
-          notifyListeners();
-          return false;
-        }
-      } else {
-        // En modo Iniciar Sesión, si no existe el perfil, bloquear y pedir crear cuenta
-        if (existingProfile == null) {
-          _errorMessage = '⚠️ No existe una cuenta registrada con esta wallet (${walletAddr.length > 12 ? walletAddr.substring(0, 6) + "..." + walletAddr.substring(walletAddr.length - 4) : walletAddr}). Por favor selecciona "Crear Cuenta".';
-          _setLoading(false);
-          notifyListeners();
-          return false;
-        }
-      }
-
+      // Web3 UX: Autenticación transparente e inmediata
+      // Si el perfil ya existe, ingresa directo a su cuenta existente
+      // Si no existe, crea automáticamente su perfil sin bloqueos ni errores de pestaña
       await _processAuthenticatedUser(
         walletAddress: walletAddr,
         fullName: fullName,
         jwtToken: res.jwtToken ?? '',
+        existingProfile: existingProfile,
       );
       _setLoading(false);
       return true;

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart' as ul;
 import '../config/app_config.dart';
 import 'solana_web_bridge.dart';
+import 'auth_storage_service.dart';
 
 class DynamicAuthResult {
   final bool isSuccess;
@@ -149,8 +150,26 @@ class DynamicAuthService {
       }
     }
 
+    // 3. Persistent Mobile / Native Device Wallet (Seeker, MWA, Hardware Seed Vault)
     if (realSolanaAddress == null || realSolanaAddress.isEmpty) {
-      realSolanaAddress = _generateRealSolanaAddress('${walletType.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}');
+      String? persistentAddress = AuthStorageService.instance.getItem('pawtbook_device_wallet_address');
+      if (persistentAddress == null || persistentAddress.isEmpty) {
+        persistentAddress = AuthStorageService.instance.getItem('pawtbook_logged_wallet');
+      }
+
+      if (persistentAddress != null && persistentAddress.isNotEmpty) {
+        realSolanaAddress = persistentAddress;
+      } else {
+        // First-time wallet initialization on this device: generate a permanent Base58 Solana address
+        final deviceSeed = 'seeker_device_wallet_${Random().nextInt(9999999)}_${DateTime.now().millisecondsSinceEpoch}';
+        realSolanaAddress = _generateRealSolanaAddress(deviceSeed);
+        AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
+      }
+    }
+
+    // Always ensure persistent storage remembers this device wallet address
+    if (realSolanaAddress != null && realSolanaAddress.isNotEmpty) {
+      AuthStorageService.instance.setItem('pawtbook_device_wallet_address', realSolanaAddress);
     }
 
     return DynamicAuthResult(

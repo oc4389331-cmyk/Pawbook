@@ -5,6 +5,7 @@ import 'package:pawtbook/models/profile_model.dart';
 import 'package:pawtbook/models/pet_model.dart';
 import 'package:pawtbook/services/auth_storage_service.dart';
 import 'package:pawtbook/services/supabase_service.dart';
+import 'package:pawtbook/services/dynamic_auth_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -115,6 +116,52 @@ void main() {
       final didRestore = await authController.restoreSession();
       expect(didRestore, isFalse);
       expect(authController.isAuthenticated, isFalse);
+    });
+
+    test('Solana device wallet address is persistent across logout and re-login without asking to recreate account', () async {
+      final supabaseService = SupabaseService(useMockFallback: true);
+      final dynamicAuthService = DynamicAuthService();
+
+      final authController = AuthController(
+        supabaseService: supabaseService,
+        dynamicAuthService: dynamicAuthService,
+      );
+
+      // 1. Initial wallet connection (e.g. on Seeker / Mobile)
+      final initialRes = await dynamicAuthService.connectSpecificWallet('Seeker');
+      expect(initialRes.isSuccess, isTrue);
+      final assignedWallet = initialRes.walletAddress;
+      expect(assignedWallet, isNotNull);
+
+      // 2. User registers/logs in with this wallet
+      final loginSuccess = await authController.loginWithSolanaWallet(
+        walletType: 'Seeker',
+        fullName: 'Seeker Pet Owner',
+      );
+      expect(loginSuccess, isTrue);
+      expect(authController.isAuthenticated, isTrue);
+      expect(authController.currentProfile?.walletAddress, equals(assignedWallet));
+
+      // 3. User explicitly logs out
+      await authController.logout();
+      expect(authController.isAuthenticated, isFalse);
+      expect(authController.currentProfile, isNull);
+
+      // 4. User connects wallet again to log in
+      final reloadedController = AuthController(
+        supabaseService: supabaseService,
+        dynamicAuthService: dynamicAuthService,
+      );
+
+      final secondLoginSuccess = await reloadedController.loginWithSolanaWallet(
+        walletType: 'Seeker',
+      );
+
+      // Must succeed and link to the EXACT same wallet and account without error
+      expect(secondLoginSuccess, isTrue);
+      expect(reloadedController.isAuthenticated, isTrue);
+      expect(reloadedController.currentProfile?.walletAddress, equals(assignedWallet));
+      expect(reloadedController.errorMessage, isNull);
     });
   });
 }

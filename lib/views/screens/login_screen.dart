@@ -318,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 20),
 
-              // Option 1: Solana Mobile / Seeker Seed Vault
+              // Option 1: Solana Mobile / Seeker Seed Vault (Primary)
               _buildModalWalletOption(
                 title: langController.t('seekerVaultTitle'),
                 subtitle: langController.t('seekerVaultSubtitle'),
@@ -337,7 +337,45 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 10),
 
-              // Option 2: Generic Solana In-App / Embedded Web3 Wallet
+              // Option 2: Phantom Wallet
+              _buildModalWalletOption(
+                title: 'Phantom Wallet',
+                subtitle: 'Conectar con extensión o app de Phantom (👻)',
+                iconWidget: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFAB9FF2).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('👻', style: TextStyle(fontSize: 18)),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleWalletSignIn(authController, langController, walletType: 'Phantom');
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // Option 3: Solflare Wallet
+              _buildModalWalletOption(
+                title: 'Solflare Wallet',
+                subtitle: 'Conectar con Solflare Flame (🔥)',
+                iconWidget: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFC7227).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('🔥', style: TextStyle(fontSize: 18)),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleWalletSignIn(authController, langController, walletType: 'Solflare');
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // Option 4: Generic Solana In-App / Embedded Web3 Wallet
               _buildModalWalletOption(
                 title: langController.t('embeddedWeb3WalletTitle'),
                 subtitle: langController.t('embeddedWeb3WalletSubtitle'),
@@ -517,128 +555,119 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
 
 
-  Widget _buildPhantomButton(AuthController authController, LanguageController langController) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFAB9FF2), // Branded Phantom Purple
-          foregroundColor: Colors.white,
-          elevation: 3,
-          shadowColor: const Color(0xFFAB9FF2).withOpacity(0.4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+  Widget _buildUnifiedWalletButton(AuthController authController, LanguageController langController) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6A5ACD), // Web3 Solana Purple
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: const Color(0xFF6A5ACD).withOpacity(0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            onPressed: authController.isLoading
+                ? null
+                : () => _handleWalletSignIn(authController, langController, walletType: 'Seeker'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        langController.t('connectSolanaWallet'),
+                        style: GoogleFonts.fredoka(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        langController.t('connectWalletSubtitle'),
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF14F195)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Solana',
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        onPressed: authController.isLoading
-            ? null
-            : () => _handleWalletSignIn(authController, langController, walletType: 'Phantom'),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                shape: BoxShape.circle,
+        const SizedBox(height: 6),
+        TextButton(
+          onPressed: authController.isLoading
+              ? null
+              : () => _showOtherWalletsModal(authController, langController),
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                langController.t('selectSolanaWalletModalTitle'),
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: AppTheme.textMutedWarm,
+                  decoration: TextDecoration.underline,
+                ),
               ),
-              child: const Text(
-                '👻',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _isSignUp ? langController.t('signUpWithPhantom') : langController.t('loginWithPhantom'),
-              style: GoogleFonts.fredoka(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF2C194D),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSolflareButton(AuthController authController, LanguageController langController) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFC7227), // Branded Solflare Flame
-          foregroundColor: Colors.white,
-          elevation: 3,
-          shadowColor: const Color(0xFFFC7227).withOpacity(0.4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+              const SizedBox(width: 4),
+              const Icon(Icons.tune_rounded, size: 13, color: AppTheme.textMutedWarm),
+            ],
           ),
         ),
-        onPressed: authController.isLoading
-            ? null
-            : () => _handleWalletSignIn(authController, langController, walletType: 'Solflare'),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                shape: BoxShape.circle,
-              ),
-              child: const Text(
-                '🔥',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _isSignUp ? langController.t('signUpWithSolflare') : langController.t('loginWithSolflare'),
-              style: GoogleFonts.fredoka(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOtherWalletsButton(AuthController authController, LanguageController langController) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.primaryTerracotta,
-          backgroundColor: AppTheme.surfaceWarm,
-          side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-        ),
-        onPressed: authController.isLoading ? null : () => _showOtherWalletsModal(authController, langController),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppTheme.primaryTerracotta),
-            const SizedBox(width: 8),
-            Text(
-              langController.t('otherSolanaWallets'),
-              style: GoogleFonts.fredoka(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryTerracotta,
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
@@ -912,17 +941,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           const SizedBox(height: 20),
 
-                          // --- BOTÓN PHANTOM WALLET ---
-                          _buildPhantomButton(authController, langController),
-                          const SizedBox(height: 12),
-
-                          // --- BOTÓN SOLFLARE WALLET ---
-                          _buildSolflareButton(authController, langController),
-                          const SizedBox(height: 12),
-
-                          // --- BOTÓN OTRAS WALLETS DE SOLANA ---
-                          _buildOtherWalletsButton(authController, langController),
-                          const SizedBox(height: 24),
+                          // --- BOTÓN ÚNICO CONECTAR WALLET DE SOLANA ---
+                          _buildUnifiedWalletButton(authController, langController),
+                          const SizedBox(height: 20),
 
                           // Tarjeta informativa sobre la billetera de beneficios
                           Container(
