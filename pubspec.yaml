@@ -24,6 +24,7 @@ dependencies:
   url_launcher: ^6.3.0
   google_sign_in: 6.2.2
   shared_preferences: ^2.5.3
+  solana_mobile_client: ^0.1.2
 
 dev_dependencies:
   flutter_test:

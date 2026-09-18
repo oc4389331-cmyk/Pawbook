@@ -6,6 +6,8 @@ import 'package:pawtbook/models/pet_model.dart';
 import 'package:pawtbook/services/auth_storage_service.dart';
 import 'package:pawtbook/services/supabase_service.dart';
 import 'package:pawtbook/services/dynamic_auth_service.dart';
+import 'package:solana_mobile_client/solana_mobile_client.dart';
+import 'package:solana/base58.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +18,11 @@ void main() {
   });
 
   group('Universal Auth Persistence & Auto-Login Tests', () {
+    test('Base58 encoding works properly', () {
+      final bytes = [1, 2, 3, 4, 5];
+      final encoded = base58encode(bytes);
+      expect(encoded, isNotEmpty);
+    });
     test('Session is restored when cached profile exists in storage', () async {
       final storage = AuthStorageService.instance;
       storage.setItem('pawtbook_logged_user_id', 'usr_test_123');

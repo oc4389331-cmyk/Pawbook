@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart' as ul;
 import '../config/app_config.dart';
 import 'solana_web_bridge.dart';
 import 'auth_storage_service.dart';
+import 'package:solana_mobile_client/solana_mobile_client.dart';
+import 'package:solana/base58.dart';
 
 class DynamicAuthResult {
   final bool isSuccess;
@@ -152,6 +154,30 @@ class DynamicAuthService {
         }
       } catch (e) {
         debugPrint('Wallet connect error: $e');
+      }
+    }
+
+    // 2b. Real Solana Mobile Wallet Adapter (MWA) for Android (Seeker, Phantom, Solflare)
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && realSolanaAddress == null && !type.contains('dynamic')) {
+      try {
+        debugPrint('[SolanaMWA] Intentando autorización nativa en Android con Solana Mobile Wallet Adapter...');
+        final session = await LocalAssociationScenario.create();
+        await session.startActivityForResult(null);
+        final client = await session.start();
+        final result = await client.authorize(
+          identityUri: Uri.parse('https://pawbooklife.com'),
+          iconUri: Uri.parse('https://media.pawbooklife.com/favicon.ico'),
+          identityName: 'Pawbooklife',
+          cluster: 'mainnet-beta',
+        );
+        await session.close();
+
+        if (result != null && result.publicKey.isNotEmpty) {
+          realSolanaAddress = base58encode(result.publicKey);
+          debugPrint('[SolanaMWA] ✅ Wallet autorizada exitosamente por el usuario: $realSolanaAddress');
+        }
+      } catch (e) {
+        debugPrint('[SolanaMWA] Aviso o fallback de MWA en Android: $e');
       }
     }
 
