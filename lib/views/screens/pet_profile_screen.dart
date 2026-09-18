@@ -253,6 +253,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
 
     final currentPetInstance = widget.pet.copyWith(nftMintAddress: _verifiedNftAddress);
+    final bool isExempted = currentPetInstance.isExempted;
     final bool isPetVerified = currentPetInstance.isVerified;
     final bool isVerificationExpired = currentPetInstance.isVerificationExpired;
     final int daysRemaining = currentPetInstance.verificationDaysRemaining;
@@ -557,14 +558,16 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 if (isPetVerified) ...[
                                   const SizedBox(width: 5),
                                   Tooltip(
-                                    message: 'Cuenta Oficial Verificada (Vence en $daysRemaining días)',
+                                    message: isExempted
+                                        ? 'Cuenta Oficial Verificada (Vitalicia / Exonerada)'
+                                        : 'Cuenta Oficial Verificada (Vence en $daysRemaining días)',
                                     child: const Icon(
                                       Icons.verified_rounded,
                                       color: Color(0xFF0284C7),
                                       size: 20,
                                     ),
                                   ),
-                                  if (isOwner && daysRemaining <= 7) ...[
+                                  if (!isExempted && isOwner && daysRemaining <= 7) ...[
                                     const SizedBox(width: 6),
                                     InkWell(
                                       borderRadius: BorderRadius.circular(12),
@@ -596,7 +599,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                       ),
                                     ),
                                   ],
-                                ] else if (isOwner) ...[
+                                ] else if (isOwner && !isExempted) ...[
                                   const SizedBox(width: 6),
                                   InkWell(
                                     borderRadius: BorderRadius.circular(12),
@@ -1128,14 +1131,16 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                           const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
+                            isExempted
+                                ? 'Cuenta Oficial Verificada • Vitalicia (Exonerada)'
+                                : 'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
                             style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ] else if (isOwner) ...[
+                  ] else if (isOwner && !isExempted) ...[
                     // Button to acquire or renew official $10 USD Blue Star Badge (40 days)
                     SizedBox(
                       width: double.infinity,

@@ -26,8 +26,16 @@ class PetModel {
   /// Official badge validity duration in days (deactivates if not renewed)
   static const int verificationValidityDays = 40;
 
+  /// Whether this pet is permanently exempted from verification fees and 40-day expiration (Chico's official account)
+  bool get isExempted {
+    final cleanName = name.trim().toLowerCase();
+    final cleanId = id.trim().toLowerCase();
+    return cleanName == 'chico' || cleanId == 'pet_d1148fad' || cleanId.contains('chico');
+  }
+
   /// Base check whether this pet has ever had a verification certificate
   bool get isVerifiedBase {
+    if (isExempted) return true;
     if (nftMintAddress == null || nftMintAddress!.isEmpty) return false;
     return nftMintAddress!.startsWith('SolVerified_') ||
         nftMintAddress!.startsWith('Verified_') ||
@@ -55,6 +63,7 @@ class PetModel {
 
   /// Expiration date of the verification badge (verifiedAt + 40 days)
   DateTime? get verificationExpiresAt {
+    if (isExempted) return null; // Never expires
     final vAt = verifiedAt;
     if (vAt != null) {
       return vAt.add(const Duration(days: verificationValidityDays));
@@ -67,6 +76,7 @@ class PetModel {
 
   /// Days remaining until the verification badge deactivates
   int get verificationDaysRemaining {
+    if (isExempted) return 999;
     final expires = verificationExpiresAt;
     if (expires == null) return 0;
     final diff = expires.difference(DateTime.now()).inDays;
@@ -75,6 +85,7 @@ class PetModel {
 
   /// Whether the verification badge has exceeded the 40-day validity window
   bool get isVerificationExpired {
+    if (isExempted) return false;
     if (!isVerifiedBase) return false;
     final expires = verificationExpiresAt;
     if (expires != null) {
@@ -84,14 +95,17 @@ class PetModel {
   }
 
   /// Whether this pet holds an ACTIVE official verified blue star badge
-  /// (Deactivates automatically after 40 days if not renewed)
+  /// (Deactivates automatically after 40 days if not renewed, EXCEPT Chico who is permanently exempted)
   bool get isVerified {
+    if (isExempted) return true;
     if (!isVerifiedBase) return false;
     return !isVerificationExpired;
   }
 
   /// Static helper to check whether an nftMintAddress is verified and not expired
-  static bool checkVerificationAddress(String? address, [DateTime? fallbackDate]) {
+  static bool checkVerificationAddress(String? address, [DateTime? fallbackDate, String? petName]) {
+    if (petName != null && petName.trim().toLowerCase() == 'chico') return true;
+    if (address != null && address.toLowerCase().contains('chico')) return true;
     if (address == null || address.isEmpty) return false;
     final isBase = address.startsWith('SolVerified_') ||
         address.startsWith('Verified_') ||
