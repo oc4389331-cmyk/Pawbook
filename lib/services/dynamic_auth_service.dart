@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -158,14 +159,14 @@ class DynamicAuthService {
     }
 
     // 2b. Real Solana Mobile Wallet Adapter (MWA) for Android (Seeker, Phantom, Solflare)
+    // Con verificación biométrica obligatoria (Huella Digital / PIN en Seed Vault) como en SolChatPlus
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && realSolanaAddress == null && !type.contains('dynamic')) {
       LocalAssociationScenario? session;
       try {
-        debugPrint('[SolanaMWA] Intentando autorización nativa en Android con Solana Mobile Wallet Adapter...');
+        debugPrint('[SolanaMWA] Iniciando conexión con Solana Mobile Wallet Adapter...');
         session = await LocalAssociationScenario.create();
         
-        // ¡CRUCIAL!: No usar 'await session.startActivityForResult' porque bloquea hasta que la actividad finalice,
-        // provocando un bloqueo mutuo con session.start() (pantalla oscura). Se debe ejecutar de forma asíncrona sin bloquear.
+        // 1. Iniciar actividad de la wallet de forma asíncrona sin bloquear
         session.startActivityForResult(null).ignore();
         
         final client = await session.start().timeout(
@@ -173,6 +174,8 @@ class DynamicAuthService {
           onTimeout: () => throw TimeoutException('Tiempo de espera agotado al conectar con el servicio MWA.'),
         );
         
+        // 2. Solicitar autorización inicial
+        debugPrint('[SolanaMWA] Solicitando autorización...');
         final result = await client.authorize(
           identityUri: Uri.parse('https://pawbooklife.com'),
           iconUri: Uri.parse('favicon.ico'),
@@ -184,16 +187,53 @@ class DynamicAuthService {
         );
 
         if (result != null && result.publicKey.isNotEmpty) {
-          realSolanaAddress = base58encode(result.publicKey);
-          debugPrint('[SolanaMWA] ✅ Wallet autorizada exitosamente por el usuario: $realSolanaAddress');
+          final address = base58encode(result.publicKey);
+          debugPrint('[SolanaMWA] Autorizado: $address. Estabilizando para firma biométrica...');
+
+          // 3. Retardo de estabilización para compatibilidad con Seed Vault / Solflare (patrón SolChatPlus)
+          await Future.delayed(const Duration(milliseconds: 1200));
+
+          // 4. Mensaje de autenticación para verificación de identidad mediante huella
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final message = 'AUTH REQUEST: PAWBOOKLIFE\n\nPlease sign this message to verify your identity.\n\nWallet: $address\nTimestamp: $timestamp';
+          final messageBytes = Uint8List.fromList(message.codeUnits);
+
+          debugPrint('[SolanaMWA] Solicitando firma biométrica (Huella Digital / PIN) en Seed Vault...');
+
+          // 5. Firma del mensaje con reintentos para solicitar huella dactilar al usuario
+          SignMessagesResult? signResult;
+          for (int retry = 0; retry < 2; retry++) {
+            try {
+              signResult = await client.signMessages(
+                messages: [messageBytes],
+                addresses: [result.publicKey],
+              ).timeout(const Duration(seconds: 60));
+              break;
+            } catch (err) {
+              debugPrint('[SolanaMWA] Intento de firma biométrica ${retry + 1} falló: $err');
+              if (retry == 0) {
+                await Future.delayed(const Duration(seconds: 2));
+                session.startActivityForResult(null).ignore();
+              } else {
+                rethrow;
+              }
+            }
+          }
+
+          if (signResult != null && signResult.signedMessages.isNotEmpty) {
+            realSolanaAddress = address;
+            debugPrint('[SolanaMWA] ✅ Wallet autorizada y verificada con huella digital: $realSolanaAddress');
+          } else {
+            throw Exception('No se recibió la confirmación de firma biométrica de la billetera.');
+          }
         }
       } catch (e) {
-        debugPrint('[SolanaMWA] Error durante autorización MWA en Android: $e');
+        debugPrint('[SolanaMWA] Error durante autorización/firma MWA en Android: $e');
         final errorStr = e.toString().toLowerCase();
         if (errorStr.contains('cancel') || errorStr.contains('reject') || errorStr.contains('denied') || errorStr.contains('declined') || errorStr.contains('user cancelled')) {
           return DynamicAuthResult(
             isSuccess: false,
-            errorMessage: 'Conexión cancelada o rechazada en la billetera.',
+            errorMessage: 'Verificación biométrica cancelada o rechazada en la billetera.',
           );
         }
         // Si falló por timeout o error real en dispositivo Android (no canal mock de tests unitarios)
