@@ -272,6 +272,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
     if (success && mounted) {
       _onLoginSuccess();
+    } else if (mounted && authController.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  authController.errorMessage!,
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.accentOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 

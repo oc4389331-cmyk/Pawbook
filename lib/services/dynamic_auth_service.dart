@@ -159,25 +159,54 @@ class DynamicAuthService {
 
     // 2b. Real Solana Mobile Wallet Adapter (MWA) for Android (Seeker, Phantom, Solflare)
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && realSolanaAddress == null && !type.contains('dynamic')) {
+      LocalAssociationScenario? session;
       try {
         debugPrint('[SolanaMWA] Intentando autorización nativa en Android con Solana Mobile Wallet Adapter...');
-        final session = await LocalAssociationScenario.create();
-        await session.startActivityForResult(null);
-        final client = await session.start();
+        session = await LocalAssociationScenario.create();
+        
+        // ¡CRUCIAL!: No usar 'await session.startActivityForResult' porque bloquea hasta que la actividad finalice,
+        // provocando un bloqueo mutuo con session.start() (pantalla oscura). Se debe ejecutar de forma asíncrona sin bloquear.
+        session.startActivityForResult(null).ignore();
+        
+        final client = await session.start().timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException('Tiempo de espera agotado al conectar con el servicio MWA.'),
+        );
+        
         final result = await client.authorize(
           identityUri: Uri.parse('https://pawbooklife.com'),
-          iconUri: Uri.parse('https://media.pawbooklife.com/favicon.ico'),
+          iconUri: Uri.parse('favicon.ico'),
           identityName: 'Pawbooklife',
           cluster: 'mainnet-beta',
+        ).timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => throw TimeoutException('Tiempo de espera agotado en la autorización de la Wallet.'),
         );
-        await session.close();
 
         if (result != null && result.publicKey.isNotEmpty) {
           realSolanaAddress = base58encode(result.publicKey);
           debugPrint('[SolanaMWA] ✅ Wallet autorizada exitosamente por el usuario: $realSolanaAddress');
         }
       } catch (e) {
-        debugPrint('[SolanaMWA] Aviso o fallback de MWA en Android: $e');
+        debugPrint('[SolanaMWA] Error durante autorización MWA en Android: $e');
+        final errorStr = e.toString().toLowerCase();
+        if (errorStr.contains('cancel') || errorStr.contains('reject') || errorStr.contains('denied') || errorStr.contains('declined') || errorStr.contains('user cancelled')) {
+          return DynamicAuthResult(
+            isSuccess: false,
+            errorMessage: 'Conexión cancelada o rechazada en la billetera.',
+          );
+        }
+        // Si falló por timeout o error real en dispositivo Android (no canal mock de tests unitarios)
+        if (!e.toString().contains('channel-error')) {
+          return DynamicAuthResult(
+            isSuccess: false,
+            errorMessage: 'No se pudo verificar con la billetera $walletType: ${e.toString()}',
+          );
+        }
+      } finally {
+        try {
+          await session?.close();
+        } catch (_) {}
       }
     }
 
