@@ -215,6 +215,7 @@ if (!fs.existsSync(path.join(webBuildPath, 'index.html'))) {
 
 if (fs.existsSync(webBuildPath)) {
   app.use(express.static(webBuildPath, {
+    index: false,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('index.html') || filePath.endsWith('flutter_service_worker.js') || filePath.endsWith('version.json') || filePath.endsWith('main.dart.js')) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -237,7 +238,32 @@ app.get('/api/health', (req, res) => {
     stripeWebhookPath: '/api/webhooks/stripe'
   });
 });
+// Explicit route for Pawbooklife Presentation Landing Page
+app.get(['/landing', '/presentacion'], (req, res) => {
+  const landingPath = path.join(__dirname, 'public/landing.html');
+  if (fs.existsSync(landingPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(landingPath);
+  }
+  res.redirect('/');
+});
+
+// Direct Dashboard & App redirect routes
+app.get(['/app', '/dashboard'], (req, res) => {
+  res.redirect('https://pawbook-358b.onrender.com');
+});
+
 app.get('/', (req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+  // If request originates from pawbooklife.com, serve presentation landing page by default
+  if (host.includes('pawbooklife.com') && !host.startsWith('media.')) {
+    const landingPath = path.join(__dirname, 'public/landing.html');
+    if (fs.existsSync(landingPath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.sendFile(landingPath);
+    }
+  }
+
   const indexPath = path.join(webBuildPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

@@ -46,7 +46,9 @@ app.*.map.json
 
 # Node / Backend / Env
 server/node_modules/
-node_modules/
 .env
 server/.env
+# Media binaries
+test/*.mp4
+*.mp4
 
