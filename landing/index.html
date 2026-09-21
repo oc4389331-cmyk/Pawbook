@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pawbooklife - SocialFi for Pets on Solana | Patrocinios & Tienda Exclusiva</title>
-  <meta name="description" content="Pawbooklife es la red SocialFi en Solana donde las mascotas son creadoras. Recibe patrocinios on-chain, comparte videos cortos y descubre la tienda exclusiva para tus mascotas.">
+  <title data-i18n="page_title">Pawbooklife - SocialFi for Pets on Solana | Sponsorships & Exclusive Boutique</title>
+  <meta name="description" data-i18n-attr="content:page_desc" content="Pawbooklife is the leading Web3 SocialFi platform on Solana where pets are the creators. Receive on-chain sponsorships, share short videos, and discover the exclusive pet store.">
 
   <!-- Favicon & Icons -->
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
@@ -76,12 +76,12 @@
     .navbar {
       position: sticky;
       top: 0;
-      z-index: 100;
-      background: rgba(250, 247, 242, 0.92);
+      z-index: 1000;
+      background: rgba(250, 247, 242, 0.94);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-light);
-      padding: 16px 0;
+      padding: 14px 0;
       transition: var(--transition);
     }
 
@@ -139,13 +139,13 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 24px;
       list-style: none;
     }
 
     .nav-links a {
       font-weight: 600;
-      font-size: 15px;
+      font-size: 14.5px;
       color: var(--text-dark);
       transition: var(--transition);
       position: relative;
@@ -158,20 +158,109 @@
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+    }
+
+    /* Language Dropdown Selector */
+    .lang-dropdown {
+      position: relative;
+    }
+
+    .lang-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-light);
+      padding: 9px 14px;
+      border-radius: var(--radius-pill);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .lang-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: 0 4px 14px rgba(224, 122, 95, 0.2);
+    }
+
+    .lang-btn .chevron {
+      font-size: 10px;
+      transition: transform 0.2s ease;
+      color: var(--text-muted);
+    }
+
+    .lang-dropdown.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    .lang-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #FFFFFF;
+      border: 1px solid rgba(224, 122, 95, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+      padding: 6px;
+      min-width: 145px;
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+      z-index: 1100;
+      backdrop-filter: blur(10px);
+    }
+
+    .lang-dropdown.open .lang-menu {
+      display: flex;
+      animation: langFadeIn 0.2s ease;
+    }
+
+    @keyframes langFadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .lang-option:hover {
+      background: rgba(224, 122, 95, 0.1);
+      color: var(--primary);
+    }
+
+    .lang-option.active {
+      background: rgba(224, 122, 95, 0.16);
+      color: var(--primary);
+      font-weight: 700;
     }
 
     /* Prominent Dashboard Button */
     .btn-dashboard {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       background: linear-gradient(135deg, var(--primary) 0%, #E63946 100%);
       color: #FFFFFF !important;
       font-family: 'Fredoka', sans-serif;
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 700;
-      padding: 12px 24px;
+      padding: 10px 22px;
       border-radius: var(--radius-pill);
       box-shadow: 0 6px 20px rgba(224, 122, 95, 0.38);
       border: 2px solid rgba(255, 255, 255, 0.4);
@@ -200,14 +289,14 @@
 
     /* Hero Section */
     .hero {
-      padding: 70px 0 50px;
       position: relative;
+      padding: 64px 0 80px;
       overflow: hidden;
     }
 
     .hero-grid {
       display: grid;
-      grid-template-columns: 1.15fr 1fr;
+      grid-template-columns: 1.15fr 0.85fr;
       gap: 48px;
       align-items: center;
     }
@@ -216,68 +305,68 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(20, 241, 149, 0.12);
-      border: 1px solid rgba(20, 241, 149, 0.35);
-      color: #0d8350;
-      padding: 6px 16px;
+      background: #FFFFFF;
+      border: 1px solid rgba(20, 241, 149, 0.4);
+      padding: 8px 18px;
       border-radius: var(--radius-pill);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 22px;
       font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 20px;
+      font-weight: 600;
+      color: #0E9F6E;
     }
 
     .hero h2 {
       font-size: 52px;
+      font-weight: 700;
       color: var(--text-dark);
       margin-bottom: 20px;
-      line-height: 1.15;
+      letter-spacing: -0.5px;
     }
 
-    .hero h2 .highlight-brand {
-      background: linear-gradient(135deg, var(--primary), var(--brand-coral));
+    .highlight-brand {
+      background: linear-gradient(135deg, var(--primary) 0%, #D90429 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .hero-description {
       font-size: 18px;
+      line-height: 1.7;
       color: var(--text-muted);
       margin-bottom: 32px;
-      max-width: 540px;
+      max-width: 580px;
     }
 
     .hero-cta-group {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       gap: 16px;
-      margin-bottom: 36px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
     }
 
     .btn-hero-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: linear-gradient(135deg, var(--primary), var(--brand-coral));
-      color: #fff;
+      background: linear-gradient(135deg, var(--primary) 0%, #E63946 100%);
+      color: #FFFFFF !important;
       font-family: 'Fredoka', sans-serif;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       padding: 16px 36px;
       border-radius: var(--radius-pill);
-      box-shadow: 0 10px 30px rgba(224, 122, 95, 0.35);
+      box-shadow: 0 10px 24px rgba(224, 122, 95, 0.4);
       transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .btn-hero-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 16px 36px rgba(224, 122, 95, 0.45);
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 14px 32px rgba(224, 122, 95, 0.55);
     }
 
     .btn-hero-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
       background: #FFFFFF;
       color: var(--text-dark);
       font-family: 'Fredoka', sans-serif;
@@ -288,12 +377,16 @@
       border: 1px solid var(--border-light);
       box-shadow: var(--shadow-sm);
       transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .btn-hero-secondary:hover {
-      background: #fdfbf7;
+      background: #FFF;
       border-color: var(--primary);
       color: var(--primary);
+      transform: translateY(-2px);
     }
 
     .hero-stats-row {
@@ -304,68 +397,70 @@
     }
 
     .stat-item h4 {
-      font-size: 28px;
-      font-weight: 700;
+      font-size: 26px;
       color: var(--primary);
+      font-weight: 700;
     }
 
     .stat-item p {
       font-size: 13px;
-      font-weight: 600;
       color: var(--text-muted);
+      font-weight: 500;
     }
 
+    /* Hero Media Visuals */
     .hero-media-wrapper {
       position: relative;
     }
 
     .hero-image-frame {
-      position: relative;
       border-radius: var(--radius-lg);
       overflow: hidden;
       box-shadow: var(--shadow-md);
       border: 6px solid #FFFFFF;
-      transition: var(--transition);
+      position: relative;
     }
 
     .hero-image-frame img {
       width: 100%;
       height: auto;
       display: block;
-      transition: transform 0.6s ease;
+      transition: var(--transition);
     }
 
     .hero-image-frame:hover img {
       transform: scale(1.02);
     }
 
+    /* Floating Badges */
     .floating-card {
       position: absolute;
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(224, 122, 95, 0.2);
-      border-radius: 18px;
       padding: 14px 20px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.1);
+      border-radius: var(--radius-md);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.8);
       display: flex;
       align-items: center;
-      gap: 12px;
-      z-index: 2;
-      animation: floatBadge 4s ease-in-out infinite;
+      gap: 14px;
+      animation: float 4s ease-in-out infinite;
+      z-index: 10;
     }
 
     .floating-card.top-right {
-      top: -20px;
-      right: -20px;
+      top: -18px;
+      right: -18px;
+      animation-delay: 0s;
     }
 
     .floating-card.bottom-left {
-      bottom: -20px;
-      left: -20px;
+      bottom: -18px;
+      left: -18px;
       animation-delay: 2s;
     }
 
-    @keyframes floatBadge {
+    @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-8px); }
     }
@@ -377,68 +472,70 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-    }
-
-    .floating-icon.heart {
-      background: #FFE4E8;
-      color: #FF4B6E;
+      font-size: 20px;
+      color: #fff;
     }
 
     .floating-icon.solana {
-      background: #E8FFF5;
-      color: #0d8350;
+      background: linear-gradient(135deg, var(--solana-mint), var(--solana-purple));
+    }
+
+    .floating-icon.heart {
+      background: linear-gradient(135deg, #FF6B6B, #EE5253);
     }
 
     .floating-card h5 {
       font-size: 14px;
       font-weight: 700;
       color: var(--text-dark);
+      margin: 0;
     }
 
     .floating-card p {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
-      font-weight: 500;
+      margin: 0;
     }
 
-    /* Section Styles */
+    /* Sections Shared Styles */
     section {
-      padding: 90px 0;
+      padding: 88px 0;
     }
 
     .section-header {
       text-align: center;
-      max-width: 760px;
+      max-width: 720px;
       margin: 0 auto 56px;
     }
 
     .section-tag {
       display: inline-block;
+      background: rgba(224, 122, 95, 0.14);
+      color: var(--primary);
       font-family: 'Fredoka', sans-serif;
       font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--primary);
-      background: rgba(224, 122, 95, 0.12);
-      padding: 6px 18px;
+      letter-spacing: 1px;
+      padding: 6px 16px;
       border-radius: var(--radius-pill);
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .section-header h2 {
       font-size: 38px;
       color: var(--text-dark);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+      font-weight: 700;
     }
 
     .section-header p {
-      font-size: 17px;
+      font-size: 16.5px;
       color: var(--text-muted);
+      line-height: 1.6;
     }
 
-    /* 3 Steps Section */
+    /* How it works */
     .steps-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -449,8 +546,8 @@
       background: var(--bg-card);
       border-radius: var(--radius-lg);
       padding: 36px 28px;
-      border: 1px solid var(--border-light);
       box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(224, 122, 95, 0.1);
       position: relative;
       transition: var(--transition);
     }
@@ -463,42 +560,42 @@
 
     .step-number {
       position: absolute;
-      top: 24px;
-      right: 28px;
+      top: 20px;
+      right: 24px;
+      font-size: 40px;
       font-family: 'Fredoka', sans-serif;
-      font-size: 44px;
       font-weight: 700;
       color: rgba(224, 122, 95, 0.15);
     }
 
     .step-icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 30px;
-      margin-bottom: 24px;
+      font-size: 28px;
+      margin-bottom: 22px;
     }
 
-    .step-icon.icon-1 { background: #FFF0EB; color: var(--primary); }
-    .step-icon.icon-2 { background: #FEF6E4; color: var(--brand-coral); }
+    .step-icon.icon-1 { background: #FFF0EB; color: #E07A5F; }
+    .step-icon.icon-2 { background: #FEF6E4; color: #F4A261; }
     .step-icon.icon-3 { background: #E8FFF5; color: #10B981; }
 
     .step-card h3 {
-      font-size: 22px;
-      margin-bottom: 12px;
+      font-size: 21px;
       color: var(--text-dark);
+      margin-bottom: 12px;
     }
 
     .step-card p {
+      font-size: 14px;
       color: var(--text-muted);
-      font-size: 15px;
       line-height: 1.6;
     }
 
-    /* Sponsorships / Patrocinios Section (Dark Premium Theme) */
+    /* Sponsorships Section (Dark Premium Theme) */
     .sponsorships-section {
       background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
       color: #FFFFFF;
@@ -571,7 +668,7 @@
     .sponsorship-features-list {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 18px;
     }
 
     .sponsor-feature-item {
@@ -580,7 +677,7 @@
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 18px;
-      padding: 20px;
+      padding: 18px;
       transition: var(--transition);
     }
 
@@ -591,9 +688,9 @@
     }
 
     .sponsor-icon-circle {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
+      width: 46px;
+      height: 46px;
+      min-width: 46px;
       background: rgba(20, 241, 149, 0.15);
       color: var(--solana-mint);
       border-radius: 14px;
@@ -604,42 +701,44 @@
     }
 
     .sponsor-feature-item h4 {
-      font-size: 19px;
-      margin-bottom: 6px;
+      font-size: 17px;
       color: #FFFFFF;
+      margin-bottom: 6px;
     }
 
     .sponsor-feature-item p {
-      font-size: 14.5px;
+      font-size: 13.5px;
       color: #94A3B8;
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
-    /* Pet Store Section (Exclusiva para Mascotas) */
+    /* Store Section */
     .store-section {
-      background-color: var(--bg-cream);
+      background: #FFFFFF;
+      border-top: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
     }
 
     .store-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 54px;
+      gap: 60px;
       align-items: center;
     }
 
-    .store-content .exclusive-tag {
+    .exclusive-tag {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: #FFEBE5;
-      color: #C84B31;
+      background: #FFF3EB;
+      color: var(--primary);
       padding: 8px 18px;
       border-radius: var(--radius-pill);
       font-family: 'Fredoka', sans-serif;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
+      letter-spacing: 0.5px;
       margin-bottom: 16px;
-      border: 1px solid rgba(200, 75, 49, 0.25);
     }
 
     .store-content h2 {
@@ -648,42 +747,53 @@
       margin-bottom: 18px;
     }
 
-    .store-content p.lead {
-      font-size: 17px;
+    .store-content .lead {
+      font-size: 16.5px;
       color: var(--text-muted);
+      line-height: 1.7;
       margin-bottom: 28px;
     }
 
     .store-categories-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
       margin-bottom: 32px;
     }
 
     .store-cat-card {
-      background: #FFFFFF;
-      padding: 16px 18px;
+      background: var(--bg-cream);
+      padding: 16px;
       border-radius: 16px;
-      border: 1px solid var(--border-light);
       display: flex;
       align-items: center;
-      gap: 12px;
-      box-shadow: var(--shadow-sm);
+      gap: 14px;
+      border: 1px solid rgba(224, 122, 95, 0.12);
       transition: var(--transition);
     }
 
     .store-cat-card:hover {
+      background: #FFF;
       border-color: var(--primary);
       transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
 
     .cat-icon {
-      font-size: 24px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     }
 
     .store-cat-card h5 {
-      font-size: 15px;
+      font-size: 14.5px;
       color: var(--text-dark);
       margin-bottom: 2px;
     }
@@ -709,29 +819,20 @@
 
     .store-callout-pill {
       position: absolute;
-      top: 24px;
-      right: 24px;
-      background: rgba(255, 255, 255, 0.95);
+      top: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.88);
       backdrop-filter: blur(10px);
-      padding: 10px 18px;
-      border-radius: var(--radius-pill);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      color: var(--solana-mint);
       font-family: 'Fredoka', sans-serif;
       font-size: 13px;
       font-weight: 700;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(20, 241, 149, 0.4);
     }
 
-    /* App Features Presentation */
-    .app-features-section {
-      background: #FFFFFF;
-      border-top: 1px solid var(--border-light);
-      border-bottom: 1px solid var(--border-light);
-    }
-
+    /* App Features Grid */
     .features-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -739,76 +840,76 @@
     }
 
     .feature-card {
-      background: var(--bg-cream);
-      border-radius: 20px;
-      padding: 28px 22px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 30px 22px;
       border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-sm);
       transition: var(--transition);
-      display: flex;
-      flex-direction: column;
+      text-align: center;
     }
 
     .feature-card:hover {
       transform: translateY(-6px);
       box-shadow: var(--shadow-md);
       border-color: var(--primary);
-      background: #FFFFFF;
     }
 
     .feature-icon-box {
-      width: 52px;
-      height: 52px;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 18px;
       border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 26px;
-      margin-bottom: 20px;
     }
 
     .feature-card h4 {
-      font-size: 19px;
+      font-size: 17.5px;
       color: var(--text-dark);
       margin-bottom: 10px;
     }
 
     .feature-card p {
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--text-muted);
       line-height: 1.55;
     }
 
     /* Big CTA Banner */
     .cta-banner {
-      background: linear-gradient(135deg, var(--primary) 0%, #E63946 60%, #9945FF 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, #E63946 100%);
       color: #FFFFFF;
       border-radius: 32px;
-      padding: 64px 48px;
+      padding: 60px 48px;
       text-align: center;
+      box-shadow: 0 20px 50px rgba(224, 122, 95, 0.4);
+      margin: 60px auto;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 24px 60px rgba(224, 122, 95, 0.4);
-      margin: 40px 0 80px;
     }
 
     .cta-banner h2 {
-      font-size: 44px;
-      margin-bottom: 18px;
-      color: #FFFFFF;
+      font-size: 42px;
+      margin-bottom: 16px;
+      font-weight: 700;
     }
 
     .cta-banner p {
-      font-size: 18px;
+      font-size: 17.5px;
       max-width: 680px;
-      margin: 0 auto 36px;
-      color: rgba(255, 255, 255, 0.9);
+      margin: 0 auto 34px;
+      color: rgba(255, 255, 255, 0.92);
+      line-height: 1.6;
     }
 
     .cta-buttons {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 20px;
+      gap: 18px;
       flex-wrap: wrap;
     }
 
@@ -816,20 +917,20 @@
       background: #FFFFFF;
       color: var(--primary) !important;
       font-family: 'Fredoka', sans-serif;
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 700;
-      padding: 18px 42px;
+      padding: 16px 38px;
       border-radius: var(--radius-pill);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
       transition: var(--transition);
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .btn-cta-dashboard:hover {
       transform: scale(1.05);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
       color: #C84B31 !important;
     }
 
@@ -837,9 +938,9 @@
       background: rgba(255, 255, 255, 0.18);
       color: #FFFFFF;
       font-family: 'Fredoka', sans-serif;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 600;
-      padding: 18px 32px;
+      padding: 16px 30px;
       border-radius: var(--radius-pill);
       border: 1px solid rgba(255, 255, 255, 0.4);
       backdrop-filter: blur(8px);
@@ -950,15 +1051,6 @@
         font-size: 30px;
       }
 
-      .steps-grid, .features-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-stats-row {
-        flex-direction: column;
-        gap: 16px;
-      }
-
       .floating-card {
         display: none;
       }
@@ -981,7 +1073,7 @@
 </head>
 <body>
 
-  <!-- Sticky Navbar -->
+  <!-- Sticky Navbar with Language Selector -->
   <header class="navbar">
     <div class="container nav-inner">
       <a href="/" class="brand-logo" title="Pawbooklife Home">
@@ -994,18 +1086,45 @@
 
       <nav>
         <ul class="nav-links">
-          <li><a href="#como-funciona">¿Cómo Funciona?</a></li>
-          <li><a href="#patrocinios">Patrocinios Web3</a></li>
-          <li><a href="#tienda-exclusiva">Tienda Exclusiva</a></li>
-          <li><a href="#caracteristicas">Características</a></li>
+          <li><a href="#como-funciona" data-i18n="nav_how">How it Works</a></li>
+          <li><a href="#patrocinios" data-i18n="nav_sponsorships">Web3 Sponsorships</a></li>
+          <li><a href="#tienda-exclusiva" data-i18n="nav_store">Exclusive Pet Store</a></li>
+          <li><a href="#caracteristicas" data-i18n="nav_features">Features</a></li>
         </ul>
       </nav>
 
       <div class="nav-actions">
+        <!-- Interactive 4-Language Dropdown -->
+        <div class="lang-dropdown" id="lang-dropdown">
+          <button class="lang-btn" id="lang-toggle-btn" aria-label="Choose Language" type="button">
+            <span id="current-lang-flag">🇺🇸</span>
+            <span id="current-lang-code">EN</span>
+            <span class="chevron">▼</span>
+          </button>
+          <div class="lang-menu" id="lang-menu">
+            <div class="lang-option active" data-lang="en">
+              <span>🇺🇸</span>
+              <span>English</span>
+            </div>
+            <div class="lang-option" data-lang="es">
+              <span>🇪🇸</span>
+              <span>Español</span>
+            </div>
+            <div class="lang-option" data-lang="zh">
+              <span>🇨🇳</span>
+              <span>中文</span>
+            </div>
+            <div class="lang-option" data-lang="ja">
+              <span>🇯🇵</span>
+              <span>日本語</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Direct Button to Dashboard on Render -->
         <a href="https://pawbook-358b.onrender.com" class="btn-dashboard" id="btn-navbar-dashboard" target="_blank" rel="noopener">
           <span class="badge-live"></span>
-          <span>Dashboard</span>
+          <span data-i18n="nav_dashboard">Dashboard</span>
           <span>🚀</span>
         </a>
       </div>
@@ -1017,52 +1136,52 @@
     <div class="container hero-grid">
       <div class="hero-text-col">
         <div class="hero-badge-solana">
-          <span>⚡ Impulsado por Solana Blockchain</span>
+          <span data-i18n="hero_badge_solana">⚡ Powered by Solana Blockchain</span>
           <span>•</span>
-          <span>v1.0.0 Oficial</span>
+          <span data-i18n="hero_badge_version">v1.0.0 Official</span>
         </div>
-        <h2>Donde tus Mascotas son las <span class="highlight-brand">Verdaderas Estrellas</span></h2>
-        <p class="hero-description">
-          Pawbooklife es la primera red social Web3 donde cada mascota tiene su propio canal de videos cortos, recibe patrocinios directos en Solana y accede a una tienda exclusiva creada para su bienestar.
+        <h2 data-i18n-html="hero_title">Where Pets Are the <span class="highlight-brand">True Stars</span></h2>
+        <p class="hero-description" data-i18n="hero_desc">
+          Pawbooklife is the premier Web3 social platform where every pet has their own short-video channel, receives direct tips and sponsorships on Solana, and accesses an exclusive boutique store crafted for their wellbeing.
         </p>
         
         <div class="hero-cta-group">
           <a href="https://pawbook-358b.onrender.com" class="btn-hero-primary" id="btn-hero-dashboard" target="_blank" rel="noopener">
-            <span>Ir al Dashboard</span>
+            <span data-i18n="hero_cta_dashboard">Go to Dashboard</span>
             <span>🐾</span>
           </a>
           <a href="#como-funciona" class="btn-hero-secondary">
-            <span>Conoce Más ↓</span>
+            <span data-i18n="hero_cta_learn">Learn More ↓</span>
           </a>
         </div>
 
         <div class="hero-stats-row">
           <div class="stat-item">
-            <h4>0 ms</h4>
-            <p>Latencia en Likes & Feed</p>
+            <h4 data-i18n="hero_stat_1_val">0 ms</h4>
+            <p data-i18n="hero_stat_1_lbl">Likes & Feed Latency</p>
           </div>
           <div class="stat-item">
-            <h4>30 seg</h4>
-            <p>Límite en Video Studio</p>
+            <h4 data-i18n="hero_stat_2_val">30s</h4>
+            <p data-i18n="hero_stat_2_lbl">Video Studio Limit</p>
           </div>
           <div class="stat-item">
-            <h4>100%</h4>
-            <p>Exclusivo para Mascotas</p>
+            <h4 data-i18n="hero_stat_3_val">100%</h4>
+            <p data-i18n="hero_stat_3_lbl">Exclusive for Pets</p>
           </div>
         </div>
       </div>
 
       <div class="hero-media-wrapper">
         <div class="hero-image-frame">
-          <img src="assets/hero_pets.jpg" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
+          <img src="assets/hero_pets.jpg" onerror="this.src='/landing_assets/hero_pets.jpg'" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
         </div>
 
         <!-- Floating Badge: Instant Sponsorship -->
         <div class="floating-card top-right">
           <div class="floating-icon solana">⚡</div>
           <div>
-            <h5>+1.5 SOL Patrocinio</h5>
-            <p>Recibido por Chico 🐶</p>
+            <h5 data-i18n="hero_badge_sponsor_title">+1.5 SOL Sponsorship</h5>
+            <p data-i18n="hero_badge_sponsor_sub">Received by Chico 🐶</p>
           </div>
         </div>
 
@@ -1070,74 +1189,74 @@
         <div class="floating-card bottom-left">
           <div class="floating-icon heart">❤️</div>
           <div>
-            <h5>Likes Inmediatos</h5>
-            <p>Comunidad Segura y Activa</p>
+            <h5 data-i18n="hero_badge_likes_title">Instant Likes</h5>
+            <p data-i18n="hero_badge_likes_sub">Active & Safe Community</p>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ¿Cómo Funciona? -->
+  <!-- How It Works Section -->
   <section id="como-funciona">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Paso a Paso</span>
-        <h2>¿Cómo Funciona Pawbooklife?</h2>
-        <p>Una experiencia diseñada para que humanos y mascotas compartan momentos genuinos y reciban apoyo real de la comunidad.</p>
+        <span class="section-tag" data-i18n="how_tag">Step by Step</span>
+        <h2 data-i18n="how_title">How Does Pawbooklife Work?</h2>
+        <p data-i18n="how_desc">An experience designed for humans and pets to share genuine moments and receive real community support.</p>
       </div>
 
       <div class="steps-grid">
-        <!-- Paso 1 -->
+        <!-- Step 1 -->
         <div class="step-card">
           <div class="step-number">01</div>
           <div class="step-icon icon-1">🐶</div>
-          <h3>Registra a tu Mascota</h3>
-          <p>Crea el perfil creador de tu perro, gato u otra mascota con su especie, raza y biografía. Conecta tu billetera Solana en segundos vía Dynamic.xyz con solo tu correo o huella biométrica.</p>
+          <h3 data-i18n="step1_title">Register Your Pet</h3>
+          <p data-i18n="step1_desc">Create the creator profile for your dog, cat, or other pet with species, breed, and bio. Connect your Solana wallet in seconds via Dynamic.xyz using email or biometrics.</p>
         </div>
 
-        <!-- Paso 2 -->
+        <!-- Step 2 -->
         <div class="step-card">
           <div class="step-number">02</div>
           <div class="step-icon icon-2">🎬</div>
-          <h3>Pawtbook Video Studio</h3>
-          <p>Graba clips de hasta 30 segundos. Aplica filtros estéticos, agrega stickers flotantes, texto interactivo y pistas de audio libres de derechos con mezcla automática y sincronización de pausa.</p>
+          <h3 data-i18n="step2_title">Pawtbook Video Studio</h3>
+          <p data-i18n="step2_desc">Record clips up to 30 seconds. Apply aesthetic filters, dynamic stickers, interactive text, and copyright-free soundtracks with automatic audio mixing and pause sync.</p>
         </div>
 
-        <!-- Paso 3 -->
+        <!-- Step 3 -->
         <div class="step-card">
           <div class="step-number">03</div>
           <div class="step-icon icon-3">🎁</div>
-          <h3>Patrocinios & PawtScore</h3>
-          <p>Recibe propinas y patrocinios directos en Solana de tus fans. Cada interacción suma PawtScore que puedes canjear por productos únicos en la tienda exclusiva.</p>
+          <h3 data-i18n="step3_title">Sponsorships & PawtScore</h3>
+          <p data-i18n="step3_desc">Receive direct tips and sponsorships on Solana from your fans. Every interaction builds your PawtScore, which can be redeemed for unique items in the exclusive pet store.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Patrocinios Web3 (Dark Premium Theme) -->
+  <!-- Web3 Sponsorships (Dark Premium Theme) -->
   <section id="patrocinios" class="sponsorships-section">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Web3 SocialFi en Solana</span>
-        <h2>Patrocinios Transparentes para Mascotas</h2>
-        <p>Apoya directamente a tus creadores de 4 patas. Sin comisiones abusivas, 100% verificado en la blockchain de Solana.</p>
+        <span class="section-tag" data-i18n="spons_tag">Web3 SocialFi on Solana</span>
+        <h2 data-i18n="spons_title">Transparent On-Chain Sponsorships for Pets</h2>
+        <p data-i18n="spons_desc">Support your favorite four-legged creators directly. Zero hidden cuts, 100% verified on the lightning-fast Solana blockchain.</p>
       </div>
 
       <div class="sponsorship-grid">
         <div class="sponsorship-image-wrapper">
-          <img src="assets/sponsorships_stats.jpg" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
+          <img src="assets/sponsorships_stats.jpg" onerror="this.src='/landing_assets/sponsorships_stats.jpg'" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
           <div class="sponsorship-badge-overlay">
             <div class="badge-stat-box">
-              <h5>Red Descentralizada</h5>
+              <h5 data-i18n="spons_badge_network">Decentralized Network</h5>
               <p>Solana Blockchain</p>
             </div>
             <div class="badge-stat-box">
-              <h5>Confirmación</h5>
+              <h5 data-i18n="spons_badge_confirm">Confirmation</h5>
               <p>&lt; 400 ms</p>
             </div>
             <div class="badge-stat-box">
-              <h5>Comisión de Red</h5>
+              <h5 data-i18n="spons_badge_fee">Network Fee</h5>
               <p>&lt; $0.001 USD</p>
             </div>
           </div>
@@ -1147,32 +1266,32 @@
           <div class="sponsor-feature-item">
             <div class="sponsor-icon-circle">💎</div>
             <div>
-              <h4>Micro-Propinas y Patrocinios en SOL</h4>
-              <p>Cualquier admirador puede enviar una propina desde 0.05 SOL o tokens $SKR con un solo toque utilizando Solana Mobile Wallet Adapter, Phantom o Solflare.</p>
+              <h4 data-i18n="spons_f1_title">Micro-Tips & Sponsorships in SOL</h4>
+              <p data-i18n="spons_f1_desc">Fans can send tips from 0.05 SOL or $SKR tokens with a single tap using Solana Mobile Wallet Adapter, Phantom, or Solflare.</p>
             </div>
           </div>
 
           <div class="sponsor-feature-item">
             <div class="sponsor-icon-circle">📊</div>
             <div>
-              <h4>Historial On-Chain Inmutable</h4>
-              <p>Cada patrocinio queda grabado con su firma de transacción (`tx_signature`), monto exacto y fecha pública. Transparencia total para sponsors y creadores.</p>
+              <h4 data-i18n="spons_f2_title">Immutable On-Chain History</h4>
+              <p data-i18n="spons_f2_desc">Every sponsorship is permanently recorded with its transaction signature (tx_signature), exact amount, and public timestamp for complete transparency.</p>
             </div>
           </div>
 
           <div class="sponsor-feature-item">
             <div class="sponsor-icon-circle">🏥</div>
             <div>
-              <h4>Fondos para Salud, Cuidados y Refugios</h4>
-              <p>Los patrocinios permiten costear tratamientos veterinarios, alimentos de alta gama y campañas de donación para mascotas en situación de rescate.</p>
+              <h4 data-i18n="spons_f3_title">Funds for Health, Care & Shelters</h4>
+              <p data-i18n="spons_f3_desc">Sponsorships help cover veterinary care, premium nutrition, and donation drives for rescue animals in need.</p>
             </div>
           </div>
 
           <div class="sponsor-feature-item">
             <div class="sponsor-icon-circle">🏆</div>
             <div>
-              <h4>Insignias de Patrocinador Oficial</h4>
-              <p>Los patrocinadores reciben insignias exclusivas en el feed y suben en el ranking de fans protectores de la comunidad Pawbooklife.</p>
+              <h4 data-i18n="spons_f4_title">Official Sponsor Badges</h4>
+              <p data-i18n="spons_f4_desc">Sponsors earn prestigious badges displayed in the feed and climb the ranking of verified community protectors.</p>
             </div>
           </div>
         </div>
@@ -1180,107 +1299,107 @@
     </div>
   </section>
 
-  <!-- Tienda Exclusiva para Mascotas -->
+  <!-- Exclusive Pet Store Section -->
   <section id="tienda-exclusiva" class="store-section">
     <div class="container store-grid">
       <div class="store-content">
         <div class="exclusive-tag">
           <span>🐾</span>
-          <span>TIENDA EXCLUSIVA PARA TUS MASCOTAS</span>
+          <span data-i18n="store_tag">EXCLUSIVE STORE FOR YOUR PETS</span>
         </div>
-        <h2>Productos Especialmente Curados para su Felicidad</h2>
-        <p class="lead">
-          Nuestra tienda está concebida con una regla inquebrantable: <strong>el 100% de los productos son de uso y beneficio exclusivo para las mascotas</strong>. Nada genérico; sólo calidad, salud y estilo pet de vanguardia.
+        <h2 data-i18n="store_title">Products Specially Curated for Their Happiness</h2>
+        <p class="lead" data-i18n-html="store_lead">
+          Our boutique is founded on an unbreakable rule: <strong>100% of products are strictly for the use and benefit of pets</strong>. Nothing generic; only cutting-edge quality, health, and pet fashion.
         </p>
 
         <div class="store-categories-grid">
           <div class="store-cat-card">
             <div class="cat-icon">🧣</div>
             <div>
-              <h5>Bandanas de Creador</h5>
-              <span>Bordadas a mano y personalizadas</span>
+              <h5 data-i18n="store_c1_title">Creator Bandanas</h5>
+              <span data-i18n="store_c1_desc">Handmade embroidery & custom styles</span>
             </div>
           </div>
 
           <div class="store-cat-card">
             <div class="cat-icon">🍪</div>
             <div>
-              <h5>Premios Gourmet Orgánicos</h5>
-              <span>Sin conservadores ni harinas nocivas</span>
+              <h5 data-i18n="store_c2_title">Gourmet Organic Treats</h5>
+              <span data-i18n="store_c2_desc">Zero preservatives or harmful additives</span>
             </div>
           </div>
 
           <div class="store-cat-card">
             <div class="cat-icon">💡</div>
             <div>
-              <h5>Collares Smart NFC</h5>
-              <span>Identificación digital y rastreo</span>
+              <h5 data-i18n="store_c3_title">Smart NFC Collars</h5>
+              <span data-i18n="store_c3_desc">Digital identity & quick contact</span>
             </div>
           </div>
 
           <div class="store-cat-card">
             <div class="cat-icon">🎾</div>
             <div>
-              <h5>Juguetes No Tóxicos</h5>
-              <span>Estimulación mental y motriz</span>
+              <h5 data-i18n="store_c4_title">Non-Toxic Interactive Toys</h5>
+              <span data-i18n="store_c4_desc">Mental & physical stimulation</span>
             </div>
           </div>
         </div>
 
         <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
           <a href="https://pawbook-358b.onrender.com" class="btn-hero-primary" target="_blank" rel="noopener">
-            <span>Explorar Tienda en el Dashboard</span>
+            <span data-i18n="store_btn">Explore Store in Dashboard</span>
             <span>🛍️</span>
           </a>
-          <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Paga con PawtScore, Tarjeta o Solana Pay</span>
+          <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;" data-i18n="store_pay_hint">Pay with PawtScore, Card, or Solana Pay</span>
         </div>
       </div>
 
       <div class="store-image-wrapper">
-        <img src="assets/exclusive_pet_store.jpg" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
+        <img src="assets/exclusive_pet_store.jpg" onerror="this.src='/landing_assets/exclusive_pet_store.jpg'" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
         <div class="store-callout-pill">
-          <span>✨ 100% Pet-Only Certified</span>
+          <span data-i18n="store_pill">✨ 100% Pet-Only Certified</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Características de la Aplicación -->
+  <!-- Detailed App Presentation / Features -->
   <section id="caracteristicas" class="app-features-section">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Tecnología & UI de Vanguardia</span>
-        <h2>Presentación Detallada de la App</h2>
-        <p>Todo lo que hace a Pawbooklife la plataforma más completa, rápida y querida del mundo animal.</p>
+        <span class="section-tag" data-i18n="feat_tag">Cutting-Edge Technology & UI</span>
+        <h2 data-i18n="feat_title">In-Depth App Presentation</h2>
+        <p data-i18n="feat_desc">Everything that makes Pawbooklife the fastest, most engaging, and beloved platform in the pet world.</p>
       </div>
 
       <div class="features-grid">
         <!-- Card 1 -->
         <div class="feature-card">
           <div class="feature-icon-box" style="background: #FFF0EB; color: #E07A5F;">📱</div>
-          <h4>Feed Estilo TikTok</h4>
-          <p>Reproducción de video ultra fluida en HTML5 y Flutter, con silencio rápido, visualización horizontal o vertical y transiciones ágiles.</p>
+          <h4 data-i18n="feat_1_title">TikTok-Style Feed</h4>
+          <p data-i18n="feat_1_desc">Ultra-smooth video playback powered by HTML5 and Flutter, instant mute toggle, responsive vertical orientation, and agile gesture navigation.</p>
         </div>
 
         <!-- Card 2 -->
         <div class="feature-card">
           <div class="feature-icon-box" style="background: #FEF6E4; color: #F4A261;">✂️</div>
-          <h4>Video Studio Integrado</h4>
-          <p>Recorta tus videos a 30 segundos exactos, añade música libre de copyright, stickers dinámicos y exporta con procesamiento FFmpeg.</p>
+          <h4 data-i18n="feat_2_title">Integrated Video Studio</h4>
+          <p data-i18n="feat_2_desc">Trim clips to exactly 30 seconds, add copyright-free music, dynamic stickers, and export with optimized mobile processing.</p>
         </div>
 
         <!-- Card 3 -->
         <div class="feature-card">
           <div class="feature-icon-box" style="background: #E8FFF5; color: #10B981;">🛡️</div>
-          <h4>Filtro de Convivencia</h4>
-          <p>Detección de lenguaje ofensivo con normalización de acentos y leetspeak para garantizar un ambiente familiar y protector.</p>
+          <h4 data-i18n="feat_3_title">Kindness & Safety Filter</h4>
+          <p data-i18n="feat_3_desc">Proactive offensive language detection with accent and leetspeak normalization, guaranteeing a safe, pet-loving, and family-friendly environment.</p>
         </div>
 
         <!-- Card 4 -->
         <div class="feature-card">
           <div class="feature-icon-box" style="background: #F3E8FF; color: #9333EA;">🌐</div>
-          <h4>Multi-Idioma Global</h4>
-          <p>Interfaz totalmente traducida en 4 idiomas principales: Español (`es`), Inglés (`en`), Chino (`zh`) y Japonés (`ja`).</p>
+          <h4 data-i18n="feat_4_title">Global Multi-Language</h4>
+          <p data-i18n="feat_4_desc">Fully translated interface across 4 primary languages: English (en), Spanish (es), Chinese (zh), and Japanese (ja).</p>
         </div>
       </div>
     </div>
@@ -1289,15 +1408,15 @@
   <!-- Big Call to Action Banner -->
   <div class="container">
     <div class="cta-banner">
-      <h2>¿Listo para dar a conocer a tu mascota?</h2>
-      <p>Únete a miles de dueños y mascotas en la plataforma donde cada ladrido y maullido cuenta. Entra al Dashboard y vive la experiencia.</p>
+      <h2 data-i18n="cta_title">Ready to Make Your Pet a Star?</h2>
+      <p data-i18n="cta_desc">Join thousands of pet lovers on the platform where every bark and meow counts. Jump into the live Dashboard and experience it now.</p>
       <div class="cta-buttons">
         <a href="https://pawbook-358b.onrender.com" class="btn-cta-dashboard" id="btn-cta-dashboard-banner" target="_blank" rel="noopener">
-          <span>Abrir Dashboard Ahora</span>
+          <span data-i18n="cta_btn_dashboard">Open Live Dashboard Now</span>
           <span>🚀</span>
         </a>
         <a href="https://pawbook-358b.onrender.com" class="btn-cta-apk" target="_blank" rel="noopener">
-          <span>📱 Versión Web & Móvil</span>
+          <span data-i18n="cta_btn_mobile">📱 Web & Mobile Version</span>
         </a>
       </div>
     </div>
@@ -1309,47 +1428,480 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <h3>🐾 Pawbooklife</h3>
-          <p>La primera plataforma SocialFi descentralizada para mascotas en la blockchain de Solana. Hecho con amor por y para los animales.</p>
+          <p data-i18n="footer_brand_desc">The first decentralized SocialFi platform for pets on the Solana blockchain. Made with love for animals everywhere.</p>
         </div>
 
         <div class="footer-col">
-          <h5>Navegación</h5>
+          <h5 data-i18n="footer_col_nav">Navigation</h5>
           <ul>
-            <li><a href="#como-funciona">¿Cómo Funciona?</a></li>
-            <li><a href="#patrocinios">Patrocinios</a></li>
-            <li><a href="#tienda-exclusiva">Tienda Exclusiva</a></li>
-            <li><a href="#caracteristicas">Características</a></li>
+            <li><a href="#como-funciona" data-i18n="nav_how">How it Works</a></li>
+            <li><a href="#patrocinios" data-i18n="nav_sponsorships">Web3 Sponsorships</a></li>
+            <li><a href="#tienda-exclusiva" data-i18n="nav_store">Exclusive Pet Store</a></li>
+            <li><a href="#caracteristicas" data-i18n="nav_features">Features</a></li>
           </ul>
         </div>
 
         <div class="footer-col">
-          <h5>Plataforma</h5>
+          <h5 data-i18n="footer_col_platform">Platform</h5>
           <ul>
             <li><a href="https://pawbook-358b.onrender.com" target="_blank" rel="noopener">Dashboard Web</a></li>
-            <li><a href="https://pawbook-358b.onrender.com/api/health" target="_blank" rel="noopener">Estado de API (Health)</a></li>
-            <li><a href="https://solana.com" target="_blank" rel="noopener">Ecosistema Solana</a></li>
+            <li><a href="https://pawbook-358b.onrender.com/api/health" target="_blank" rel="noopener">API Status (Health)</a></li>
+            <li><a href="https://solana.com" target="_blank" rel="noopener">Solana Ecosystem</a></li>
           </ul>
         </div>
 
         <div class="footer-col">
-          <h5>Legal</h5>
+          <h5 data-i18n="footer_col_legal">Legal</h5>
           <ul>
-            <li><a href="#">Términos y Condiciones</a></li>
-            <li><a href="#">Política de Bienestar Animal</a></li>
-            <li><a href="#">Privacidad</a></li>
+            <li><a href="#" data-i18n="footer_legal_terms">Terms & Conditions</a></li>
+            <li><a href="#" data-i18n="footer_legal_welfare">Animal Welfare Policy</a></li>
+            <li><a href="#" data-i18n="footer_legal_privacy">Privacy</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <p>© 2026 Pawbooklife. Todos los derechos reservados.</p>
-        <p>Impulsado por Solana Blockchain ⚡</p>
+        <p data-i18n="footer_copyright">© 2026 Pawbooklife. All rights reserved.</p>
+        <p data-i18n="footer_solana_badge">Powered by Solana Blockchain ⚡</p>
       </div>
     </div>
   </footer>
 
+  <!-- Multi-Language Translation Script (Default: English) -->
   <script>
-    // Smooth scrolling for navigation links
+    const translations = {
+      en: {
+        page_title: "Pawbooklife - SocialFi for Pets on Solana | Sponsorships & Exclusive Boutique",
+        page_desc: "Pawbooklife is the leading Web3 SocialFi platform on Solana where pets are the creators. Receive on-chain sponsorships, share short videos, and discover the exclusive pet store.",
+        nav_how: "How it Works",
+        nav_sponsorships: "Web3 Sponsorships",
+        nav_store: "Exclusive Pet Store",
+        nav_features: "Features",
+        nav_dashboard: "Dashboard",
+        hero_badge_solana: "⚡ Powered by Solana Blockchain",
+        hero_badge_version: "v1.0.0 Official",
+        hero_title: 'Where Pets Are the <span class="highlight-brand">True Stars</span>',
+        hero_desc: "Pawbooklife is the premier Web3 social platform where every pet has their own short-video channel, receives direct tips and sponsorships on Solana, and accesses an exclusive boutique store crafted for their wellbeing.",
+        hero_cta_dashboard: "Go to Dashboard",
+        hero_cta_learn: "Learn More ↓",
+        hero_stat_1_val: "0 ms",
+        hero_stat_1_lbl: "Likes & Feed Latency",
+        hero_stat_2_val: "30s",
+        hero_stat_2_lbl: "Video Studio Limit",
+        hero_stat_3_val: "100%",
+        hero_stat_3_lbl: "Exclusive for Pets",
+        hero_badge_sponsor_title: "+1.5 SOL Sponsorship",
+        hero_badge_sponsor_sub: "Received by Chico 🐶",
+        hero_badge_likes_title: "Instant Likes",
+        hero_badge_likes_sub: "Active & Safe Community",
+        how_tag: "Step by Step",
+        how_title: "How Does Pawbooklife Work?",
+        how_desc: "An experience designed for humans and pets to share genuine moments and receive real community support.",
+        step1_title: "Register Your Pet",
+        step1_desc: "Create the creator profile for your dog, cat, or other pet with species, breed, and bio. Connect your Solana wallet in seconds via Dynamic.xyz using email or biometrics.",
+        step2_title: "Pawtbook Video Studio",
+        step2_desc: "Record clips up to 30 seconds. Apply aesthetic filters, dynamic stickers, interactive text, and copyright-free soundtracks with automatic audio mixing and pause sync.",
+        step3_title: "Sponsorships & PawtScore",
+        step3_desc: "Receive direct tips and sponsorships on Solana from your fans. Every interaction builds your PawtScore, which can be redeemed for unique items in the exclusive pet store.",
+        spons_tag: "Web3 SocialFi on Solana",
+        spons_title: "Transparent On-Chain Sponsorships for Pets",
+        spons_desc: "Support your favorite four-legged creators directly. Zero hidden cuts, 100% verified on the lightning-fast Solana blockchain.",
+        spons_badge_network: "Decentralized Network",
+        spons_badge_confirm: "Confirmation",
+        spons_badge_fee: "Network Fee",
+        spons_f1_title: "Micro-Tips & Sponsorships in SOL",
+        spons_f1_desc: "Fans can send tips from 0.05 SOL or $SKR tokens with a single tap using Solana Mobile Wallet Adapter, Phantom, or Solflare.",
+        spons_f2_title: "Immutable On-Chain History",
+        spons_f2_desc: "Every sponsorship is permanently recorded with its transaction signature (tx_signature), exact amount, and public timestamp for complete transparency.",
+        spons_f3_title: "Funds for Health, Care & Shelters",
+        spons_f3_desc: "Sponsorships help cover veterinary care, premium nutrition, and donation drives for rescue animals in need.",
+        spons_f4_title: "Official Sponsor Badges",
+        spons_f4_desc: "Sponsors earn prestigious badges displayed in the feed and climb the ranking of verified community protectors.",
+        store_tag: "EXCLUSIVE STORE FOR YOUR PETS",
+        store_title: "Products Specially Curated for Their Happiness",
+        store_lead: "Our boutique is founded on an unbreakable rule: <strong>100% of products are strictly for the use and benefit of pets</strong>. Nothing generic; only cutting-edge quality, health, and pet fashion.",
+        store_c1_title: "Creator Bandanas",
+        store_c1_desc: "Handmade embroidery & custom styles",
+        store_c2_title: "Gourmet Organic Treats",
+        store_c2_desc: "Zero preservatives or harmful additives",
+        store_c3_title: "Smart NFC Collars",
+        store_c3_desc: "Digital identity & quick contact",
+        store_c4_title: "Non-Toxic Interactive Toys",
+        store_c4_desc: "Mental & physical stimulation",
+        store_btn: "Explore Store in Dashboard",
+        store_pay_hint: "Pay with PawtScore, Card, or Solana Pay",
+        store_pill: "✨ 100% Pet-Only Certified",
+        feat_tag: "Cutting-Edge Technology & UI",
+        feat_title: "In-Depth App Presentation",
+        feat_desc: "Everything that makes Pawbooklife the fastest, most engaging, and beloved platform in the pet world.",
+        feat_1_title: "TikTok-Style Feed",
+        feat_1_desc: "Ultra-smooth video playback powered by HTML5 and Flutter, instant mute toggle, responsive vertical orientation, and agile gesture navigation.",
+        feat_2_title: "Integrated Video Studio",
+        feat_2_desc: "Trim clips to exactly 30 seconds, add copyright-free music, dynamic stickers, and export with optimized mobile processing.",
+        feat_3_title: "Kindness & Safety Filter",
+        feat_3_desc: "Proactive offensive language detection with accent and leetspeak normalization, guaranteeing a safe, pet-loving, and family-friendly environment.",
+        feat_4_title: "Global Multi-Language",
+        feat_4_desc: "Fully translated interface across 4 primary languages: English (en), Spanish (es), Chinese (zh), and Japanese (ja).",
+        cta_title: "Ready to Make Your Pet a Star?",
+        cta_desc: "Join thousands of pet lovers on the platform where every bark and meow counts. Jump into the live Dashboard and experience it now.",
+        cta_btn_dashboard: "Open Live Dashboard Now",
+        cta_btn_mobile: "📱 Web & Mobile Version",
+        footer_brand_desc: "The first decentralized SocialFi platform for pets on the Solana blockchain. Made with love for animals everywhere.",
+        footer_col_nav: "Navigation",
+        footer_col_platform: "Platform",
+        footer_col_legal: "Legal",
+        footer_legal_terms: "Terms & Conditions",
+        footer_legal_welfare: "Animal Welfare Policy",
+        footer_legal_privacy: "Privacy",
+        footer_copyright: "© 2026 Pawbooklife. All rights reserved.",
+        footer_solana_badge: "Powered by Solana Blockchain ⚡"
+      },
+      es: {
+        page_title: "Pawbooklife - SocialFi para Mascotas en Solana | Patrocinios & Tienda Exclusiva",
+        page_desc: "Pawbooklife es la red SocialFi en Solana donde las mascotas son creadoras. Recibe patrocinios on-chain, comparte videos cortos y descubre la tienda exclusiva para tus mascotas.",
+        nav_how: "¿Cómo Funciona?",
+        nav_sponsorships: "Patrocinios Web3",
+        nav_store: "Tienda Exclusiva",
+        nav_features: "Características",
+        nav_dashboard: "Dashboard",
+        hero_badge_solana: "⚡ Impulsado por Solana Blockchain",
+        hero_badge_version: "v1.0.0 Oficial",
+        hero_title: 'Donde tus Mascotas son las <span class="highlight-brand">Verdaderas Estrellas</span>',
+        hero_desc: "Pawbooklife es la primera red social Web3 donde cada mascota tiene su propio canal de videos cortos, recibe patrocinios directos en Solana y accede a una tienda exclusiva creada para su bienestar.",
+        hero_cta_dashboard: "Ir al Dashboard",
+        hero_cta_learn: "Conoce Más ↓",
+        hero_stat_1_val: "0 ms",
+        hero_stat_1_lbl: "Latencia en Likes & Feed",
+        hero_stat_2_val: "30 seg",
+        hero_stat_2_lbl: "Límite en Video Studio",
+        hero_stat_3_val: "100%",
+        hero_stat_3_lbl: "Exclusivo para Mascotas",
+        hero_badge_sponsor_title: "+1.5 SOL Patrocinio",
+        hero_badge_sponsor_sub: "Recibido por Chico 🐶",
+        hero_badge_likes_title: "Likes Inmediatos",
+        hero_badge_likes_sub: "Comunidad Segura y Activa",
+        how_tag: "Paso a Paso",
+        how_title: "¿Cómo Funciona Pawbooklife?",
+        how_desc: "Una experiencia diseñada para que humanos y mascotas compartan momentos genuinos y reciban apoyo real de la comunidad.",
+        step1_title: "Registra a tu Mascota",
+        step1_desc: "Crea el perfil creador de tu perro, gato u otra mascota con su especie, raza y biografía. Conecta tu billetera Solana en segundos vía Dynamic.xyz con solo tu correo o huella biométrica.",
+        step2_title: "Pawtbook Video Studio",
+        step2_desc: "Graba clips de hasta 30 segundos. Aplica filtros estéticos, agrega stickers flotantes, texto interactivo y pistas de audio libres de derechos con mezcla automática y sincronización de pausa.",
+        step3_title: "Patrocinios & PawtScore",
+        step3_desc: "Recibe propinas y patrocinios directos en Solana de tus fans. Cada interacción suma PawtScore que puedes canjear por productos únicos en la tienda exclusiva.",
+        spons_tag: "Web3 SocialFi en Solana",
+        spons_title: "Patrocinios Transparentes para Mascotas",
+        spons_desc: "Apoya directamente a tus creadores de 4 patas. Sin comisiones abusivas, 100% verificado en la blockchain de Solana.",
+        spons_badge_network: "Red Descentralizada",
+        spons_badge_confirm: "Confirmación",
+        spons_badge_fee: "Comisión de Red",
+        spons_f1_title: "Micro-Propinas y Patrocinios en SOL",
+        spons_f1_desc: "Cualquier admirador puede enviar una propina desde 0.05 SOL o tokens $SKR con un solo toque utilizando Solana Mobile Wallet Adapter, Phantom o Solflare.",
+        spons_f2_title: "Historial On-Chain Inmutable",
+        spons_f2_desc: "Cada patrocinio queda grabado con su firma de transacción (tx_signature), monto exacto y fecha pública. Transparencia total para sponsors y creadores.",
+        spons_f3_title: "Fondos para Salud, Cuidados y Refugios",
+        spons_f3_desc: "Los patrocinios permiten costear tratamientos veterinarios, alimentos de alta gama y campañas de donación para mascotas en situación de rescate.",
+        spons_f4_title: "Insignias de Patrocinador Oficial",
+        spons_f4_desc: "Los patrocinadores reciben insignias exclusivas en el feed y suben en el ranking de fans protectores de la comunidad Pawbooklife.",
+        store_tag: "TIENDA EXCLUSIVA PARA TUS MASCOTAS",
+        store_title: "Productos Especialmente Curados para su Felicidad",
+        store_lead: "Nuestra tienda está concebida con una regla inquebrantable: <strong>el 100% de los productos son de uso y beneficio exclusivo para las mascotas</strong>. Nada genérico; sólo calidad, salud y estilo pet de vanguardia.",
+        store_c1_title: "Bandanas de Creador",
+        store_c1_desc: "Bordadas a mano y personalizadas",
+        store_c2_title: "Premios Gourmet Orgánicos",
+        store_c2_desc: "Sin conservadores ni harinas nocivas",
+        store_c3_title: "Collares Smart NFC",
+        store_c3_desc: "Identificación digital y rastreo",
+        store_c4_title: "Juguetes No Tóxicos",
+        store_c4_desc: "Estimulación mental y motriz",
+        store_btn: "Explorar Tienda en el Dashboard",
+        store_pay_hint: "Paga con PawtScore, Tarjeta o Solana Pay",
+        store_pill: "✨ 100% Pet-Only Certified",
+        feat_tag: "Tecnología & UI de Vanguardia",
+        feat_title: "Presentación Detallada de la App",
+        feat_desc: "Todo lo que hace a Pawbooklife la plataforma más completa, rápida y querida del mundo animal.",
+        feat_1_title: "Feed Estilo TikTok",
+        feat_1_desc: "Reproducción de video ultra fluida en HTML5 y Flutter, con silencio rápido, visualización horizontal o vertical y transiciones ágiles.",
+        feat_2_title: "Video Studio Integrado",
+        feat_2_desc: "Recorta tus videos a 30 segundos exactos, añade música libre de copyright, stickers dinámicos y exporta con procesamiento FFmpeg.",
+        feat_3_title: "Filtro de Convivencia",
+        feat_3_desc: "Detección de lenguaje ofensivo con normalización de acentos y leetspeak para garantizar un ambiente familiar y protector.",
+        feat_4_title: "Multi-Idioma Global",
+        feat_4_desc: "Interfaz totalmente traducida en 4 idiomas principales: Español (es), Inglés (en), Chino (zh) y Japonés (ja).",
+        cta_title: "¿Listo para dar a conocer a tu mascota?",
+        cta_desc: "Únete a miles de dueños y mascotas en la plataforma donde cada ladrido y maullido cuenta. Entra al Dashboard y vive la experiencia.",
+        cta_btn_dashboard: "Abrir Dashboard Ahora",
+        cta_btn_mobile: "📱 Versión Web & Móvil",
+        footer_brand_desc: "La primera plataforma SocialFi descentralizada para mascotas en la blockchain de Solana. Hecho con amor por y para los animales.",
+        footer_col_nav: "Navegación",
+        footer_col_platform: "Plataforma",
+        footer_col_legal: "Legal",
+        footer_legal_terms: "Términos y Condiciones",
+        footer_legal_welfare: "Política de Bienestar Animal",
+        footer_legal_privacy: "Privacidad",
+        footer_copyright: "© 2026 Pawbooklife. Todos los derechos reservados.",
+        footer_solana_badge: "Impulsado por Solana Blockchain ⚡"
+      },
+      zh: {
+        page_title: "Pawbooklife - Solana 上的宠物 SocialFi 平台 | Web3 赞助与专属精选商店",
+        page_desc: "Pawbooklife 是基于 Solana 区块链的宠物 SocialFi 平台。宠物变身创作者，接收链上透明赞助，分享短视频，畅享专属宠物商店。",
+        nav_how: "工作原理",
+        nav_sponsorships: "Web3 赞助",
+        nav_store: "专属宠物商店",
+        nav_features: "功能特性",
+        nav_dashboard: "进入仪表盘",
+        hero_badge_solana: "⚡ 由 Solana 区块链驱动",
+        hero_badge_version: "v1.0.0 官方版本",
+        hero_title: '让您的爱宠成为<span class="highlight-brand">真正的耀眼明星</span>',
+        hero_desc: "Pawbooklife 是首个 Web3 宠物专属社交平台。每只爱宠都拥有独立的短视频频道，在高速 Solana 网络上直接接收打赏和赞助，尽享专属于毛孩子的品质精品店。",
+        hero_cta_dashboard: "前往仪表盘",
+        hero_cta_learn: "了解更多 ↓",
+        hero_stat_1_val: "0 ms",
+        hero_stat_1_lbl: "点赞与信息流零延迟",
+        hero_stat_2_val: "30 秒",
+        hero_stat_2_lbl: "视频创作时长上限",
+        hero_stat_3_val: "100%",
+        hero_stat_3_lbl: "宠物专享认证",
+        hero_badge_sponsor_title: "+1.5 SOL 赞助打赏",
+        hero_badge_sponsor_sub: "由 Chico 🐶 实时接收",
+        hero_badge_likes_title: "即时点赞互动",
+        hero_badge_likes_sub: "活跃有爱的纯净社区",
+        how_tag: "新手指南",
+        how_title: "Pawbooklife 如何运作？",
+        how_desc: "为人宠真挚互动倾心打造的温暖社区，记录美好日常，收获来自全球爱宠人士的真实支持。",
+        step1_title: "注册专属宠物档案",
+        step1_desc: "填写爱犬、爱猫或其他宠物的品种与个性简介。通过 Dynamic.xyz 几秒内即可用邮箱或生物识别安全绑定 Solana 钱包。",
+        step2_title: "Pawtbook 视频创作者工作室",
+        step2_desc: "轻松录制最长 30 秒的高清萌宠视频。内置精美滤镜、生动贴纸、个性文字以及免版税音乐，支持音频智能混音与暂停同步。",
+        step3_title: "粉丝赞助与 PawtScore 积分",
+        step3_desc: "接收粉丝通过 Solana 发送的链上小费和赞助。每次点赞与互动都转化为 PawtScore 积分，可在专属商城免费兑换高档用品。",
+        spons_tag: "Solana 上的 Web3 SocialFi",
+        spons_title: "透明可查的毛孩子链上赞助",
+        spons_desc: "无中间商高额抽成，粉丝心意 100% 直达爱宠钱包，每笔打赏在 Solana 区块链上公开透明、有迹可循。",
+        spons_badge_network: "去中心化网络",
+        spons_badge_confirm: "确认速度",
+        spons_badge_fee: "网络交易费",
+        spons_f1_title: "SOL 与 $SKR 便捷微额赞助",
+        spons_f1_desc: "支持使用 Solana Mobile Wallet Adapter、Phantom 或 Solflare 钱包，轻点屏幕即可发送低至 0.05 SOL 或 $SKR 的爱心打赏。",
+        spons_f2_title: "永久可查的链上哈希记录",
+        spons_f2_desc: "每笔赞助均附带唯一链上签名 (tx_signature)、金额与时间戳，彻底告别暗箱操作，赞助者与创作者清晰可见。",
+        spons_f3_title: "宠物医疗、营养与公益救援基金",
+        spons_f3_desc: "所得赞助可直接用于宠物的疫苗医疗、高端天然粮与照料开支，更可参与流浪动物救助捐款倡议。",
+        spons_f4_title: "官方守护者闪耀徽章",
+        spons_f4_desc: "慷慨赞助者在评论区和视频流中尊享专属荣誉铭牌，荣登 Pawbooklife 社区超级爱心守护榜单。",
+        store_tag: "专属宠物用品商城",
+        store_title: "只为爱宠健康与快乐甄选的优品",
+        store_lead: "我们的商城坚守核心承诺：<strong>所有产品 100% 专为毛孩子的健康福祉定制</strong>。无任何普通泛人类用品，唯有高端、天然与宠物时尚。",
+        store_c1_title: "创作者刺绣头巾",
+        store_c1_desc: "纯手工定制刺绣与潮流印花",
+        store_c2_title: "天然有机营养零食",
+        store_c2_desc: "无防腐剂、无添加的健康美味",
+        store_c3_title: "智能 NFC 宠物项圈",
+        store_c3_desc: "数字化芯片防走失快速联络",
+        store_c4_title: "环保益智互动玩具",
+        store_c4_desc: "激发大脑智力与日常运动活力",
+        store_btn: "在仪表盘中逛逛商店",
+        store_pay_hint: "支持 PawtScore 积分、银行卡或 Solana Pay 结算",
+        store_pill: "✨ 100% 宠物专享认证",
+        feat_tag: "前沿技术与极致体验",
+        feat_title: "应用程序深度展示",
+        feat_desc: "让 Pawbooklife 成为全球宠物主人最喜爱、操作最丝滑的创新平台。",
+        feat_1_title: "TikTok 式纵向短视频流",
+        feat_1_desc: "借助 HTML5 与 Flutter 底层优化，带来极致顺畅的视频加载、一键消音、横竖屏自适应与手势滑动。",
+        feat_2_title: "内置视频全能编辑器",
+        feat_2_desc: "精准剪辑至 30 秒黄金时长，添加无版权音乐、特效贴纸，通过移动端引擎快速合成并发布。",
+        feat_3_title: "文明和谐纯净过滤器",
+        feat_3_desc: "智能识别并过滤违规言论与网络变体字，为所有人宠搭建安全、温暖、充满爱意的社交港湾。",
+        feat_4_title: "全球多语言无缝切换",
+        feat_4_desc: "全系统支持 4 大主要语言：英语 (en)、西班牙语 (es)、中文 (zh) 与日语 (ja)。",
+        cta_title: "准备好让您的爱宠成为明星了吗？",
+        cta_desc: "与成千上万的宠物家庭同行，在这里每一次欢叫与摇尾都满载价值。立即开启仪表盘体验吧！",
+        cta_btn_dashboard: "立即开启实时仪表盘",
+        cta_btn_mobile: "📱 网页端与移动端",
+        footer_brand_desc: "Solana 区块链上首个去中心化宠物 SocialFi 平台。满怀对动物的关爱倾心打造。",
+        footer_col_nav: "快速导航",
+        footer_col_platform: "平台链接",
+        footer_col_legal: "法律与政策",
+        footer_legal_terms: "服务条款",
+        footer_legal_welfare: "动物福祉政策",
+        footer_legal_privacy: "隐私政策",
+        footer_copyright: "© 2026 Pawbooklife. 保留所有权利。",
+        footer_solana_badge: "由 Solana 区块链强力驱动 ⚡"
+      },
+      ja: {
+        page_title: "Pawbooklife - Solana上のペット特化型 SocialFi | スポンサー＆限定ショップ",
+        page_desc: "Pawbooklife は Solana ブロックチェーン上のペット向け SocialFi プラットフォームです。ペットが主役になり、透明なオンチェーン支援を受け取り、限定ストアを楽しめます。",
+        nav_how: "使い方",
+        nav_sponsorships: "Web3 スポンサー",
+        nav_store: "ペット限定ストア",
+        nav_features: "主な機能",
+        nav_dashboard: "ダッシュボード",
+        hero_badge_solana: "⚡ Solana ブロックチェーン搭載",
+        hero_badge_version: "v1.0.0 公式版",
+        hero_title: 'ペットが<span class="highlight-brand">本当の主役になれる場所</span>',
+        hero_desc: "Pawbooklife は、すべてのペットが自身のショート動画チャンネルを持ち、Solana で直接ファンからチップを受け取り、ペット専用の厳選セレクトストアを利用できる初の Web3 ソーシャルプラットフォームです。",
+        hero_cta_dashboard: "ダッシュボードへ",
+        hero_cta_learn: "詳細を見る ↓",
+        hero_stat_1_val: "0 ms",
+        hero_stat_1_lbl: "いいね＆フィード遅延ゼロ",
+        hero_stat_2_val: "30秒",
+        hero_stat_2_lbl: "動画スタジオ上限時間",
+        hero_stat_3_val: "100%",
+        hero_stat_3_lbl: "ペット専用設計",
+        hero_badge_sponsor_title: "+1.5 SOL スポンサー支援",
+        hero_badge_sponsor_sub: "Chico 🐶 が受け取りました",
+        hero_badge_likes_title: "即時いいね！",
+        hero_badge_likes_sub: "安心・安全なコミュニティ",
+        how_tag: "ステップバイステップ",
+        how_title: "Pawbooklife の仕組み",
+        how_desc: "人とペットがかけがえのない瞬間を共有し、世界中のファンから温かい応援を受け取るためのプラットフォーム。",
+        step1_title: "ペットのプロフィールを登録",
+        step1_desc: "ワンちゃんや猫ちゃんなどの種別、品種、紹介文を登録。Dynamic.xyz 経由でメールアドレスや生体認証を使い数秒で Solana ウォレットを接続。",
+        step2_title: "Pawtbook 動画スタジオ",
+        step2_desc: "最大30秒のショート動画を撮影・編集。フィルター、スタンプ、テキスト、著作権フリー音源を自動ミキシングと一時停止同期で快適に適用。",
+        step3_title: "スポンサー支援と PawtScore",
+        step3_desc: "ファンから Solana で直接チップや支援を受け取れます。すべての交流で PawtScore が貯まり、限定ストアで特別なアイテムと交換可能。",
+        spons_tag: "Solana 上の Web3 SocialFi",
+        spons_title: "ペットのための透明なオンチェーンスポンサー",
+        spons_desc: "お気に入りの4本足のクリエイターをダイレクトに支援。不当な中抜き手数料なし、高速な Solana ブロックチェーン上で100%検証。",
+        spons_badge_network: "分散型ネットワーク",
+        spons_badge_confirm: "承認速度",
+        spons_badge_fee: "取引手数料（ガス代）",
+        spons_f1_title: "SOL と $SKR によるマイクロ支援",
+        spons_f1_desc: "Solana Mobile Wallet Adapter、Phantom、Solflare を使用して、ワンタップで 0.05 SOL や $SKR トークンから手軽に応援。",
+        spons_f2_title: "改ざん不能なオンチェーン履歴",
+        spons_f2_desc: "すべての支援はトランザクション署名 (tx_signature)、正確な金額、日時とともに記録され、完全な透明性を実現。",
+        spons_f3_title: "医療費、ケア、保護活動の支援基金",
+        spons_f3_desc: "受け取った支援金は、ワクチンや診察代、良質なフード、保護シェルターへの寄付に直接役立てられます。",
+        spons_f4_title: "公式スポンサー限定バッジ",
+        spons_f4_desc: "サポーターにはフィード上で特別なバッジが付与され、Pawbooklife 認定サポーターランキングで上位に表示されます。",
+        store_tag: "ペット専用限定ショップ",
+        store_title: "ペットの幸せのために厳選されたアイテム",
+        store_lead: "私たちのストアには揺るぎない約束があります：<strong>全商品が100%ペットの健康と幸せのための専用設計</strong>。一般的な雑貨ではなく、高品質・健康志向・最先端のペットスタイルのみをお届け。",
+        store_c1_title: "クリエイターバンダナ",
+        store_c1_desc: "手縫い刺繍・カスタムデザイン",
+        store_c2_title: "オーガニック・グルメおやつ",
+        store_c2_desc: "保存料・添加物ゼロの安心品質",
+        store_c3_title: "スマート NFC 首輪",
+        store_c3_desc: "デジタル迷子札・即時照会",
+        store_c4_title: "無毒性知育トイ",
+        store_c4_desc: "知育・運動不足解消に最適",
+        store_btn: "ダッシュボードでストアを見る",
+        store_pay_hint: "PawtScore、クレジットカード、Solana Pay で決済可能",
+        store_pill: "✨ 100% ペット専用認定",
+        feat_tag: "最先端テクノロジー＆UI",
+        feat_title: "アプリの詳細紹介",
+        feat_desc: "Pawbooklife をペットの世界で最も高速で愛されるプラットフォームにしている秘密をご紹介。",
+        feat_1_title: "TikTok スタイルの縦型フィード",
+        feat_1_desc: "HTML5 と Flutter による超スムーズな動画再生、クイック消音、快適な縦画面表示と滑らかなジェスチャー操作。",
+        feat_2_title: "内蔵ビデオスタジオ",
+        feat_2_desc: "動画を正確に30秒へトリミング、著作権フリー音楽やステッカーを追加し、最適化されたエンジンで高速出力。",
+        feat_3_title: "安心・安全のコミュニティフィルター",
+        feat_3_desc: "不適切な表現を事前に検出・フィルタリングし、家族みんなで安心して楽しめる温かい環境を保護。",
+        feat_4_title: "多言語グローバル対応",
+        feat_4_desc: "英語 (en)、スペイン語 (es)、中国語 (zh)、日本語 (ja) の4主要言語に完全対応。",
+        cta_title: "あなたのペットをスターにする準備はできましたか？",
+        cta_desc: "すべてのワンワン・ニャーニャーが価値になる場所。ダッシュボードを開いて今すぐ体験しましょう。",
+        cta_btn_dashboard: "今すぐダッシュボードを開く",
+        cta_btn_mobile: "📱 ウェブ＆モバイル版",
+        footer_brand_desc: "Solana ブロックチェーン上の初の分散型ペット SocialFi プラットフォーム。動物たちへの愛を込めて。",
+        footer_col_nav: "ナビゲーション",
+        footer_col_platform: "プラットフォーム",
+        footer_col_legal: "規約・情報",
+        footer_legal_terms: "利用規約",
+        footer_legal_welfare: "動物福祉ポリシー",
+        footer_legal_privacy: "プライバシーポリシー",
+        footer_copyright: "© 2026 Pawbooklife. All rights reserved.",
+        footer_solana_badge: "Solana ブロックチェーン駆動 ⚡"
+      }
+    };
+
+    const defaultLang = 'en'; // Predeterminado: Inglés
+    const supportedLangs = ['en', 'es', 'zh', 'ja'];
+    const flags = { en: '🇺🇸', es: '🇪🇸', zh: '🇨🇳', ja: '🇯🇵' };
+    const codes = { en: 'EN', es: 'ES', zh: 'ZH', ja: 'JA' };
+
+    function applyTranslations(lang) {
+      if (!supportedLangs.includes(lang)) lang = defaultLang;
+      document.documentElement.lang = lang;
+
+      const t = translations[lang] || translations[defaultLang];
+
+      // Update text nodes
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) {
+          el.textContent = t[key];
+        }
+      });
+
+      // Update innerHTML nodes (e.g. highlights/spans)
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (t[key]) {
+          el.innerHTML = t[key];
+        }
+      });
+
+      // Update page title & meta
+      if (t.page_title) document.title = t.page_title;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && t.page_desc) metaDesc.setAttribute('content', t.page_desc);
+
+      // Update selector buttons
+      const flagEl = document.getElementById('current-lang-flag');
+      const codeEl = document.getElementById('current-lang-code');
+      if (flagEl) flagEl.textContent = flags[lang];
+      if (codeEl) codeEl.textContent = codes[lang];
+
+      // Update active option
+      document.querySelectorAll('.lang-option').forEach(opt => {
+        if (opt.getAttribute('data-lang') === lang) {
+          opt.classList.add('active');
+        } else {
+          opt.classList.remove('active');
+        }
+      });
+
+      try {
+        localStorage.setItem('pawbook_landing_lang', lang);
+      } catch (e) {}
+    }
+
+    // Initialize Language
+    let savedLang = defaultLang;
+    try {
+      savedLang = localStorage.getItem('pawbook_landing_lang') || defaultLang;
+      if (!supportedLangs.includes(savedLang)) savedLang = defaultLang;
+    } catch (e) {
+      savedLang = defaultLang;
+    }
+    applyTranslations(savedLang);
+
+    // Dropdown toggle logic
+    const dropdown = document.getElementById('lang-dropdown');
+    const toggleBtn = document.getElementById('lang-toggle-btn');
+    if (toggleBtn && dropdown) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+      });
+
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('open');
+      });
+
+      document.querySelectorAll('.lang-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const selectedLang = opt.getAttribute('data-lang');
+          applyTranslations(selectedLang);
+          dropdown.classList.remove('open');
+        });
+      });
+    }
+
+    // Smooth scroll for nav links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();

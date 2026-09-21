@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_translations.dart';
 
 class LanguageController extends ChangeNotifier {
-  String _currentLanguage = 'es'; // Default to Spanish (or English)
+  String _currentLanguage = 'en'; // Default to English as primary language
 
   String get currentLanguage => _currentLanguage;
 

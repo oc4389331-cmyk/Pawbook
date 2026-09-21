@@ -54,16 +54,16 @@ void main() {
     test('LanguageController dynamically switches translations for new features', () {
       final controller = LanguageController();
 
-      // Default Spanish
-      expect(controller.currentLanguage, equals('es'));
-      expect(controller.t('likeComment'), equals('Me gusta'));
-      expect(controller.t('aboutBtn'), equals('Acerca de Pawbooklife'));
-
-      // Switch to English
-      controller.setLanguage('en');
+      // Default English as requested by user
       expect(controller.currentLanguage, equals('en'));
       expect(controller.t('likeComment'), equals('Like'));
       expect(controller.t('aboutBtn'), equals('About Pawbooklife'));
+
+      // Switch to Spanish
+      controller.setLanguage('es');
+      expect(controller.currentLanguage, equals('es'));
+      expect(controller.t('likeComment'), equals('Me gusta'));
+      expect(controller.t('aboutBtn'), equals('Acerca de Pawbooklife'));
 
       // Switch to Chinese
       controller.setLanguage('zh');

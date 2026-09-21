@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+const fs = require('fs');
+const path = require('path');
+
+function generateLandingHtml(isServerVersion = false) {
+  const heroImgSrc = isServerVersion ? '/landing_assets/hero_pets.jpg' : 'assets/hero_pets.jpg';
+  const sponsImgSrc = isServerVersion ? '/landing_assets/sponsorships_stats.jpg' : 'assets/sponsorships_stats.jpg';
+  const storeImgSrc = isServerVersion ? '/landing_assets/exclusive_pet_store.jpg' : 'assets/exclusive_pet_store.jpg';
+
+  const heroFallback = isServerVersion ? 'assets/hero_pets.jpg' : '/landing_assets/hero_pets.jpg';
+  const sponsFallback = isServerVersion ? 'assets/sponsorships_stats.jpg' : '/landing_assets/sponsorships_stats.jpg';
+  const storeFallback = isServerVersion ? 'assets/exclusive_pet_store.jpg' : '/landing_assets/exclusive_pet_store.jpg';
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1173,7 +1185,7 @@
 
       <div class="hero-media-wrapper">
         <div class="hero-image-frame">
-          <img src="/landing_assets/hero_pets.jpg" onerror="this.src='assets/hero_pets.jpg'" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
+          <img src="${heroImgSrc}" onerror="this.src='${heroFallback}'" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
         </div>
 
         <!-- Floating Badge: Instant Sponsorship -->
@@ -1245,7 +1257,7 @@
 
       <div class="sponsorship-grid">
         <div class="sponsorship-image-wrapper">
-          <img src="/landing_assets/sponsorships_stats.jpg" onerror="this.src='assets/sponsorships_stats.jpg'" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
+          <img src="${sponsImgSrc}" onerror="this.src='${sponsFallback}'" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
           <div class="sponsorship-badge-overlay">
             <div class="badge-stat-box">
               <h5 data-i18n="spons_badge_network">Decentralized Network</h5>
@@ -1356,7 +1368,7 @@
       </div>
 
       <div class="store-image-wrapper">
-        <img src="/landing_assets/exclusive_pet_store.jpg" onerror="this.src='assets/exclusive_pet_store.jpg'" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
+        <img src="${storeImgSrc}" onerror="this.src='${storeFallback}'" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
         <div class="store-callout-pill">
           <span data-i18n="store_pill">✨ 100% Pet-Only Certified</span>
         </div>
@@ -1914,3 +1926,15 @@
   </script>
 </body>
 </html>
+`;
+}
+
+// Generate landing/index.html (client/root)
+const rootLanding = generateLandingHtml(false);
+fs.writeFileSync(path.join(__dirname, '../landing/index.html'), rootLanding, 'utf8');
+console.log('✅ Generated landing/index.html with 4 languages (English default)');
+
+// Generate server/public/landing.html (server/Render)
+const serverLanding = generateLandingHtml(true);
+fs.writeFileSync(path.join(__dirname, '../server/public/landing.html'), serverLanding, 'utf8');
+console.log('✅ Generated server/public/landing.html with 4 languages (English default)');
