@@ -93,8 +93,7 @@ void main() {
 
       final isErnestoOwner = (ernestoUser.email == 'wernesto66@gmail.com' ||
           ernestoUser.id == 'usr_VL5CBAhr' ||
-          ernestoUser.id == 'usr_sol_400a' ||
-          authController.userPets.any((p) => p.id == chicoPet.id));
+          ernestoUser.id == 'usr_sol_400a');
       expect(isErnestoOwner, isTrue);
 
       // Case 2: Other user logged in with Seeker wallet
@@ -109,9 +108,40 @@ void main() {
 
       final isOtherOwner = (otherUser.email == 'wernesto66@gmail.com' ||
           otherUser.id == 'usr_VL5CBAhr' ||
-          otherUser.id == 'usr_sol_400a' ||
-          authController.userPets.any((p) => p.id == chicoPet.id));
+          otherUser.id == 'usr_sol_400a');
       expect(isOtherOwner, isFalse);
+
+      // Case 3: Other pet belongs strictly to its creator/owner
+      final lunaPet = PetModel(
+        id: 'pet_luna_cTgH6w',
+        ownerId: 'usr_cTgH6wCK',
+        name: 'Luna',
+        species: 'Gato',
+        breed: 'Siamés',
+        bio: 'Gatita juguetona',
+        avatarUrl: '',
+        totalSponsoredScore: 200,
+        createdAt: DateTime.now(),
+      );
+
+      final isOtherUserLunaOwner = (lunaPet.ownerId.isNotEmpty &&
+              lunaPet.ownerId != 'usr_owner' &&
+              lunaPet.ownerId == otherUser.id) ||
+          authController.userPets.any((p) => p.id == lunaPet.id && p.ownerId == otherUser.id);
+      expect(isOtherUserLunaOwner, isFalse);
+
+      // When the actual creator of Luna logs in:
+      final lunaOwner = ProfileModel(
+        id: 'usr_cTgH6wCK',
+        walletAddress: 'cTgH6wCK999...',
+        username: 'oscar_luna',
+        email: 'oscar.romero@anda.gob.sv',
+        createdAt: DateTime.now(),
+      );
+      final isLunaRealOwner = (lunaPet.ownerId.isNotEmpty &&
+              lunaPet.ownerId != 'usr_owner' &&
+              lunaPet.ownerId == lunaOwner.id);
+      expect(isLunaRealOwner, isTrue);
     });
   });
 }

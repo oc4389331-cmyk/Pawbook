@@ -258,14 +258,19 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
       if (isChico) {
         // Regla estricta: Chico pertenece exclusivamente a W. Ernesto (wernesto66@gmail.com / usr_VL5CBAhr / usr_sol_400a)
-        isOwner = currentUserEmail == 'wernesto66@gmail.com' ||
+        isOwner = (currentUserEmail == 'wernesto66@gmail.com' ||
             currentUserId == 'usr_VL5CBAhr' ||
-            currentUserId == 'usr_sol_400a' ||
-            authController.userPets.any((p) => p.id == 'pet_d1148fad');
+            currentUserId == 'usr_sol_400a');
       } else {
-        isOwner = (widget.pet.ownerId.isNotEmpty && widget.pet.ownerId != 'usr_owner' && widget.pet.ownerId == currentUserId) ||
-            authController.activePet?.id == widget.pet.id ||
-            authController.userPets.any((p) => p.id == widget.pet.id);
+        isOwner = (widget.pet.ownerId.isNotEmpty &&
+                widget.pet.ownerId != 'usr_owner' &&
+                widget.pet.ownerId == currentUserId) ||
+            (authController.activePet != null &&
+                authController.activePet!.id == widget.pet.id &&
+                (widget.pet.ownerId.isEmpty || widget.pet.ownerId == currentUserId)) ||
+            (authController.userPets.any((p) =>
+                p.id == widget.pet.id &&
+                (p.ownerId == currentUserId || p.ownerId.isEmpty)));
       }
     }
 
@@ -763,79 +768,130 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                     const SizedBox(height: 14),
                   ],
 
-                  // Attribute Progress Bars (Exact Image 1 layout)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAF5EE),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Atributos de Bienestar',
-                              style: GoogleFonts.fredoka(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textPrimaryDark,
+                  // Attribute Progress Bars (Solo visible para el tutor/dueño de la mascota)
+                  if (isOwner) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF5EE),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Atributos de Bienestar',
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimaryDark,
+                                ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppTheme.brandCoral.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.people_outline_rounded, size: 12, color: AppTheme.brandCoral),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    affinityText,
-                                    style: GoogleFonts.fredoka(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.brandCoral,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.brandCoral.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.people_outline_rounded, size: 12, color: AppTheme.brandCoral),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      affinityText,
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.brandCoral,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        PetAttributeBar(
-                          icon: Icons.favorite_rounded,
-                          iconColor: AppTheme.brandCoral,
-                          label: 'Vitalidad',
-                          progress: vitalityProgress,
-                          percentageText: vitalityPercentageText,
-                          valueColor: AppTheme.brandCoral,
-                        ),
-                        PetAttributeBar(
-                          icon: Icons.shield_rounded,
-                          iconColor: AppTheme.pawTeal,
-                          label: 'Patrocinio',
-                          progress: sponsorshipProgress,
-                          percentageText: sponsorshipPercentageText,
-                          valueColor: AppTheme.pawTeal,
-                        ),
-                        PetAttributeBar(
-                          icon: Icons.bolt_rounded,
-                          iconColor: const Color(0xFFF59E0B),
-                          label: 'Nivel Energía',
-                          progress: energyProgress,
-                          percentageText: energyPercentageText,
-                          valueColor: const Color(0xFFF59E0B),
-                        ),
-                      ],
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          PetAttributeBar(
+                            icon: Icons.favorite_rounded,
+                            iconColor: AppTheme.brandCoral,
+                            label: 'Vitalidad',
+                            progress: vitalityProgress,
+                            percentageText: vitalityPercentageText,
+                            valueColor: AppTheme.brandCoral,
+                          ),
+                          PetAttributeBar(
+                            icon: Icons.shield_rounded,
+                            iconColor: AppTheme.pawTeal,
+                            label: 'Patrocinio',
+                            progress: sponsorshipProgress,
+                            percentageText: sponsorshipPercentageText,
+                            valueColor: AppTheme.pawTeal,
+                          ),
+                          PetAttributeBar(
+                            icon: Icons.bolt_rounded,
+                            iconColor: const Color(0xFFF59E0B),
+                            label: 'Nivel Energía',
+                            progress: energyProgress,
+                            percentageText: energyPercentageText,
+                            valueColor: const Color(0xFFF59E0B),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                  ],
 
-                  const SizedBox(height: 14),
+                  // Public Welcome Card for Visitors (Sin exponer métricas internas)
+                  if (!isOwner) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.brandCoral.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.pets_rounded, color: AppTheme.brandCoral, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Canal Oficial de ${widget.pet.name}',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimaryDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '¡Disfruta sus videos y apóyalo con patrocinios!',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11.5,
+                                    color: AppTheme.textMutedWarm,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
 
                   // Analytics Curve Card (Métricas Privadas de Rendimiento y Ganancias - Exclusivo para el tutor/dueño)
                   if (isOwner) ...[
@@ -862,14 +918,14 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                   Center(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
-                      onTap: () {
+                      onTap: isOwner ? () {
                         FollowsDashboardModal.show(
                           context,
                           pet: widget.pet,
                           currentUserId: authController.currentProfile?.id,
                           initialTabIndex: 0,
                         );
-                      },
+                      } : null,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
@@ -910,8 +966,10 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 color: AppTheme.textPrimaryDark,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppTheme.textMutedWarm),
+                            if (isOwner) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppTheme.textMutedWarm),
+                            ],
                           ],
                         ),
                       ),

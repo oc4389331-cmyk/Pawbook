@@ -1431,8 +1431,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isChicoPost
           ? (authController.currentProfile!.email?.trim().toLowerCase() == 'wernesto66@gmail.com' ||
               authController.currentProfile!.id == 'usr_VL5CBAhr' ||
-              authController.currentProfile!.id == 'usr_sol_400a' ||
-              authController.userPets.any((p) => p.id == 'pet_d1148fad'))
+              authController.currentProfile!.id == 'usr_sol_400a')
           : (authController.activePet?.id == post.petId ||
               authController.userPets.any((p) => p.id == post.petId))
     );
@@ -1804,8 +1803,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isChicoPost
           ? (authController.currentProfile!.email?.trim().toLowerCase() == 'wernesto66@gmail.com' ||
               authController.currentProfile!.id == 'usr_VL5CBAhr' ||
-              authController.currentProfile!.id == 'usr_sol_400a' ||
-              authController.userPets.any((p) => p.id == 'pet_d1148fad'))
+              authController.currentProfile!.id == 'usr_sol_400a')
           : (authController.activePet?.id == post.petId ||
               authController.userPets.any((p) => p.id == post.petId))
     );

@@ -60,12 +60,11 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
         // Regla estricta: Chico pertenece exclusivamente a W. Ernesto (wernesto66@gmail.com / usr_VL5CBAhr / usr_sol_400a)
         isOwner = currentUserEmail == 'wernesto66@gmail.com' ||
             currentUserId == 'usr_VL5CBAhr' ||
-            currentUserId == 'usr_sol_400a' ||
-            authController.userPets.any((p) => p.id == 'pet_d1148fad');
+            currentUserId == 'usr_sol_400a';
       } else {
         isOwner = (widget.pet.ownerId.isNotEmpty && widget.pet.ownerId != 'usr_owner' && widget.pet.ownerId == currentUserId) ||
-            authController.activePet?.id == widget.pet.id ||
-            authController.userPets.any((p) => p.id == widget.pet.id);
+            (authController.activePet != null && authController.activePet!.id == widget.pet.id && (widget.pet.ownerId.isEmpty || widget.pet.ownerId == currentUserId)) ||
+            authController.userPets.any((p) => p.id == widget.pet.id && (p.ownerId == currentUserId || p.ownerId.isEmpty));
       }
     }
 
