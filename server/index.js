@@ -1,12 +1,20 @@
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const express = require('express');
 const cors = require('cors');
 const Stripe = require('stripe');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+
+if (ffmpegInstaller && ffmpegInstaller.path) {
+  ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+  console.log('✅ FFmpeg binary located and configured:', ffmpegInstaller.path);
+}
 
 const app = express();
 app.use(cors());
@@ -195,8 +203,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   return res.json({ received: true });
 });
 
-// JSON Body Parser for all remaining routes
-app.use(express.json());
+// JSON Body Parser for all remaining routes (supports video uploads up to 70mb)
+app.use(express.json({ limit: '70mb' }));
+app.use(express.urlencoded({ limit: '70mb', extended: true }));
 
 // Serve static Flutter Web application build if present
 let webBuildPath = path.join(__dirname, 'public');
@@ -672,6 +681,201 @@ app.post('/api/media/delete-object', async (req, res) => {
 
   console.log(`🗑️ [Mock R2] Deleted object: ${key}`);
   return res.json({ success: true, key, message: 'Mock R2 object deleted' });
+});
+
+// --------------------------------------------------------------------------
+// 4D. VIDEO PROCESSING PIPELINE WITH FFMPEG (AUDIO MIXING & OVERLAYS INTEGRATION)
+// --------------------------------------------------------------------------
+app.post('/api/media/process-video', async (req, res) => {
+  const {
+    petId,
+    videoUrl,
+    videoBase64,
+    overlayPngBase64,
+    soundUrl,
+    startSeconds = 0,
+    endSeconds = 30,
+    originalVolume = 1.0,
+    musicVolume = 0.8
+  } = req.body;
+
+  if (!petId) {
+    return res.status(400).json({ success: false, error: 'Missing petId' });
+  }
+
+  const tempDir = os.tmpdir();
+  const timestamp = Date.now();
+  const inputVideoPath = path.join(tempDir, `input_vid_${timestamp}.mp4`);
+  const inputOverlayPath = path.join(tempDir, `input_overlay_${timestamp}.png`);
+  const inputAudioPath = path.join(tempDir, `input_audio_${timestamp}.mp3`);
+  const outputVideoPath = path.join(tempDir, `output_processed_${timestamp}.mp4`);
+
+  const cleanupFiles = () => {
+    [inputVideoPath, inputOverlayPath, inputAudioPath, outputVideoPath].forEach(file => {
+      try {
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+      } catch (_) {}
+    });
+  };
+
+  try {
+    // 1. Obtener video origen
+    if (videoBase64) {
+      const cleanBase64 = videoBase64.replace(/^data:video\/\w+;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      fs.writeFileSync(inputVideoPath, buffer);
+    } else if (videoUrl) {
+      const resp = await fetch(videoUrl);
+      if (!resp.ok) throw new Error(`Failed to download source video: ${resp.statusText}`);
+      const arrayBuffer = await resp.arrayBuffer();
+      fs.writeFileSync(inputVideoPath, Buffer.from(arrayBuffer));
+    } else {
+      return res.status(400).json({ success: false, error: 'No video provided (neither videoUrl nor videoBase64)' });
+    }
+
+    // 2. Guardar overlay PNG si existe
+    const hasOverlay = !!overlayPngBase64;
+    if (hasOverlay) {
+      const cleanOverlay = overlayPngBase64.replace(/^data:image\/\w+;base64,/, '');
+      const overlayBuffer = Buffer.from(cleanOverlay, 'base64');
+      fs.writeFileSync(inputOverlayPath, overlayBuffer);
+    }
+
+    // 3. Descargar pista de audio si existe
+    const hasSound = !!soundUrl;
+    if (hasSound) {
+      try {
+        const audioResp = await fetch(soundUrl);
+        if (audioResp.ok) {
+          const audioArray = await audioResp.arrayBuffer();
+          fs.writeFileSync(inputAudioPath, Buffer.from(audioArray));
+        }
+      } catch (audioErr) {
+        console.warn('Could not download audio track, proceeding without music:', audioErr.message);
+      }
+    }
+
+    const audioAvailable = hasSound && fs.existsSync(inputAudioPath);
+    const overlayAvailable = hasOverlay && fs.existsSync(inputOverlayPath);
+
+    // Duración máxima estricta de 30 segundos
+    const rawStart = parseFloat(startSeconds) || 0.0;
+    const rawEnd = parseFloat(endSeconds) || 30.0;
+    const targetDuration = Math.max(1.0, Math.min(30.0, rawEnd - rawStart));
+    const startTime = Math.max(0.0, rawStart);
+
+    console.log(`🎬 Processing video for pet ${petId}: duration=${targetDuration}s, overlays=${overlayAvailable}, music=${audioAvailable}`);
+
+    // 4. Configurar FFmpeg
+    let command = ffmpeg();
+    command = command.input(inputVideoPath).seekInput(startTime).duration(targetDuration);
+
+    const complexFilters = [];
+    let currentVideoLabel = '0:v';
+
+    if (overlayAvailable) {
+      command = command.input(inputOverlayPath);
+      complexFilters.push(`[${currentVideoLabel}][1:v]overlay=0:0[vfinal]`);
+      currentVideoLabel = 'vfinal';
+    }
+
+    let audioLabel = '0:a';
+    if (audioAvailable) {
+      const audioInputIndex = overlayAvailable ? 2 : 1;
+      command = command.input(inputAudioPath);
+
+      const origVol = parseFloat(originalVolume) || 1.0;
+      const musVol = parseFloat(musicVolume) || 0.8;
+
+      if (origVol > 0) {
+        complexFilters.push(`[0:a]volume=${origVol.toFixed(2)}[a_orig]`);
+        complexFilters.push(`[${audioInputIndex}:a]volume=${musVol.toFixed(2)}[a_music]`);
+        complexFilters.push(`[a_orig][a_music]amix=inputs=2:duration=first:dropout_transition=2[afinal]`);
+        audioLabel = 'afinal';
+      } else {
+        complexFilters.push(`[${audioInputIndex}:a]volume=${musVol.toFixed(2)}[afinal]`);
+        audioLabel = 'afinal';
+      }
+    }
+
+    if (complexFilters.length > 0) {
+      command = command.complexFilter(complexFilters);
+    }
+
+    command = command.outputOptions([
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      '-preset', 'fast',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart'
+    ]);
+
+    if (complexFilters.length > 0) {
+      if (overlayAvailable) {
+        command = command.outputOptions(['-map', `[${currentVideoLabel}]`]);
+      }
+      if (audioAvailable) {
+        command = command.outputOptions(['-map', `[${audioLabel}]`]);
+      }
+    }
+
+    await new Promise((resolve, reject) => {
+      command
+        .save(outputVideoPath)
+        .on('end', () => {
+          console.log(`✅ FFmpeg processing completed for pet ${petId}`);
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error('❌ FFmpeg execution error:', err.message);
+          reject(err);
+        });
+    });
+
+    // 5. Subir a Cloudflare R2
+    const processedBytes = fs.readFileSync(outputVideoPath);
+    const uniqueKey = `posts/${petId}_processed_${Date.now()}.mp4`;
+    const publicUrl = `${R2_CUSTOM_DOMAIN}/${uniqueKey}`;
+
+    if (r2Client) {
+      try {
+        const putCmd = new PutObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: uniqueKey,
+          ContentType: 'video/mp4',
+          Body: processedBytes
+        });
+        await r2Client.send(putCmd);
+        console.log(`☁️ Processed video uploaded to Cloudflare R2: ${publicUrl}`);
+      } catch (r2Err) {
+        console.error('Error uploading processed video to R2:', r2Err);
+        throw r2Err;
+      }
+    } else {
+      console.log(`⚠️ [Mock R2] Processed video ready: ${publicUrl} (${processedBytes.length} bytes)`);
+    }
+
+    cleanupFiles();
+
+    return res.json({
+      success: true,
+      publicUrl,
+      key: uniqueKey,
+      duration: targetDuration,
+      audioIntegrated: audioAvailable,
+      overlaysIntegrated: overlayAvailable,
+      message: 'Video procesado, audio y stickers integrados correctamente como un nuevo video'
+    });
+  } catch (procErr) {
+    cleanupFiles();
+    console.error('Video processing exception:', procErr.message);
+    return res.status(500).json({
+      success: false,
+      error: procErr.message,
+      fallbackUrl: videoUrl || null
+    });
+  }
 });
 
 // --------------------------------------------------------------------------

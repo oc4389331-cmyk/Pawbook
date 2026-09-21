@@ -11,6 +11,7 @@ class AppVideoPlayerWidget extends StatelessWidget {
   final BoxFit fit;
   final Future<bool> Function()? onPlayAttempt;
   final VoidCallback? onVideoTap;
+  final ValueChanged<bool>? onPlayingChanged;
 
   const AppVideoPlayerWidget({
     super.key,
@@ -21,6 +22,7 @@ class AppVideoPlayerWidget extends StatelessWidget {
     this.fit = BoxFit.contain,
     this.onPlayAttempt,
     this.onVideoTap,
+    this.onPlayingChanged,
   });
 
   @override
@@ -34,6 +36,7 @@ class AppVideoPlayerWidget extends StatelessWidget {
         fit: fit,
         onPlayAttempt: onPlayAttempt,
         onVideoTap: onVideoTap,
+        onPlayingChanged: onPlayingChanged,
       );
     }
 
@@ -45,6 +48,7 @@ class AppVideoPlayerWidget extends StatelessWidget {
       fit: fit,
       onPlayAttempt: onPlayAttempt,
       onVideoTap: onVideoTap,
+      onPlayingChanged: onPlayingChanged,
     );
   }
 }

@@ -28,6 +28,7 @@ abstract class VideoMetadataService {
   static final VideoMetadataService instance = getVideoMetadataService();
 
   Future<VideoInfo> extractMetadata(Uint8List bytes);
+  Future<VideoInfo> extractMetadataFromPath(String path);
   Widget buildVideoPlayerView({
     required Uint8List bytes,
     required String viewKey,

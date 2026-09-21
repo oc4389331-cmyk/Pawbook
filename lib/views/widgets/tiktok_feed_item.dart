@@ -225,9 +225,16 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
             loop: true,
             fit: BoxFit.contain,
             onPlayAttempt: widget.onPlayAttempt,
-            onVideoTap: () {
-              if (widget.post.hasSound && _audioPlayer != null && !_isMuted && !_isPlayingSound) {
-                _audioPlayer!.play(widget.post.soundUrl!, loop: true);
+            onPlayingChanged: (isPlaying) {
+              if (widget.post.hasSound && _audioPlayer != null) {
+                if (isPlaying) {
+                  if (!_isMuted && widget.isCurrentPage && widget.post.soundUrl != null) {
+                    _audioPlayer!.play(widget.post.soundUrl!, loop: true);
+                  }
+                } else {
+                  // Si el video se pausa, la pista de audio SE PAUSA INMEDIATAMENTE
+                  _audioPlayer!.pause();
+                }
               }
             },
           ),
@@ -310,16 +317,23 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
 
 extension PostDummyPetExt on PostModel {
   PetModel toPetModel() {
+    final bool isChico = petId == 'pet_d1148fad' ||
+        (petName != null && petName!.trim().toLowerCase() == 'chico') ||
+        petId.toLowerCase().contains('chico');
+
+    final String resolvedOwnerId = petOwnerId ??
+        (isChico ? 'usr_VL5CBAhr' : 'usr_owner');
+
     return PetModel(
       id: petId,
-      ownerId: 'usr_owner',
-      name: petName ?? 'Mascota Creadora',
-      species: petSpecies ?? 'Pet',
-      breed: 'Pawtbook Creator',
-      bio: 'Star creator pet on Solana 🐾',
+      ownerId: resolvedOwnerId,
+      name: petName ?? (isChico ? 'Chico' : 'Mascota Creadora'),
+      species: petSpecies ?? (isChico ? 'Perro' : 'Pet'),
+      breed: isChico ? 'Otro' : 'Pawtbook Creator',
+      bio: isChico ? 'Me gusta correr, caminar, salir a dar grandes paseos' : 'Star creator pet on Solana 🐾',
       avatarUrl: petAvatarUrl ?? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
       nftMintAddress: nftMintAddress,
-      totalSponsoredScore: 500,
+      totalSponsoredScore: isChico ? 500 : 100,
       createdAt: DateTime.now(),
     );
   }

@@ -8,6 +8,8 @@ class CommentModel {
   final String? avatarUrl;
   final String? parentId; // ID of the parent comment if this is a reply
   final String? replyToUsername; // Username being replied to
+  final int likesCount;
+  final bool isLikedByCurrentUser;
 
   CommentModel({
     required this.id,
@@ -19,6 +21,8 @@ class CommentModel {
     this.avatarUrl,
     this.parentId,
     this.replyToUsername,
+    this.likesCount = 0,
+    this.isLikedByCurrentUser = false,
   });
 
   bool get isReply => parentId != null && parentId!.isNotEmpty;
@@ -56,6 +60,10 @@ class CommentModel {
       avatarUrl: json['avatar_url'] ?? json['profiles']?['avatar_url'],
       parentId: parentId,
       replyToUsername: replyToUsername,
+      likesCount: json['likes_count'] is int
+          ? json['likes_count']
+          : int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
+      isLikedByCurrentUser: json['is_liked_by_current_user'] == true,
     );
   }
 
@@ -68,6 +76,7 @@ class CommentModel {
       'created_at': createdAt.toIso8601String(),
       if (parentId != null) 'parent_id': parentId,
       if (replyToUsername != null) 'reply_to_username': replyToUsername,
+      'likes_count': likesCount,
     };
   }
 
@@ -78,8 +87,11 @@ class CommentModel {
     String? content,
     DateTime? createdAt,
     String? username,
+    String? avatarUrl,
     String? parentId,
     String? replyToUsername,
+    int? likesCount,
+    bool? isLikedByCurrentUser,
   }) {
     return CommentModel(
       id: id ?? this.id,
@@ -88,8 +100,11 @@ class CommentModel {
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       parentId: parentId ?? this.parentId,
       replyToUsername: replyToUsername ?? this.replyToUsername,
+      likesCount: likesCount ?? this.likesCount,
+      isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
     );
   }
 }

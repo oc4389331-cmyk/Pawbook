@@ -456,6 +456,34 @@ class AppTranslations {
       'pointsEarnedPostMsg': 'You earned +50 PawtScore points! 🐾',
       'pointsEarnedMarketMsg': 'You earned +150 PawtScore points! 🐾',
       'pointsEarnedSponsorMsg': 'You earned +150 PawtScore points! 🐾',
+
+      // About Pawbooklife & Version
+      'aboutPawbookTitle': 'About Pawbooklife 🐾',
+      'aboutPawbookSubtitle': 'The Web3 & SocialFi platform for all your pets on Solana',
+      'appVersionLabel': 'Version {version}',
+      'aboutWhatIsTitle': 'What is Pawbooklife?',
+      'aboutWhatIsDesc': 'Pawbooklife is the leading SocialFi creator platform where pets take the spotlight! Tutors share authentic short-form videos, earn direct fan sponsorships on the Solana blockchain, and foster a healthy global pet-loving community.',
+      'aboutWeb3Title': 'Solana & Web3 SocialFi',
+      'aboutWeb3Desc': 'Integrated with Solana Pay, Dynamic Embedded Wallets, and the \$SKR ecosystem for instant, low-fee tips and pet sponsorship transparently registered on-chain.',
+      'aboutCommunityTitle': 'Safe & Respectful Community',
+      'aboutCommunityDesc': 'AI-assisted moderation and active profanity filtering to maintain a positive, welcoming environment for families and pets worldwide.',
+      'aboutMarketplaceTitle': 'Marketplace & Rewards',
+      'aboutMarketplaceDesc': 'Earn PawtScore points with every interaction, redeem exclusive bandanas, merchandise, and support animal welfare initiatives.',
+      'aboutBtn': 'About Pawbooklife',
+
+      // Video Restrictions & Studio
+      'videoLimitDialogTitle': 'Video Duration Limit (Max 30s) ⏱️',
+      'videoLimitDialogMsg': 'To keep server performance optimal and protect network bandwidth, videos must be at most 30 seconds.\n\nWould you like to trim this video to 30 seconds or less in our Studio now?',
+      'trimVideoBtn': 'Trim to 30s ✂️',
+      'videoTrimCancelled': 'Selection cancelled: Video exceeds the 30s limit',
+      'videoNotUploadedTrimRequired': '⚠️ Video not uploaded: You must trim it to at most 30 seconds',
+      'likeComment': 'Like',
+      'studioDoneBtn': 'Done ✅',
+      'studioTextTool': 'Text',
+      'studioTrimTool': 'Trim',
+      'studioFilterTool': 'Filters',
+      'studioStickersTool': 'Stickers',
+      'studioAudioTool': 'Music',
     },
 
     'es': {
@@ -914,6 +942,34 @@ class AppTranslations {
       'pointsEarnedPostMsg': '¡Has ganado +50 puntos PawtScore por publicar tu video! 🐾',
       'pointsEarnedMarketMsg': '¡Has ganado +150 puntos PawtScore por tu compra! 🐾',
       'pointsEarnedSponsorMsg': '¡Has ganado +150 puntos PawtScore por tu patrocinio! 🐾',
+
+      // Acerca de Pawbooklife y Versión
+      'aboutPawbookTitle': 'Acerca de Pawbooklife 🐾',
+      'aboutPawbookSubtitle': 'La plataforma Web3 y SocialFi para tus mascotas en Solana',
+      'appVersionLabel': 'Versión {version}',
+      'aboutWhatIsTitle': '¿Qué es Pawbooklife?',
+      'aboutWhatIsDesc': 'Pawbooklife es la plataforma líder de creadores SocialFi donde las mascotas son las protagonistas. Los tutores comparten videos cortos auténticos, reciben patrocinios directos de fanáticos en la blockchain de Solana y forman una comunidad global que cuida a los animales.',
+      'aboutWeb3Title': 'Solana & Web3 SocialFi',
+      'aboutWeb3Desc': 'Integrado con Solana Pay, billeteras embebidas Dynamic y el ecosistema \$SKR para propinas instantáneas, de baja comisión y patrocinios registrados de forma transparente en la blockchain.',
+      'aboutCommunityTitle': 'Comunidad Segura y Respetuosa',
+      'aboutCommunityDesc': 'Moderación asistida por IA y filtros estrictos contra malas palabras para preservar un entorno positivo y seguro para familias y mascotas en todo el mundo.',
+      'aboutMarketplaceTitle': 'Mercado & Recompensas',
+      'aboutMarketplaceDesc': 'Acumula puntos PawtScore con cada interacción, canjea bandanas y productos exclusivos y apoya iniciativas para el cuidado animal.',
+      'aboutBtn': 'Acerca de Pawbooklife',
+
+      // Restricciones de Video y Studio
+      'videoLimitDialogTitle': 'Límite de Duración del Video (Máx 30s) ⏱️',
+      'videoLimitDialogMsg': 'Por políticas de servidor y para no saturar Cloudflare, los videos deben durar máximo 30 segundos.\n\n¿Deseas recortar este video a 30 segundos o menos en nuestro Studio ahora?',
+      'trimVideoBtn': 'Recortar a 30s ✂️',
+      'videoTrimCancelled': 'Selección cancelada: El video supera los 30s permitidos',
+      'videoNotUploadedTrimRequired': '⚠️ Video no subido: Debes recortarlo a máximo 30 segundos',
+      'likeComment': 'Me gusta',
+      'studioDoneBtn': 'Listo ✅',
+      'studioTextTool': 'Texto',
+      'studioTrimTool': 'Cortar',
+      'studioFilterTool': 'Filtros',
+      'studioStickersTool': 'Stickers',
+      'studioAudioTool': 'Música',
     },
 
     'zh': {
@@ -1372,6 +1428,34 @@ class AppTranslations {
       'pointsEarnedPostMsg': '上传视频成功！你获得了 +50 PawtScore 积分！🐾',
       'pointsEarnedMarketMsg': '购买成功！你获得了 +150 PawtScore 积分！🐾',
       'pointsEarnedSponsorMsg': '赞助成功！你获得了 +150 PawtScore 积分！🐾',
+
+      // 关于 Pawbooklife 和版本
+      'aboutPawbookTitle': '关于 Pawbooklife 🐾',
+      'aboutPawbookSubtitle': 'Solana 链上专为宠物打造的 Web3 与 SocialFi 平台',
+      'appVersionLabel': '版本 {version}',
+      'aboutWhatIsTitle': '什么是 Pawbooklife？',
+      'aboutWhatIsDesc': 'Pawbooklife 是领先的宠物 SocialFi 创作者平台，宠物在此成为焦点！主人们分享真实的宠物短视频，在 Solana 区块链上获得粉丝的直接赞助，并建立一个充满爱心的全球宠物社区。',
+      'aboutWeb3Title': 'Solana 与 Web3 SocialFi',
+      'aboutWeb3Desc': '集成 Solana Pay、Dynamic 内置钱包和 \$SKR 生态，实现即时、低手续费的小额打赏与链上透明赞助。',
+      'aboutCommunityTitle': '安全与尊重的社区',
+      'aboutCommunityDesc': '结合 AI 辅助审核与严格的不雅用语过滤，为全球家庭和宠物维护积极、温馨的健康环境。',
+      'aboutMarketplaceTitle': '商城与积分奖励',
+      'aboutMarketplaceDesc': '每一次互动都能获得 PawtScore 积分，兑换独家宠物头巾、周边商品，并支持动物关爱计划。',
+      'aboutBtn': '关于 Pawbooklife',
+
+      // 视频限制与工作室
+      'videoLimitDialogTitle': '视频时长限制 (最大30秒) ⏱️',
+      'videoLimitDialogMsg': '为保障服务器性能并防止网络拥堵，视频长度最多为30秒。\n\n是否立即在我们的视频工作室中将此视频剪辑至30秒以内？',
+      'trimVideoBtn': '剪辑至30秒 ✂️',
+      'videoTrimCancelled': '已取消：视频超过了30秒的限制',
+      'videoNotUploadedTrimRequired': '⚠️ 视频未上传：必须将其剪辑至最多30秒',
+      'likeComment': '赞',
+      'studioDoneBtn': '完成 ✅',
+      'studioTextTool': '文字',
+      'studioTrimTool': '剪辑',
+      'studioFilterTool': '滤镜',
+      'studioStickersTool': '贴纸',
+      'studioAudioTool': '音乐',
     },
 
     'ja': {
@@ -1830,6 +1914,34 @@ class AppTranslations {
       'pointsEarnedPostMsg': '動画を投稿しました！+50 PawtScore 獲得！🐾',
       'pointsEarnedMarketMsg': '購入完了！+150 PawtScore 獲得！🐾',
       'pointsEarnedSponsorMsg': 'スポンサー完了！+150 PawtScore 獲得！🐾',
+
+      // Pawbooklife について＆バージョン
+      'aboutPawbookTitle': 'Pawbooklife について 🐾',
+      'aboutPawbookSubtitle': 'Solana上のすべてのペットのためのWeb3＆SocialFiプラットフォーム',
+      'appVersionLabel': 'バージョン {version}',
+      'aboutWhatIsTitle': 'Pawbooklife とは？',
+      'aboutWhatIsDesc': 'Pawbooklife はペットが主役の最先端 SocialFi クリエイタープラットフォームです！飼い主が愛犬・愛猫のショート動画を共有し、Solanaブロックチェーン上でファンから直接スポンサーシップ（チップ）を受け取り、世界中のペット愛好家コミュニティと繋がります。',
+      'aboutWeb3Title': 'Solana ＆ Web3 SocialFi',
+      'aboutWeb3Desc': 'Solana Pay、Dynamic組み込みウォレット、\$SKRエコシステムと連携し、低手数料で即座のチップやオンチェーンで透明に記録されるペットスポンサーシップを提供します。',
+      'aboutCommunityTitle': '安全で尊重しあえるコミュニティ',
+      'aboutCommunityDesc': 'AI支援のモデレーションと不適切用語フィルターにより、世界中の家族とペットにとって安心・安全でポジティブな環境を守ります。',
+      'aboutMarketplaceTitle': 'マーケット＆リワード',
+      'aboutMarketplaceDesc': 'アクションごとに PawtScore ポイントを獲得し、限定バンダナやグッズと交換して動物福祉の取り組みを応援できます。',
+      'aboutBtn': 'Pawbooklife について',
+
+      // 動画制限＆スタジオ
+      'videoLimitDialogTitle': '動画の長さ制限 (最大30秒) ⏱️',
+      'videoLimitDialogMsg': 'サーバーのパフォーマンスを最適に保ち帯域を保護するため、動画は最大30秒までです。\n\n今すぐビデオスタジオで30秒以内にカットしますか？',
+      'trimVideoBtn': '30秒にカット ✂️',
+      'videoTrimCancelled': 'キャンセルされました：動画が30秒を超えています',
+      'videoNotUploadedTrimRequired': '⚠️ 動画はアップロードされませんでした：最大30秒以内にカットしてください',
+      'likeComment': 'いいね',
+      'studioDoneBtn': '完了 ✅',
+      'studioTextTool': 'テキスト',
+      'studioTrimTool': 'カット',
+      'studioFilterTool': 'フィルター',
+      'studioStickersTool': 'ステッカー',
+      'studioAudioTool': '音楽',
     },
   };
 

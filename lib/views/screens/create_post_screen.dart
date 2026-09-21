@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -168,7 +167,58 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       if (file != null) {
         final bytes = await file.readAsBytes();
-        final info = await VideoMetadataService.instance.extractMetadata(bytes);
+        final info = await VideoMetadataService.instance.extractMetadataFromPath(file.path);
+
+        // Verificación estricta de tiempo de video para proteger Cloudflare y el servidor
+        if (info.durationSeconds > AppConfig.maxVideoDurationSeconds) {
+          if (!mounted) return;
+          final lang = Provider.of<LanguageController>(context, listen: false);
+          final shouldTrim = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppTheme.bgWarmCream,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.timer_off_rounded, color: AppTheme.primaryTerracotta, size: 26),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      lang.t('videoLimitDialogTitle'),
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 17),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                lang.t('videoLimitDialogMsg'),
+                style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimaryDark),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(lang.t('cancel'), style: GoogleFonts.fredoka(color: Colors.redAccent)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTerracotta,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(lang.t('trimVideoBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldTrim != true) {
+            _showSnack(lang.t('videoTrimCancelled'), isError: true);
+            return;
+          }
+        }
+
         setState(() {
           _pickedMedia.clear();
           _videoEditorResult = null;
@@ -181,7 +231,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         });
 
         // Automatically open Video Studio for the user after picking video
-        await _openVideoEditor();
+        final editedResult = await _openVideoEditor(forceTrim: info.durationSeconds > AppConfig.maxVideoDurationSeconds);
+
+        // Si el video original superaba 30s y el usuario no completó el recorte, descartar el video
+        if (info.durationSeconds > AppConfig.maxVideoDurationSeconds && (editedResult == null || editedResult.duration > AppConfig.maxVideoDurationSeconds)) {
+          final lang = Provider.of<LanguageController>(context, listen: false);
+          setState(() {
+            _pickedMedia.clear();
+            _videoEditorResult = null;
+          });
+          _showSnack(lang.t('videoNotUploadedTrimRequired'), isError: true);
+        }
       }
     } catch (e) {
       _showSnack('Error al seleccionar video: $e', isError: true);
@@ -189,7 +249,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   // ── Open Pawtbook Video Studio ────────────────────────────────────────────
-  Future<void> _openVideoEditor() async {
+  Future<VideoEditorResult?> _openVideoEditor({bool forceTrim = false}) async {
     try {
       Uint8List bytes;
       String filename;
@@ -200,10 +260,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           source: ImageSource.gallery,
           maxDuration: const Duration(seconds: 30),
         );
-        if (file == null) return;
+        if (file == null) return null;
         bytes = await file.readAsBytes();
         filename = file.name;
-        final info = await VideoMetadataService.instance.extractMetadata(bytes);
+        final info = await VideoMetadataService.instance.extractMetadataFromPath(file.path);
         if (mounted) {
           setState(() {
             _pickedMedia.clear();
@@ -221,7 +281,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
 
       await _audioPlayer.stop();
-      if (!mounted) return;
+      if (!mounted) return null;
 
       final result = await Navigator.of(context).push<VideoEditorResult>(
         MaterialPageRoute(
@@ -239,10 +299,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           _videoEditorResult = result;
           _selectedSound = result.selectedSound;
         });
-        _showSnack('✨ Video editado en Studio: Filtro ${result.filterName} • ${result.overlays.length} stickers');
+        _showSnack('✨ Video editado en Studio: ${result.duration.toStringAsFixed(1)}s • Filtro ${result.filterName}${result.overlays.isNotEmpty ? " • ${result.overlays.length} stickers" : ""}');
       }
+      return result;
     } catch (e) {
       _showSnack('Error al abrir Studio: $e', isError: true);
+      return null;
     }
   }
 
@@ -1249,6 +1311,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
+    if (_mediaType == 'video') {
+      if (_videoEditorResult != null && _videoEditorResult!.duration > AppConfig.maxVideoDurationSeconds) {
+        _showSnack('⚠️ El video dura ${_videoEditorResult!.duration.toStringAsFixed(1)}s. El máximo permitido es de ${AppConfig.maxVideoDurationSeconds.toInt()}s', isError: true);
+        return;
+      }
+    }
+
     final caption = ProfanityFilterService.sanitize(rawCaption);
     setState(() => _isUploading = true);
     await _audioPlayer.stop();
@@ -1272,6 +1341,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         extraFilenames: extraNames,
         soundUrl: _selectedSound?.url,
         soundTitle: _selectedSound?.title,
+        overlayPngBytes: _videoEditorResult?.overlayPngBytes,
+        startSeconds: _videoEditorResult?.startSeconds,
+        endSeconds: _videoEditorResult?.endSeconds,
+        originalVolume: _videoEditorResult?.originalVolume,
+        musicVolume: _videoEditorResult?.musicVolume,
       );
 
       // Award 50 PawtScore points for uploading pet videos/posts

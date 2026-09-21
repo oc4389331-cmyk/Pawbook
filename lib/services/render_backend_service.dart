@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
@@ -272,6 +273,62 @@ class RenderBackendService {
       'presignedPutUrl': '${AppConfig.r2MediaDomain}/upload-signed/$key',
       'publicUrl': publicUrl,
     };
+  }
+
+  /// Processes video via FFmpeg in the backend (trims, overlays stickers/text, mixes audio)
+  Future<Map<String, dynamic>> processVideo({
+    required String petId,
+    String? videoUrl,
+    Uint8List? videoBytes,
+    Uint8List? overlayPngBytes,
+    String? soundUrl,
+    double startSeconds = 0.0,
+    double endSeconds = 30.0,
+    double originalVolume = 1.0,
+    double musicVolume = 0.8,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/media/process-video');
+      final Map<String, dynamic> payload = {
+        'petId': petId,
+        'startSeconds': startSeconds,
+        'endSeconds': endSeconds,
+        'originalVolume': originalVolume,
+        'musicVolume': musicVolume,
+      };
+
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        payload['videoUrl'] = videoUrl;
+      }
+      if (videoBytes != null && videoBytes.isNotEmpty) {
+        payload['videoBase64'] = base64Encode(videoBytes);
+      }
+      if (overlayPngBytes != null && overlayPngBytes.isNotEmpty) {
+        payload['overlayPngBase64'] = base64Encode(overlayPngBytes);
+      }
+      if (soundUrl != null && soundUrl.isNotEmpty) {
+        payload['soundUrl'] = soundUrl;
+      }
+
+      final res = await _client
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 45));
+
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+
+      return {
+        'success': false,
+        'error': 'Error en backend de video HTTP ${res.statusCode}: ${res.body}',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
   }
 
   /// Requests Cloudflare R2 bucket deletion for previous media object

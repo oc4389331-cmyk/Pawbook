@@ -13,6 +13,7 @@ class AppVideoPlayerWeb extends StatefulWidget {
   final BoxFit fit;
   final Future<bool> Function()? onPlayAttempt;
   final VoidCallback? onVideoTap;
+  final ValueChanged<bool>? onPlayingChanged;
 
   const AppVideoPlayerWeb({
     super.key,
@@ -23,6 +24,7 @@ class AppVideoPlayerWeb extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.onPlayAttempt,
     this.onVideoTap,
+    this.onPlayingChanged,
   });
 
   @override
@@ -46,13 +48,11 @@ class _AppVideoPlayerWebState extends State<AppVideoPlayerWeb>
   late AnimationController _animController;
   late Animation<double> _scaleAnimation;
 
-  static int _viewIdCounter = 0;
-
   @override
   void initState() {
     super.initState();
     _isMuted = widget.isMuted;
-    _viewType = 'pawtbook_video_${DateTime.now().millisecondsSinceEpoch}_${_viewIdCounter++}';
+    _viewType = 'paw_vid_${widget.videoUrl.hashCode}_${DateTime.now().millisecondsSinceEpoch}';
 
     _animController = AnimationController(
       vsync: this,
@@ -62,10 +62,10 @@ class _AppVideoPlayerWebState extends State<AppVideoPlayerWeb>
       CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
     );
 
-    _createAndRegisterVideoElement();
+    _initVideoElement();
   }
 
-  void _createAndRegisterVideoElement() {
+  void _initVideoElement() {
     final cleanUrl = widget.videoUrl.trim();
     if (cleanUrl.isEmpty) return;
 
@@ -74,7 +74,6 @@ class _AppVideoPlayerWebState extends State<AppVideoPlayerWeb>
       ..autoplay = widget.isCurrentPage
       ..loop = widget.loop
       ..muted = _isMuted
-      ..preload = 'auto'
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.objectFit = widget.fit == BoxFit.cover ? 'cover' : 'contain'
@@ -83,23 +82,30 @@ class _AppVideoPlayerWebState extends State<AppVideoPlayerWeb>
       ..style.border = 'none'
       ..style.outline = 'none'
       ..setAttribute('playsinline', 'true')
-      ..setAttribute('webkit-playsinline', 'true');
+      ..setAttribute('webkit-playsinline', 'true')
+      ..setAttribute('preload', 'auto');
 
     _canPlaySub = video.onCanPlay.listen((_) {
       if (mounted) {
         setState(() => _isBuffering = false);
-        if (widget.isCurrentPage) {
+        if (widget.isCurrentPage && video.paused) {
           _safePlay(video);
         }
       }
     });
 
     _playSub = video.onPlay.listen((_) {
-      if (mounted) setState(() => _isPlaying = true);
+      if (mounted) {
+        setState(() => _isPlaying = true);
+        widget.onPlayingChanged?.call(true);
+      }
     });
 
     _pauseSub = video.onPause.listen((_) {
-      if (mounted) setState(() => _isPlaying = false);
+      if (mounted) {
+        setState(() => _isPlaying = false);
+        widget.onPlayingChanged?.call(false);
+      }
     });
 
     _errorSub = video.onError.listen((e) {

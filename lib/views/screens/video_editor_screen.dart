@@ -1,7 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../config/app_config.dart';
+import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../models/sound_track_model.dart';
 import '../../services/video_metadata_service.dart';
@@ -127,6 +132,7 @@ class VideoEditorResult {
   final SoundTrack? selectedSound;
   final double originalVolume;
   final double musicVolume;
+  final Uint8List? overlayPngBytes;
 
   const VideoEditorResult({
     required this.videoBytes,
@@ -138,6 +144,7 @@ class VideoEditorResult {
     this.selectedSound,
     this.originalVolume = 1.0,
     this.musicVolume = 0.8,
+    this.overlayPngBytes,
   });
 
   double get duration => endSeconds - startSeconds;
@@ -153,6 +160,7 @@ class VideoEditorResult {
     bool clearSound = false,
     double? originalVolume,
     double? musicVolume,
+    Uint8List? overlayPngBytes,
   }) {
     return VideoEditorResult(
       videoBytes: videoBytes ?? this.videoBytes,
@@ -164,6 +172,7 @@ class VideoEditorResult {
       selectedSound: clearSound ? null : (selectedSound ?? this.selectedSound),
       originalVolume: originalVolume ?? this.originalVolume,
       musicVolume: musicVolume ?? this.musicVolume,
+      overlayPngBytes: overlayPngBytes ?? this.overlayPngBytes,
     );
   }
 }
@@ -188,7 +197,6 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   // Trimming
   double _totalVideoDuration = 30.0;
   RangeValues _trimRange = const RangeValues(0.0, 15.0);
-  bool _isPlaying = true;
 
   // Video Info & Aspect Ratio
   VideoInfo? _videoInfo;
@@ -203,6 +211,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   // Overlays (Stickers, Emojis, Text)
   final List<VideoOverlayItem> _overlays = [];
   String? _selectedOverlayId;
+  final GlobalKey _overlaysBoundaryKey = GlobalKey();
 
   // Audio / Sound
   SoundTrack? _selectedSound;
@@ -242,7 +251,10 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           _videoInfo = info;
           if (info.durationSeconds > 0) {
             _totalVideoDuration = info.durationSeconds;
-            _trimRange = RangeValues(0.0, _totalVideoDuration.clamp(3.0, 30.0));
+            final maxTrim = info.durationSeconds > AppConfig.maxVideoDurationSeconds
+                ? AppConfig.maxVideoDurationSeconds
+                : info.durationSeconds;
+            _trimRange = RangeValues(0.0, maxTrim.clamp(1.0, AppConfig.maxVideoDurationSeconds));
           }
           if (info.isLandscape) {
             _aspectRatio = 16 / 9;
@@ -392,24 +404,56 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     );
   }
 
-  void _finishEditing() {
+  Future<void> _finishEditing() async {
+    // 1. Deseleccionar overlay para que no aparezca el borde ni la 'X' en la captura
+    setState(() => _selectedOverlayId = null);
+    await Future.delayed(const Duration(milliseconds: 60));
+
+    // 2. Capturar capa de overlays a PNG transparente si hay stickers o texto
+    Uint8List? overlayBytes;
+    if (_overlays.isNotEmpty) {
+      try {
+        final boundary = _overlaysBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        if (boundary != null) {
+          final image = await boundary.toImage(pixelRatio: 2.0);
+          final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+          if (byteData != null) {
+            overlayBytes = byteData.buffer.asUint8List();
+          }
+        }
+      } catch (e) {
+        debugPrint('[VideoEditor] Error capturing overlays PNG: $e');
+      }
+    }
+
+    // 3. Salvaguarda estricta de tiempo máximo (30s)
+    double start = _trimRange.start;
+    double end = _trimRange.end;
+    if (end - start > AppConfig.maxVideoDurationSeconds) {
+      end = start + AppConfig.maxVideoDurationSeconds;
+    }
+
     final result = VideoEditorResult(
       videoBytes: widget.videoBytes,
       filename: widget.filename,
-      startSeconds: _trimRange.start,
-      endSeconds: _trimRange.end,
+      startSeconds: start,
+      endSeconds: end,
       filterName: videoFilterPresets[_selectedFilterIndex].name,
       overlays: List.unmodifiable(_overlays),
       selectedSound: _selectedSound,
       originalVolume: _originalVolume,
       musicVolume: _musicVolume,
+      overlayPngBytes: overlayBytes,
     );
 
-    Navigator.pop(context, result);
+    if (mounted) {
+      Navigator.pop(context, result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageController>(context);
     final currentFilter = videoFilterPresets[_selectedFilterIndex];
 
     return Scaffold(
@@ -441,8 +485,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                               )
                             : _buildVideoCanvasContent(),
 
-                        // Overlays layer (Stickers, Emojis, Text)
-                        ..._overlays.map((item) => _buildDraggableOverlay(item)),
+                        // Overlays layer (Stickers, Emojis, Text) wrapped in RepaintBoundary for PNG export
+                        RepaintBoundary(
+                          key: _overlaysBoundaryKey,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: _overlays.map((item) => _buildDraggableOverlay(item)).toList(),
+                          ),
+                        ),
 
                         // Watermark / Filter indicator
                         Positioned(
@@ -535,7 +585,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: _finishEditing,
-                    child: Text('Listo ✅', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: Text(lang.t('studioDoneBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                 ],
               ),
@@ -549,15 +599,15 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                 children: [
                   _buildStudioToolButton(icon: Icons.aspect_ratio_rounded, label: _aspectRatioMode, toolId: 'ratio'),
                   const SizedBox(height: 12),
-                  _buildStudioToolButton(icon: Icons.content_cut_rounded, label: 'Cortar', toolId: 'trim'),
+                  _buildStudioToolButton(icon: Icons.content_cut_rounded, label: lang.t('studioTrimTool'), toolId: 'trim'),
                   const SizedBox(height: 12),
-                  _buildStudioToolButton(icon: Icons.filter_vintage_rounded, label: 'Filtros', toolId: 'filter'),
+                  _buildStudioToolButton(icon: Icons.filter_vintage_rounded, label: lang.t('studioFilterTool'), toolId: 'filter'),
                   const SizedBox(height: 12),
-                  _buildStudioToolButton(icon: Icons.emoji_emotions_rounded, label: 'Stickers', toolId: 'stickers'),
+                  _buildStudioToolButton(icon: Icons.emoji_emotions_rounded, label: lang.t('studioStickersTool'), toolId: 'stickers'),
                   const SizedBox(height: 12),
-                  _buildStudioToolButton(icon: Icons.title_rounded, label: 'Texto', toolId: 'text', onTap: _openTextEditorModal),
+                  _buildStudioToolButton(icon: Icons.title_rounded, label: lang.t('studioTextTool'), toolId: 'text', onTap: _openTextEditorModal),
                   const SizedBox(height: 12),
-                  _buildStudioToolButton(icon: Icons.music_note_rounded, label: 'Música', toolId: 'audio'),
+                  _buildStudioToolButton(icon: Icons.music_note_rounded, label: lang.t('studioAudioTool'), toolId: 'audio'),
                   if (_selectedOverlayId != null) ...[
                     const SizedBox(height: 16),
                     GestureDetector(
@@ -866,8 +916,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           RangeSlider(
             values: _trimRange,
             min: 0.0,
-            max: _totalVideoDuration,
-            divisions: 30,
+            max: _totalVideoDuration > 0 ? _totalVideoDuration : AppConfig.maxVideoDurationSeconds,
             activeColor: AppTheme.primaryTerracotta,
             inactiveColor: Colors.white24,
             labels: RangeLabels(
@@ -875,8 +924,17 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
               '${_trimRange.end.toStringAsFixed(1)}s',
             ),
             onChanged: (values) {
-              if (values.end - values.start >= 3.0) {
-                setState(() => _trimRange = values);
+              double start = values.start;
+              double end = values.end;
+              if (end - start > AppConfig.maxVideoDurationSeconds) {
+                if ((end - _trimRange.end).abs() > (start - _trimRange.start).abs()) {
+                  start = (end - AppConfig.maxVideoDurationSeconds).clamp(0.0, _totalVideoDuration);
+                } else {
+                  end = (start + AppConfig.maxVideoDurationSeconds).clamp(0.0, _totalVideoDuration);
+                }
+              }
+              if (end - start >= 1.0) {
+                setState(() => _trimRange = RangeValues(start, end));
               }
             },
           ),

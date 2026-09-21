@@ -11,6 +11,7 @@ class AppVideoPlayerWeb extends StatefulWidget {
   final BoxFit fit;
   final Future<bool> Function()? onPlayAttempt;
   final VoidCallback? onVideoTap;
+  final ValueChanged<bool>? onPlayingChanged;
 
   const AppVideoPlayerWeb({
     super.key,
@@ -21,6 +22,7 @@ class AppVideoPlayerWeb extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.onPlayAttempt,
     this.onVideoTap,
+    this.onPlayingChanged,
   });
 
   @override
@@ -60,9 +62,11 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _controller?.pause();
+      widget.onPlayingChanged?.call(false);
     } else if (state == AppLifecycleState.resumed) {
       if (widget.isCurrentPage && _controller != null && _isInitialized) {
         _controller?.play();
+        widget.onPlayingChanged?.call(true);
       }
     }
   }
@@ -105,6 +109,7 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
 
       if (widget.isCurrentPage) {
         await controller.play();
+        widget.onPlayingChanged?.call(true);
       }
     } catch (e) {
       debugPrint('Error initializing native video player for $url: $e');
@@ -135,8 +140,10 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
       if (widget.isCurrentPage != oldWidget.isCurrentPage) {
         if (widget.isCurrentPage) {
           _controller?.play();
+          widget.onPlayingChanged?.call(true);
         } else {
           _controller?.pause();
+          widget.onPlayingChanged?.call(false);
         }
       }
 
@@ -152,9 +159,11 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
     if (_controller!.value.isPlaying) {
       await _controller!.pause();
       _triggerOverlay();
+      widget.onPlayingChanged?.call(false);
     } else {
       await _controller!.play();
       _triggerOverlay();
+      widget.onPlayingChanged?.call(true);
     }
 
     if (widget.onVideoTap != null) {

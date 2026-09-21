@@ -52,5 +52,12 @@ class AppConfig {
   static const int pointsForMarketPurchase = 150;
   static const int pointsForSponsorship = 150;
   static const int pointsForVideoUpload = 50;
+
+  // Cloudflare R2 / Server Video Restrictions
+  static const double maxVideoDurationSeconds = 30.0;
+
+  // App Version & Build
+  static const String appVersion = '1.0.0+1';
+  static const String appDisplayVersion = 'v1.0.0 (Build 1)';
 }
 

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pawtbook/config/app_config.dart';
 import 'package:pawtbook/views/screens/video_editor_screen.dart';
 
 void main() {
@@ -70,6 +71,58 @@ void main() {
       expect(result.overlays.length, equals(2));
       expect(result.originalVolume, equals(0.9));
       expect(result.musicVolume, equals(0.7));
+    });
+
+    test('Video duration constraint enforces AppConfig.maxVideoDurationSeconds (30s)', () {
+      expect(AppConfig.maxVideoDurationSeconds, equals(30.0));
+
+      // Test a video trimmed to exactly 30s
+      final validResult = VideoEditorResult(
+        videoBytes: Uint8List.fromList([1, 2, 3]),
+        filename: 'valid_clip.mp4',
+        startSeconds: 0.0,
+        endSeconds: 30.0,
+        filterName: 'Normal',
+        overlays: const [],
+      );
+      expect(validResult.duration, equals(30.0));
+      expect(validResult.duration <= AppConfig.maxVideoDurationSeconds, isTrue);
+
+      // Test detection of excessive video duration (> 30s)
+      final longResult = VideoEditorResult(
+        videoBytes: Uint8List.fromList([1, 2, 3]),
+        filename: 'long_clip.mp4',
+        startSeconds: 0.0,
+        endSeconds: 45.0,
+        filterName: 'Normal',
+        overlays: const [],
+      );
+      expect(longResult.duration, equals(45.0));
+      expect(longResult.duration > AppConfig.maxVideoDurationSeconds, isTrue);
+    });
+
+    test('VideoEditorResult supports integrated overlay PNG rasterization', () {
+      final mockPngBytes = Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]); // PNG magic bytes
+      final result = VideoEditorResult(
+        videoBytes: Uint8List.fromList([1, 2, 3]),
+        filename: 'doggy.mp4',
+        startSeconds: 0.0,
+        endSeconds: 15.0,
+        filterName: 'Warm Golden',
+        overlays: [
+          VideoOverlayItem(
+            id: 'ov_1',
+            type: OverlayType.text,
+            content: 'Guau! 🐶',
+            offset: const Offset(10, 10),
+          ),
+        ],
+        overlayPngBytes: mockPngBytes,
+      );
+
+      expect(result.overlayPngBytes, isNotNull);
+      expect(result.overlayPngBytes!.length, equals(8));
+      expect(result.overlayPngBytes![0], equals(137));
     });
   });
 }

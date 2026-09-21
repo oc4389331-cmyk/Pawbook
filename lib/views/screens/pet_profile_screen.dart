@@ -21,6 +21,7 @@ import '../widgets/claim_sponsorship_modal.dart';
 import '../widgets/post_card.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/terms_and_conditions_modal.dart';
+import '../widgets/about_pawbook_modal.dart';
 import '../widgets/pet_attribute_bar.dart';
 import '../widgets/pet_analytics_curve_card.dart';
 import '../widgets/follows_dashboard_modal.dart';
@@ -246,11 +247,27 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
     final oracleController = Provider.of<OracleController>(context);
-    final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
-        authController.activePet?.id == widget.pet.id ||
-        authController.userPets.any((p) => p.id == widget.pet.id) ||
-        (authController.activePet != null && authController.activePet!.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase()) ||
-        authController.userPets.any((p) => p.name.trim().toLowerCase() == widget.pet.name.trim().toLowerCase());
+    final bool isChico = widget.pet.id == 'pet_d1148fad' ||
+        widget.pet.name.trim().toLowerCase() == 'chico' ||
+        widget.pet.id.toLowerCase().contains('chico');
+
+    bool isOwner = false;
+    if (authController.isAuthenticated && authController.currentProfile != null) {
+      final currentUserId = authController.currentProfile!.id;
+      final currentUserEmail = authController.currentProfile!.email?.trim().toLowerCase();
+
+      if (isChico) {
+        // Regla estricta: Chico pertenece exclusivamente a W. Ernesto (wernesto66@gmail.com / usr_VL5CBAhr / usr_sol_400a)
+        isOwner = currentUserEmail == 'wernesto66@gmail.com' ||
+            currentUserId == 'usr_VL5CBAhr' ||
+            currentUserId == 'usr_sol_400a' ||
+            authController.userPets.any((p) => p.id == 'pet_d1148fad');
+      } else {
+        isOwner = (widget.pet.ownerId.isNotEmpty && widget.pet.ownerId != 'usr_owner' && widget.pet.ownerId == currentUserId) ||
+            authController.activePet?.id == widget.pet.id ||
+            authController.userPets.any((p) => p.id == widget.pet.id);
+      }
+    }
 
     final currentPetInstance = widget.pet.copyWith(nftMintAddress: _verifiedNftAddress);
     final bool isExempted = currentPetInstance.isExempted;
@@ -338,7 +355,12 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         ),
         actions: [
           const Center(child: LanguageSelector()),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.info_outline_rounded, color: AppTheme.primaryTerracotta, size: 24),
+            tooltip: langController.t('aboutBtn'),
+            onPressed: () => AboutPawbookModal.show(context),
+          ),
           if (isOwner && widget.onSwitchToHuman != null)
             IconButton(
               icon: const Icon(Icons.person_pin_rounded, color: AppTheme.primaryTerracotta, size: 28),
@@ -815,24 +837,26 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
                   const SizedBox(height: 14),
 
-                  // Analytics Curve Card (Real Metrics from Videos & Real Sponsorships)
-                  PetAnalyticsCurveCard(
-                    followersCount: _followersCount,
-                    totalScore: realScore,
-                    popularityPercent: popularityPercent,
-                    earningsText: realEarningsText,
-                    performanceText: performanceText,
-                    weeklyPoints: weeklyPoints,
-                    onTapFollowers: () {
-                      FollowsDashboardModal.show(
-                        context,
-                        pet: widget.pet,
-                        currentUserId: authController.currentProfile?.id,
-                        initialTabIndex: 0,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
+                  // Analytics Curve Card (Métricas Privadas de Rendimiento y Ganancias - Exclusivo para el tutor/dueño)
+                  if (isOwner) ...[
+                    PetAnalyticsCurveCard(
+                      followersCount: _followersCount,
+                      totalScore: realScore,
+                      popularityPercent: popularityPercent,
+                      earningsText: realEarningsText,
+                      performanceText: performanceText,
+                      weeklyPoints: weeklyPoints,
+                      onTapFollowers: () {
+                        FollowsDashboardModal.show(
+                          context,
+                          pet: widget.pet,
+                          currentUserId: authController.currentProfile?.id,
+                          initialTabIndex: 0,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                  ],
 
                   // Community & Follows Quick Stat Chip
                   Center(

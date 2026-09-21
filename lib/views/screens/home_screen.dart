@@ -12,9 +12,9 @@ import '../../models/comment_model.dart';
 import '../../services/supabase_service.dart';
 import '../../services/profanity_filter_service.dart';
 import '../../theme/app_theme.dart';
-import '../widgets/language_selector.dart';
 import '../widgets/tiktok_feed_item.dart';
 import '../widgets/terms_and_conditions_modal.dart';
+import '../widgets/about_pawbook_modal.dart';
 import '../widgets/sponsorship_modal.dart';
 import '../widgets/wallet_dashboard_modal.dart';
 import '../widgets/live_oracle_ticker.dart';
@@ -38,7 +38,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
-  bool _hasShownRegisterWall = false;
   int _currentFeedPage = 0;
   final Set<String> _followedPetIds = {};
 
@@ -196,9 +195,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final commentController = TextEditingController();
     final commentFocusNode = FocusNode();
     final supabaseService = SupabaseService();
+    final feedController = Provider.of<FeedController>(context, listen: false);
     CommentModel? replyingToComment;
     final Set<String> expandedCommentIds = {};
-    Future<List<CommentModel>> commentsFuture = supabaseService.getCommentsForPost(post.id);
+    Future<List<CommentModel>> commentsFuture = supabaseService.getCommentsForPost(post.id, currentUserId: currentUserId);
+    List<CommentModel>? activeCommentsList;
 
     showModalBottomSheet(
       context: context,
@@ -268,12 +269,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: FutureBuilder<List<CommentModel>>(
                       future: commentsFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData && activeCommentsList == null) {
                           return const Center(
                             child: CircularProgressIndicator(color: AppTheme.primaryTerracotta, strokeWidth: 2),
                           );
                         }
-                        final allComments = snapshot.data ?? [];
+                        if (snapshot.hasData && activeCommentsList == null) {
+                          activeCommentsList = List<CommentModel>.from(snapshot.data!);
+                        }
+                        final allComments = activeCommentsList ?? snapshot.data ?? [];
                         if (allComments.isEmpty) {
                           return Center(
                             child: Padding(
@@ -389,36 +393,88 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            // Action: Responder
-                                            InkWell(
-                                              onTap: () {
-                                                setModalState(() {
-                                                  replyingToComment = parentComment;
-                                                });
-                                                Future.delayed(const Duration(milliseconds: 60), () {
-                                                  if (commentFocusNode.canRequestFocus) {
-                                                    commentFocusNode.requestFocus();
-                                                  }
-                                                });
-                                              },
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryTerracotta),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      langController.t('reply'),
-                                                      style: GoogleFonts.fredoka(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: AppTheme.primaryTerracotta,
-                                                      ),
+                                            // Action Buttons: Responder & Me Gusta
+                                            Row(
+                                              children: [
+                                                InkWell(
+                                                  onTap: () {
+                                                    setModalState(() {
+                                                      replyingToComment = parentComment;
+                                                    });
+                                                    Future.delayed(const Duration(milliseconds: 60), () {
+                                                      if (commentFocusNode.canRequestFocus) {
+                                                        commentFocusNode.requestFocus();
+                                                      }
+                                                    });
+                                                  },
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryTerracotta),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          langController.t('reply'),
+                                                          style: GoogleFonts.fredoka(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: AppTheme.primaryTerracotta,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                  ],
+                                                  ),
                                                 ),
-                                              ),
+                                                const SizedBox(width: 16),
+                                                // Action: Me Gusta en Comentario
+                                                InkWell(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  onTap: () async {
+                                                    if (!authController.isAuthenticated) {
+                                                      Navigator.pop(ctx);
+                                                      _showTikTokRegistrationWall(context, authController);
+                                                      return;
+                                                    }
+                                                    final isCurrentlyLiked = parentComment.isLikedByCurrentUser;
+                                                    final newCount = (parentComment.likesCount + (isCurrentlyLiked ? -1 : 1)).clamp(0, 999999);
+                                                    setModalState(() {
+                                                      if (activeCommentsList != null) {
+                                                        final pIdx = activeCommentsList!.indexWhere((c) => c.id == parentComment.id);
+                                                        if (pIdx != -1) {
+                                                          activeCommentsList![pIdx] = parentComment.copyWith(
+                                                            isLikedByCurrentUser: !isCurrentlyLiked,
+                                                            likesCount: newCount,
+                                                          );
+                                                        }
+                                                      }
+                                                    });
+                                                    await supabaseService.toggleLikeComment(currentUserId, parentComment.id);
+                                                  },
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          parentComment.isLikedByCurrentUser ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                                          size: 14,
+                                                          color: parentComment.isLikedByCurrentUser ? const Color(0xFFFF4B6E) : AppTheme.textMutedWarm,
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          parentComment.likesCount > 0 ? '${parentComment.likesCount}' : langController.t('likeComment'),
+                                                          style: GoogleFonts.fredoka(
+                                                            fontSize: 11.5,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: parentComment.isLikedByCurrentUser ? const Color(0xFFFF4B6E) : AppTheme.textMutedWarm,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -574,28 +630,80 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         ),
                                                       ),
                                                       const SizedBox(height: 3),
-                                                      InkWell(
-                                                        onTap: () {
-                                                          setModalState(() {
-                                                            replyingToComment = reply;
-                                                          });
-                                                          Future.delayed(const Duration(milliseconds: 60), () {
-                                                            if (commentFocusNode.canRequestFocus) {
-                                                              commentFocusNode.requestFocus();
-                                                            }
-                                                          });
-                                                        },
-                                                        child: Padding(
-                                                          padding: const EdgeInsets.symmetric(vertical: 2),
-                                                          child: Text(
-                                                            langController.t('reply'),
-                                                            style: GoogleFonts.fredoka(
-                                                              fontSize: 11,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: AppTheme.primaryTerracotta,
+                                                      Row(
+                                                        children: [
+                                                          InkWell(
+                                                            onTap: () {
+                                                              setModalState(() {
+                                                                replyingToComment = reply;
+                                                              });
+                                                              Future.delayed(const Duration(milliseconds: 60), () {
+                                                                if (commentFocusNode.canRequestFocus) {
+                                                                  commentFocusNode.requestFocus();
+                                                                }
+                                                              });
+                                                            },
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(vertical: 2),
+                                                              child: Text(
+                                                                langController.t('reply'),
+                                                                style: GoogleFonts.fredoka(
+                                                                  fontSize: 11,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: AppTheme.primaryTerracotta,
+                                                                ),
+                                                              ),
                                                             ),
                                                           ),
-                                                        ),
+                                                          const SizedBox(width: 14),
+                                                          // Like button on reply
+                                                          InkWell(
+                                                            borderRadius: BorderRadius.circular(10),
+                                                            onTap: () async {
+                                                              if (!authController.isAuthenticated) {
+                                                                Navigator.pop(ctx);
+                                                                _showTikTokRegistrationWall(context, authController);
+                                                                return;
+                                                              }
+                                                              final isCurrentlyLiked = reply.isLikedByCurrentUser;
+                                                              final newCount = (reply.likesCount + (isCurrentlyLiked ? -1 : 1)).clamp(0, 999999);
+                                                              setModalState(() {
+                                                                if (activeCommentsList != null) {
+                                                                  final rIdx = activeCommentsList!.indexWhere((c) => c.id == reply.id);
+                                                                  if (rIdx != -1) {
+                                                                    activeCommentsList![rIdx] = reply.copyWith(
+                                                                      isLikedByCurrentUser: !isCurrentlyLiked,
+                                                                      likesCount: newCount,
+                                                                    );
+                                                                  }
+                                                                }
+                                                              });
+                                                              await supabaseService.toggleLikeComment(currentUserId, reply.id);
+                                                            },
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(
+                                                                    reply.isLikedByCurrentUser ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                                                    size: 13,
+                                                                    color: reply.isLikedByCurrentUser ? const Color(0xFFFF4B6E) : AppTheme.textMutedWarm,
+                                                                  ),
+                                                                  const SizedBox(width: 3),
+                                                                  Text(
+                                                                    reply.likesCount > 0 ? '${reply.likesCount}' : langController.t('likeComment'),
+                                                                    style: GoogleFonts.fredoka(
+                                                                      fontSize: 10.5,
+                                                                      fontWeight: FontWeight.bold,
+                                                                      color: reply.isLikedByCurrentUser ? const Color(0xFFFF4B6E) : AppTheme.textMutedWarm,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ],
                                                   ),
@@ -710,9 +818,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             backgroundColor: AppTheme.primaryTerracotta,
-                                            content: Text(
-                                              '⚠️ ${langController.t("profanityWarning")}',
-                                              style: GoogleFonts.fredoka(color: Colors.white),
+                                            duration: const Duration(seconds: 4),
+                                            content: Row(
+                                              children: [
+                                                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 22),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    langController.t("profanityWarning"),
+                                                    style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         );
@@ -739,17 +856,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                         replyingToComment = null;
                                       });
 
-                                      await supabaseService.addComment(
-                                        currentUserId,
-                                        post.id,
-                                        sanitized,
+                                      // Optimistic immediate add in FeedController (updates commentsCount on post with 0ms UI delay)
+                                      final newComment = await feedController.addCommentToPost(
+                                        userId: currentUserId,
+                                        postId: post.id,
+                                        content: sanitized,
                                         username: activeCommenterName,
                                         parentId: parentId,
                                         replyToUsername: replyToUser,
                                       );
 
                                       setModalState(() {
-                                        commentsFuture = supabaseService.getCommentsForPost(post.id);
+                                        if (activeCommentsList != null) {
+                                          activeCommentsList!.add(newComment);
+                                        }
+                                        commentsFuture = supabaseService.getCommentsForPost(post.id, currentUserId: currentUserId);
                                       });
                                     },
                                   ),
@@ -1234,22 +1355,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.pets_rounded, color: AppTheme.brandCoral, size: 24),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Pawbooklife',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            shadows: const [
-                              Shadow(color: Colors.black45, blurRadius: 8),
-                            ],
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => AboutPawbookModal.show(context),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.pets_rounded, color: AppTheme.brandCoral, size: 24),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Pawbooklife',
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              shadows: const [
+                                Shadow(color: Colors.black45, blurRadius: 8),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const LiveOracleTicker(compact: true),
                   ],
@@ -1298,13 +1423,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionSidebar(PostModel post, String currentUserId, AuthController authController, LanguageController langController, FeedController feedController) {
-    final isOwner = authController.isAuthenticated && (
-      authController.activePet?.id == post.petId ||
-      authController.userPets.any((p) => p.id == post.petId) ||
-      (post.petName != null && authController.activePet != null && 
-       authController.activePet!.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
-      (post.petName != null && authController.userPets.any((p) => 
-       p.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()))
+    final bool isChicoPost = post.petId == 'pet_d1148fad' ||
+        (post.petName != null && post.petName!.trim().toLowerCase() == 'chico') ||
+        post.petId.toLowerCase().contains('chico');
+
+    final isOwner = authController.isAuthenticated && authController.currentProfile != null && (
+      isChicoPost
+          ? (authController.currentProfile!.email?.trim().toLowerCase() == 'wernesto66@gmail.com' ||
+              authController.currentProfile!.id == 'usr_VL5CBAhr' ||
+              authController.currentProfile!.id == 'usr_sol_400a' ||
+              authController.userPets.any((p) => p.id == 'pet_d1148fad'))
+          : (authController.activePet?.id == post.petId ||
+              authController.userPets.any((p) => p.id == post.petId))
     );
     final isLiked = post.isLikedByCurrentUser;
     final likesCount = post.likesCount;
@@ -1666,13 +1796,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBottomInfo(PostModel post, AuthController authController) {
     final petName = post.petName ?? 'Mascota';
-    final isOwner = authController.isAuthenticated && (
-      authController.activePet?.id == post.petId ||
-      authController.userPets.any((p) => p.id == post.petId) ||
-      (post.petName != null && authController.activePet != null && 
-       authController.activePet!.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()) ||
-      (post.petName != null && authController.userPets.any((p) => 
-       p.name.trim().toLowerCase() == post.petName!.trim().toLowerCase()))
+    final bool isChicoPost = post.petId == 'pet_d1148fad' ||
+        (post.petName != null && post.petName!.trim().toLowerCase() == 'chico') ||
+        post.petId.toLowerCase().contains('chico');
+
+    final isOwner = authController.isAuthenticated && authController.currentProfile != null && (
+      isChicoPost
+          ? (authController.currentProfile!.email?.trim().toLowerCase() == 'wernesto66@gmail.com' ||
+              authController.currentProfile!.id == 'usr_VL5CBAhr' ||
+              authController.currentProfile!.id == 'usr_sol_400a' ||
+              authController.userPets.any((p) => p.id == 'pet_d1148fad'))
+          : (authController.activePet?.id == post.petId ||
+              authController.userPets.any((p) => p.id == post.petId))
     );
     final petToOpen = isOwner && authController.activePet != null
         ? authController.activePet!
@@ -1891,6 +2026,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: AppTheme.primaryTerracotta),
+                icon: const Icon(Icons.info_outline_rounded, size: 18),
+                label: Text(langController.t('aboutBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: () => AboutPawbookModal.show(context),
               ),
             ],
           ),
@@ -2316,26 +2458,46 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
             ],
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.redAccent,
-                side: const BorderSide(color: Colors.redAccent, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: Text(
-                langController.t('logOut'),
-                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-              ),
-              onPressed: () async {
-                await authController.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                }
-              },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryTerracotta,
+                    side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.info_outline_rounded, size: 18),
+                  label: Text(
+                    langController.t('aboutBtn'),
+                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () => AboutPawbookModal.show(context),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: Text(
+                    langController.t('logOut'),
+                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () async {
+                    await authController.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
           ],
         ),

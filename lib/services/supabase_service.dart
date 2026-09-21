@@ -24,6 +24,8 @@ class SupabaseService {
   final List<SponsorshipModel> _mockSponsorships = [];
   final List<WithdrawalModel> _mockWithdrawals = [];
   final Set<String> _mockLikedPostUserKeys = {}; // "userId_postId"
+  final Set<String> _mockLikedCommentKeys = {}; // "userId_commentId"
+  final Map<String, int> _commentLikesCounts = {}; // "commentId" -> count
   final Set<String> _mockFollows = {}; // "humanId_petId"
   final Map<String, Map<String, int>> _userSpeciesAffinity = {}; // userId -> { 'Dog': 15, 'Cat': 5 }
   final List<RewardOrderModel> _mockOrders = [];
@@ -274,6 +276,22 @@ class SupabaseService {
       }
     }
     return _mockPets.values.where((p) => p.ownerId == ownerId && p.id != 'pet_chico_VL5CBA').toList();
+  }
+
+  Future<PetModel?> getPetById(String petId) async {
+    if (_client != null) {
+      try {
+        final res = await _client!
+            .from('pets')
+            .select()
+            .eq('id', petId)
+            .maybeSingle();
+        if (res != null) {
+          return PetModel.fromJson(res);
+        }
+      } catch (_) {}
+    }
+    return _mockPets[petId];
   }
 
   Future<PetModel> createPet(PetModel pet) async {
@@ -538,7 +556,17 @@ class SupabaseService {
 
         if (existing != null) {
           await _client!.from('post_likes').delete().eq('user_id', userId).eq('post_id', postId);
-          await _client!.rpc('decrement_likes', params: {'post_id': postId});
+          try {
+            await _client!.rpc('decrement_likes', params: {'post_id': postId});
+          } catch (_) {
+            try {
+              final postRes = await _client!.from('posts').select('likes_count').eq('id', postId).maybeSingle();
+              if (postRes != null) {
+                final curLikes = (postRes['likes_count'] as num?)?.toInt() ?? 1;
+                await _client!.from('posts').update({'likes_count': (curLikes - 1).clamp(0, 999999)}).eq('id', postId);
+              }
+            } catch (_) {}
+          }
           isLiked = false;
         } else {
           await _client!.from('post_likes').insert({
@@ -546,10 +574,22 @@ class SupabaseService {
             'user_id': userId,
             'post_id': postId,
           });
-          await _client!.rpc('increment_likes', params: {'post_id': postId});
+          try {
+            await _client!.rpc('increment_likes', params: {'post_id': postId});
+          } catch (_) {
+            try {
+              final postRes = await _client!.from('posts').select('likes_count').eq('id', postId).maybeSingle();
+              if (postRes != null) {
+                final curLikes = (postRes['likes_count'] as num?)?.toInt() ?? 0;
+                await _client!.from('posts').update({'likes_count': curLikes + 1}).eq('id', postId);
+              }
+            } catch (_) {}
+          }
           isLiked = true;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Supabase] Error toggling post like: $e');
+      }
     } else {
       // Mock Fallback
       final key = '${userId}_$postId';
@@ -741,8 +781,8 @@ class SupabaseService {
     );
   }
 
-  // --- Comments Operations (with Nested Replies / Threads) ---
-  Future<List<CommentModel>> getCommentsForPost(String postId) async {
+  // --- Comments Operations (with Nested Replies / Threads & Comment Likes) ---
+  Future<List<CommentModel>> getCommentsForPost(String postId, {String? currentUserId}) async {
     List<CommentModel> list = [];
     if (_client != null) {
       try {
@@ -774,7 +814,83 @@ class SupabaseService {
     }
 
     list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    return list;
+
+    // Decorate each comment with like status and count
+    return list.map((c) {
+      final key = currentUserId != null ? '${currentUserId}_${c.id}' : '';
+      final isLiked = currentUserId != null && _mockLikedCommentKeys.contains(key);
+      final count = _commentLikesCounts.containsKey(c.id)
+          ? _commentLikesCounts[c.id]!
+          : c.likesCount;
+      return c.copyWith(
+        likesCount: count,
+        isLikedByCurrentUser: isLiked,
+      );
+    }).toList();
+  }
+
+  Future<bool> toggleLikeComment(String userId, String commentId) async {
+    final key = '${userId}_${commentId}';
+    final wasLiked = _mockLikedCommentKeys.contains(key);
+    final isLikedNow = !wasLiked;
+
+    if (isLikedNow) {
+      _mockLikedCommentKeys.add(key);
+      _commentLikesCounts[commentId] = (_commentLikesCounts[commentId] ?? 0) + 1;
+    } else {
+      _mockLikedCommentKeys.remove(key);
+      _commentLikesCounts[commentId] = ((_commentLikesCounts[commentId] ?? 1) - 1).clamp(0, 999999);
+    }
+
+    // Update local _mockComments if present
+    final mIdx = _mockComments.indexWhere((c) => c.id == commentId);
+    if (mIdx != -1) {
+      _mockComments[mIdx] = _mockComments[mIdx].copyWith(
+        likesCount: _commentLikesCounts[commentId],
+        isLikedByCurrentUser: isLikedNow,
+      );
+    }
+
+    // Background sync to Supabase
+    if (_client != null) {
+      try {
+        if (isLikedNow) {
+          try {
+            await _client!.from('comment_likes').insert({
+              'user_id': userId,
+              'comment_id': commentId,
+            });
+          } catch (_) {
+            try {
+              await _client!.rpc('increment_comment_likes', params: {'comment_id': commentId});
+            } catch (_) {
+              await _client!.from('comments').update({
+                'likes_count': _commentLikesCounts[commentId],
+              }).eq('id', commentId);
+            }
+          }
+        } else {
+          try {
+            await _client!.from('comment_likes').delete().match({
+              'user_id': userId,
+              'comment_id': commentId,
+            });
+          } catch (_) {
+            try {
+              await _client!.rpc('decrement_comment_likes', params: {'comment_id': commentId});
+            } catch (_) {
+              await _client!.from('comments').update({
+                'likes_count': _commentLikesCounts[commentId],
+              }).eq('id', commentId);
+            }
+          }
+        }
+      } catch (e) {
+        print('[Supabase] Note on toggleLikeComment remote sync: $e');
+      }
+    }
+
+    return isLikedNow;
   }
 
   Future<CommentModel> addComment(

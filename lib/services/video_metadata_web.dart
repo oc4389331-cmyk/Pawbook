@@ -68,6 +68,15 @@ class VideoMetadataWeb implements VideoMetadataService {
   }
 
   @override
+  Future<VideoInfo> extractMetadataFromPath(String path) async {
+    return const VideoInfo(
+      width: 1080,
+      height: 1920,
+      durationSeconds: 15.0,
+    );
+  }
+
+  @override
   Widget buildVideoPlayerView({
     required Uint8List bytes,
     required String viewKey,

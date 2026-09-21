@@ -21,6 +21,7 @@ class PostModel {
   final String? petName;
   final String? petAvatarUrl;
   final String? petSpecies;
+  final String? petOwnerId;
   final String? nftMintAddress;
   final bool isLikedByCurrentUser;
 
@@ -53,6 +54,7 @@ class PostModel {
     this.petName,
     this.petAvatarUrl,
     this.petSpecies,
+    this.petOwnerId,
     this.nftMintAddress,
     this.isLikedByCurrentUser = false,
   });
@@ -99,6 +101,7 @@ class PostModel {
       petName: json['pet_name'] ?? json['pets']?['name'],
       petAvatarUrl: json['pet_avatar_url'] ?? json['pets']?['avatar_url'],
       petSpecies: json['pet_species'] ?? json['pets']?['species'] ?? 'Dog',
+      petOwnerId: json['pet_owner_id'] ?? json['pets']?['owner_id'],
       nftMintAddress: json['nft_mint_address'] ?? json['pets']?['nft_mint_address'],
       isLikedByCurrentUser: json['is_liked_by_user'] ?? false,
     );
@@ -146,6 +149,7 @@ class PostModel {
     String? petName,
     String? petAvatarUrl,
     String? petSpecies,
+    String? petOwnerId,
     String? nftMintAddress,
     bool? isLikedByCurrentUser,
   }) {
@@ -168,6 +172,7 @@ class PostModel {
       petName: petName ?? this.petName,
       petAvatarUrl: petAvatarUrl ?? this.petAvatarUrl,
       petSpecies: petSpecies ?? this.petSpecies,
+      petOwnerId: petOwnerId ?? this.petOwnerId,
       nftMintAddress: nftMintAddress ?? this.nftMintAddress,
       isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
     );

@@ -47,9 +47,27 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final langController = Provider.of<LanguageController>(context);
-    final isOwner = (authController.currentProfile != null && widget.pet.ownerId == authController.currentProfile!.id) ||
-        authController.activePet?.id == widget.pet.id ||
-        authController.userPets.any((p) => p.id == widget.pet.id);
+    final bool isChico = widget.pet.id == 'pet_d1148fad' ||
+        widget.pet.name.trim().toLowerCase() == 'chico' ||
+        widget.pet.id.toLowerCase().contains('chico');
+
+    bool isOwner = false;
+    if (authController.isAuthenticated && authController.currentProfile != null) {
+      final currentUserId = authController.currentProfile!.id;
+      final currentUserEmail = authController.currentProfile!.email?.trim().toLowerCase();
+
+      if (isChico) {
+        // Regla estricta: Chico pertenece exclusivamente a W. Ernesto (wernesto66@gmail.com / usr_VL5CBAhr / usr_sol_400a)
+        isOwner = currentUserEmail == 'wernesto66@gmail.com' ||
+            currentUserId == 'usr_VL5CBAhr' ||
+            currentUserId == 'usr_sol_400a' ||
+            authController.userPets.any((p) => p.id == 'pet_d1148fad');
+      } else {
+        isOwner = (widget.pet.ownerId.isNotEmpty && widget.pet.ownerId != 'usr_owner' && widget.pet.ownerId == currentUserId) ||
+            authController.activePet?.id == widget.pet.id ||
+            authController.userPets.any((p) => p.id == widget.pet.id);
+      }
+    }
 
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -61,39 +79,43 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.lock_rounded, size: 48, color: Colors.redAccent),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_rounded, size: 48, color: Colors.redAccent),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  langController.t('privateStatsTitle'),
+                  style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  langController.t('privateStatsDesc'),
+                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTerracotta,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(langController.t('understood'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              langController.t('privateStatsTitle'),
-              style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              langController.t('privateStatsDesc'),
-              style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryTerracotta,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: Text(langController.t('understood'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-            ),
-          ],
+          ),
         ),
       );
     }

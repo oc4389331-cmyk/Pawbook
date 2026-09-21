@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import '../config/app_config.dart';
 import '../models/post_model.dart';
+import '../models/comment_model.dart';
 import '../models/pet_model.dart';
 import '../models/profile_model.dart';
 import '../services/supabase_service.dart';
@@ -72,6 +75,7 @@ class FeedController extends ChangeNotifier {
   }
 
   /// Creates a new post for a pet. Enforces ROLE RESTRICTION & Moderation Pipeline.
+  /// Creates a new post for a pet. Enforces ROLE RESTRICTION & Moderation Pipeline.
   Future<PostModel?> createPetPost({
     required PetModel? pet,
     required List<int> mediaBytes,
@@ -83,6 +87,11 @@ class FeedController extends ChangeNotifier {
     String? soundUrl,
     String? soundTitle,
     String? forceModerationDecision,
+    Uint8List? overlayPngBytes,
+    double? startSeconds,
+    double? endSeconds,
+    double? originalVolume,
+    double? musicVolume,
   }) async {
     // 1. Role Check: Only Pet Creators can publish
     if (pet == null || pet.id.isEmpty) {
@@ -105,15 +114,56 @@ class FeedController extends ChangeNotifier {
       final presignedPutUrl = uploadRes['presignedPutUrl'] as String;
       final publicUrl = uploadRes['publicUrl'] as String;
 
-      // 3. Upload File to Cloudflare R2
-      final uploadedUrl = await _r2StorageService.uploadMediaWithPresignedUrl(
+      // 3. Upload Original File to Cloudflare R2
+      String finalUploadedUrl = await _r2StorageService.uploadMediaWithPresignedUrl(
         presignedPutUrl: presignedPutUrl,
         publicUrl: publicUrl,
         bytes: mediaBytes,
         contentType: mediaType == 'video' ? 'video/mp4' : 'image/jpeg',
       );
 
-      final List<String> allUploadedUrls = [uploadedUrl];
+      String? finalSoundUrl = soundUrl;
+      String? finalSoundTitle = soundTitle;
+
+      // 3B. Si es video y tiene audio, overlays o recortes, procesarlo mediante el pipeline FFmpeg en backend
+      if (mediaType == 'video') {
+        final hasOverlays = overlayPngBytes != null && overlayPngBytes.isNotEmpty;
+        final hasSound = soundUrl != null && soundUrl.isNotEmpty;
+        final hasTrim = (startSeconds != null && startSeconds > 0) || (endSeconds != null && endSeconds < 30.0);
+
+        if (hasOverlays || hasSound || hasTrim) {
+          try {
+            debugPrint('[FeedController] 🎬 Procesando video con FFmpeg: overlays=$hasOverlays, audio=$hasSound');
+            final processRes = await _renderBackendService.processVideo(
+              petId: pet.id,
+              videoUrl: finalUploadedUrl,
+              overlayPngBytes: overlayPngBytes,
+              soundUrl: soundUrl,
+              startSeconds: startSeconds ?? 0.0,
+              endSeconds: endSeconds ?? AppConfig.maxVideoDurationSeconds,
+              originalVolume: originalVolume ?? 1.0,
+              musicVolume: musicVolume ?? 0.8,
+            );
+
+            if (processRes['success'] == true && processRes['publicUrl'] != null) {
+              finalUploadedUrl = processRes['publicUrl'] as String;
+              debugPrint('[FeedController] ✅ Video procesado exitosamente: $finalUploadedUrl');
+
+              // Si el audio quedó integrado directamente en la pista del archivo de video,
+              // evitamos que el reproductor de feed reproduzca una pista externa duplicada
+              if (processRes['audioIntegrated'] == true) {
+                finalSoundUrl = null;
+              }
+            } else {
+              debugPrint('[FeedController] ⚠️ FFmpeg no disponible o falló, usando video original: ${processRes["error"]}');
+            }
+          } catch (procEx) {
+            debugPrint('[FeedController] ⚠️ Excepción en processVideo, continuando con video base: $procEx');
+          }
+        }
+      }
+
+      final List<String> allUploadedUrls = [finalUploadedUrl];
 
       // Upload any additional images
       if (extraMediaBytes != null && extraMediaBytes.isNotEmpty) {
@@ -149,14 +199,14 @@ class FeedController extends ChangeNotifier {
       final newPost = PostModel(
         id: postId,
         petId: pet.id,
-        mediaUrl: uploadedUrl,
+        mediaUrl: finalUploadedUrl,
         mediaUrls: allUploadedUrls,
         mediaType: mediaType,
         caption: caption,
         status: PostStatus.pendingReview,
         createdAt: DateTime.now(),
-        soundUrl: soundUrl,
-        soundTitle: soundTitle,
+        soundUrl: finalSoundUrl,
+        soundTitle: finalSoundTitle,
         petName: pet.name,
         petAvatarUrl: pet.avatarUrl,
         nftMintAddress: pet.nftMintAddress,
@@ -167,7 +217,7 @@ class FeedController extends ChangeNotifier {
       // 5. Trigger Backend Safety & Animal Welfare Moderation Webhook
       final modRes = await _renderBackendService.triggerModeration(
         postId: postId,
-        mediaUrl: uploadedUrl,
+        mediaUrl: finalUploadedUrl,
         forceDecision: forceModerationDecision,
       );
 
@@ -225,26 +275,71 @@ class FeedController extends ChangeNotifier {
     }
   }
 
+  /// Toggles Like for a post with instant 0ms optimistic UI update
   Future<void> toggleLikePost(String userId, String postId) async {
-    final isLikedNow = await _supabaseService.toggleLikePost(userId, postId);
+    final idx = _posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+
+    final current = _posts[idx];
+    final bool newLikedState = !current.isLikedByCurrentUser;
+    final int newCount = newLikedState
+        ? current.likesCount + 1
+        : (current.likesCount > 0 ? current.likesCount - 1 : 0);
+
+    // 1. Optimistic Update Inmediato (0 ms)
+    _posts[idx] = current.copyWith(
+      likesCount: newCount,
+      isLikedByCurrentUser: newLikedState,
+    );
+    notifyListeners();
+
+    // 2. Persistencia en Supabase
+    try {
+      final isLikedNow = await _supabaseService.toggleLikePost(userId, postId);
+      if (isLikedNow != newLikedState) {
+        final curIdx = _posts.indexWhere((p) => p.id == postId);
+        if (curIdx != -1) {
+          _posts[curIdx] = _posts[curIdx].copyWith(isLikedByCurrentUser: isLikedNow);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      // Revertir si hay fallo
+      final curIdx = _posts.indexWhere((p) => p.id == postId);
+      if (curIdx != -1) {
+        _posts[curIdx] = current;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Adds a comment to a post and immediately increments commentsCount in FeedController (0ms latency)
+  Future<CommentModel> addCommentToPost({
+    required String userId,
+    required String postId,
+    required String content,
+    String? username,
+    String? parentId,
+    String? replyToUsername,
+  }) async {
+    // 1. Incremento inmediato optimista en memoria
     final idx = _posts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
-      final current = _posts[idx];
-      // Note: toggleLikePost in SupabaseService already calculates the new state, but we need to update the local _posts list.
-      // We don't know the exact count if it was modified by others, but we can just use our local diff.
-      int newCount = current.likesCount;
-      if (isLikedNow && !current.isLikedByCurrentUser) {
-        newCount++;
-      } else if (!isLikedNow && current.isLikedByCurrentUser) {
-        newCount = newCount > 0 ? newCount - 1 : 0;
-      }
-      
-      _posts[idx] = current.copyWith(
-        likesCount: newCount,
-        isLikedByCurrentUser: isLikedNow,
+      _posts[idx] = _posts[idx].copyWith(
+        commentsCount: _posts[idx].commentsCount + 1,
       );
-      // notifyListeners(); // Optional: UI is already updated optimistically in TikTokFeedItem
+      notifyListeners();
     }
+
+    // 2. Persistencia en Supabase
+    return await _supabaseService.addComment(
+      userId,
+      postId,
+      content,
+      username: username,
+      parentId: parentId,
+      replyToUsername: replyToUsername,
+    );
   }
 
   void _setLoading(bool val) {
