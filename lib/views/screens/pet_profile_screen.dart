@@ -1329,6 +1329,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               ),
             ),
 
+            // Language Profile Tile (Permite cambiar el idioma directamente desde el perfil)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: LanguageProfileTile(),
+            ),
+            const SizedBox(height: 8),
+
             // Pet Posts Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

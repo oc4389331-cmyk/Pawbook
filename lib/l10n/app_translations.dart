@@ -484,6 +484,11 @@ class AppTranslations {
       'studioFilterTool': 'Filters',
       'studioStickersTool': 'Stickers',
       'studioAudioTool': 'Music',
+      'language': 'Language',
+      'changeLanguage': 'Change Language',
+      'changeLanguageDesc': 'Select your preferred language for the whole app',
+      'selectLanguageTitle': 'Select Language 🌐',
+      'languageAppliedToast': 'Language updated to {lang}',
     },
 
     'es': {
@@ -970,6 +975,11 @@ class AppTranslations {
       'studioFilterTool': 'Filtros',
       'studioStickersTool': 'Stickers',
       'studioAudioTool': 'Música',
+      'language': 'Idioma',
+      'changeLanguage': 'Cambiar Idioma',
+      'changeLanguageDesc': 'Elige tu idioma preferido para toda la aplicación',
+      'selectLanguageTitle': 'Seleccionar Idioma 🌐',
+      'languageAppliedToast': 'Idioma actualizado a {lang}',
     },
 
     'zh': {
@@ -1456,6 +1466,11 @@ class AppTranslations {
       'studioFilterTool': '滤镜',
       'studioStickersTool': '贴纸',
       'studioAudioTool': '音乐',
+      'language': '语言',
+      'changeLanguage': '切换语言',
+      'changeLanguageDesc': '选择您在整个应用中首选的语言',
+      'selectLanguageTitle': '选择语言 🌐',
+      'languageAppliedToast': '语言已更新为 {lang}',
     },
 
     'ja': {
@@ -1942,6 +1957,11 @@ class AppTranslations {
       'studioFilterTool': 'フィルター',
       'studioStickersTool': 'ステッカー',
       'studioAudioTool': '音楽',
+      'language': '言語',
+      'changeLanguage': '言語を変更',
+      'changeLanguageDesc': 'アプリ全体の優先言語を選択してください',
+      'selectLanguageTitle': '言語を選択 🌐',
+      'languageAppliedToast': '言語が {lang} に更新されました',
     },
   };
 

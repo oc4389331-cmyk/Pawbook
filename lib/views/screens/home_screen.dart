@@ -21,6 +21,7 @@ import '../widgets/live_oracle_ticker.dart';
 import '../widgets/floating_bottom_nav_bar.dart';
 import '../widgets/live_comment_bubbles.dart';
 import '../widgets/spinning_vinyl_disc.dart';
+import '../widgets/language_selector.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
 import 'login_screen.dart';
@@ -2056,6 +2057,8 @@ class _HomeScreenState extends State<HomeScreen> {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 20),
         ),
         actions: [
+          const Center(child: LanguageSelector()),
+          const SizedBox(width: 4),
           if (authController.hasPet && onSwitchToPet != null)
             IconButton(
               icon: const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 26),
@@ -2456,6 +2459,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
             ],
+            const LanguageProfileTile(),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
