@@ -1062,6 +1062,7 @@
       .footer-grid {
         grid-template-columns: 1fr;
       }
+    }
 
     /* Legal Interactive Modal */
     .legal-modal-backdrop {
@@ -1575,9 +1576,18 @@
         <div class="footer-col">
           <h5 data-i18n="footer_col_legal">Legal</h5>
           <ul>
-            <li><a href="/terms" onclick="openLegalModal('terms'); return false;" data-i18n="footer_legal_terms">Terms & Conditions</a></li>
-            <li><a href="/terms#welfare" onclick="openLegalModal('welfare'); return false;" data-i18n="footer_legal_welfare">Animal Welfare Policy</a></li>
-            <li><a href="/privacy" onclick="openLegalModal('privacy'); return false;" data-i18n="footer_legal_privacy">Privacy & Security</a></li>
+            <li>
+              <a href="/terms" onclick="openLegalModal('terms'); return false;" data-i18n="footer_legal_terms">Terms & Conditions</a>
+              <a href="/terms" target="_blank" rel="noopener" style="opacity:0.7; font-size:13px; margin-left:6px;" title="Abrir página completa de Términos 📄">📄</a>
+            </li>
+            <li>
+              <a href="/terms#welfare" onclick="openLegalModal('welfare'); return false;" data-i18n="footer_legal_welfare">Animal Welfare Policy</a>
+              <a href="/terms#welfare" target="_blank" rel="noopener" style="opacity:0.7; font-size:13px; margin-left:6px;" title="Abrir política de Bienestar Animal 🐾">🐾</a>
+            </li>
+            <li>
+              <a href="/privacy" onclick="openLegalModal('privacy'); return false;" data-i18n="footer_legal_privacy">Privacy & Security</a>
+              <a href="/privacy" target="_blank" rel="noopener" style="opacity:0.7; font-size:13px; margin-left:6px;" title="Abrir página de Privacidad y Seguridad 🛡️">🛡️</a>
+            </li>
           </ul>
         </div>
       </div>
@@ -2103,30 +2113,30 @@
     });
 
     // Legal Interactive Modal Controls
-    function openLegalModal(tab) {
+    window.openLegalModal = function(tab) {
       const modal = document.getElementById('legal-modal-backdrop');
       if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        switchLegalTab(tab || 'terms');
+        window.switchLegalTab(tab || 'terms');
       }
-    }
+    };
 
-    function closeLegalModal() {
+    window.closeLegalModal = function() {
       const modal = document.getElementById('legal-modal-backdrop');
       if (modal) {
         modal.classList.remove('active');
         document.body.style.overflow = '';
       }
-    }
+    };
 
-    function handleLegalBackdropClick(e) {
+    window.handleLegalBackdropClick = function(e) {
       if (e.target && e.target.id === 'legal-modal-backdrop') {
-        closeLegalModal();
+        window.closeLegalModal();
       }
-    }
+    };
 
-    function switchLegalTab(tabName) {
+    window.switchLegalTab = function(tabName) {
       const tabs = ['terms', 'privacy', 'welfare'];
       tabs.forEach(t => {
         const btn = document.getElementById('tab-btn-' + t);
@@ -2134,10 +2144,10 @@
         if (btn) btn.classList.toggle('active', t === tabName);
         if (pane) pane.classList.toggle('active', t === tabName);
       });
-    }
+    };
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLegalModal();
+      if (e.key === 'Escape') window.closeLegalModal();
     });
   </script>
 </body>

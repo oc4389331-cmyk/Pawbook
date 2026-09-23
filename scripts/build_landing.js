@@ -1074,6 +1074,7 @@ function generateLandingHtml(isServerVersion = false) {
       .footer-grid {
         grid-template-columns: 1fr;
       }
+    }
 
     /* Legal Interactive Modal */
     .legal-modal-backdrop {
