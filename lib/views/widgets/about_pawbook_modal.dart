@@ -51,56 +51,58 @@ class AboutPawbookModal extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primaryTerracotta, AppTheme.brandCoral],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryTerracotta.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.primaryTerracotta, AppTheme.brandCoral],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryTerracotta.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      child: const Icon(Icons.pets_rounded, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pawbooklife',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryTerracotta,
-                          ),
-                        ),
-                        Text(
-                          lang.t('appTagline'),
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: AppTheme.textMutedWarm,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: const Icon(Icons.pets_rounded, color: Colors.white, size: 24),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pawbooklife',
+                        style: GoogleFonts.fredoka(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryTerracotta,
+                        ),
+                      ),
+                      Text(
+                        lang.t('appTagline'),
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: AppTheme.textMutedWarm,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppTheme.textMutedWarm),
                   onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
               ],
             ),

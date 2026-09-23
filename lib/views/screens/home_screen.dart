@@ -115,9 +115,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   void _handleIncomingUri(Uri uri) {
-    debugPrint('🐾 Deep Link received in Pawbook: $uri');
     final queryPost = uri.queryParameters['post'];
     final queryPet = uri.queryParameters['pet'];
+    debugPrint('🐾 Deep Link received in Pawbook: $uri (post: $queryPost, pet: $queryPet)');
     String? resolvedPostId = queryPost;
 
     if (resolvedPostId == null && uri.pathSegments.contains('post')) {
@@ -2676,44 +2676,51 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             const LanguageProfileTile(),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.primaryTerracotta,
-                    side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryTerracotta,
+                      side: const BorderSide(color: AppTheme.primaryTerracotta, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.info_outline_rounded, size: 17),
+                    label: Text(
+                      langController.t('aboutBtn'),
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onPressed: () => AboutPawbookModal.show(context),
                   ),
-                  icon: const Icon(Icons.info_outline_rounded, size: 18),
-                  label: Text(
-                    langController.t('aboutBtn'),
-                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () => AboutPawbookModal.show(context),
                 ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.logout_rounded, size: 17),
+                    label: Text(
+                      langController.t('logOut'),
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onPressed: () async {
+                      await authController.logout();
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      }
+                    },
                   ),
-                  icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: Text(
-                    langController.t('logOut'),
-                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () async {
-                    await authController.logout();
-                    if (mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
-                      );
-                    }
-                  },
                 ),
               ],
             ),
