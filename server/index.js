@@ -34,6 +34,13 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_m7a70Z7bRCbjOtqqDYK12DhNPQnlR42D';
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+if (GEMINI_API_KEY && !GEMINI_API_KEY.includes('your_gemini')) {
+  console.log('✅ Google Gemini Vision AI Moderation initialized successfully');
+} else {
+  console.log('⚠️ Running AI Moderation in fallback/mock mode (Missing GEMINI_API_KEY in .env)');
+}
+
 // Initialize Stripe Client
 let stripe = null;
 if (STRIPE_SECRET_KEY && !STRIPE_SECRET_KEY.includes('your_stripe_secret_key')) {
@@ -238,14 +245,54 @@ app.get('/api/health', (req, res) => {
     stripeWebhookPath: '/api/webhooks/stripe'
   });
 });
-// Explicit route for Pawbooklife Presentation Landing Page
-app.get(['/landing', '/presentacion'], (req, res) => {
+// APK Direct Download endpoint (for Solana Seeker / Android users)
+app.get(['/download/apk', '/apk', '/download', '/app.apk', '/pawbook.apk'], (req, res) => {
+  const candidatePaths = [
+    path.join(__dirname, 'public/app-release.apk'),
+    path.join(__dirname, '../build/app/outputs/flutter-apk/app-release.apk'),
+    path.join(__dirname, 'public/Pawbook.apk'),
+  ];
+  for (const apkPath of candidatePaths) {
+    if (fs.existsSync(apkPath)) {
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      return res.download(apkPath, 'pawbooklife.apk');
+    }
+  }
+  return res.status(404).send('APK no disponible para descarga en este momento. Por favor visita la tienda Solana Seeker dApp Store o la versión web.');
+});
+
+// Explicit route for Pawbooklife Presentation Landing Page & Community / Group Invitations
+app.get(['/landing', '/presentacion', '/invite', '/join', '/grupo', '/invitacion'], (req, res) => {
   const landingPath = path.join(__dirname, 'public/landing.html');
   if (fs.existsSync(landingPath)) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.sendFile(landingPath);
   }
   res.redirect('/');
+});
+
+// Legal routes: Terms of Service & Privacy/Security Policy
+app.get(['/terms', '/terminos', '/terms-of-service'], (req, res) => {
+  const termsPath = path.join(__dirname, 'public/terms.html');
+  if (fs.existsSync(termsPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(termsPath);
+  }
+  res.redirect('/');
+});
+
+app.get(['/privacy', '/privacidad', '/seguridad', '/security', '/privacy-policy'], (req, res) => {
+  const privacyPath = path.join(__dirname, 'public/privacy.html');
+  if (fs.existsSync(privacyPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(privacyPath);
+  }
+  res.redirect('/');
+});
+
+// Support route: redirect to official SolChat Plus support group
+app.get(['/support', '/soporte', '/solchat', '/chat-soporte'], (req, res) => {
+  res.redirect('https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c');
 });
 
 // Direct Dashboard & App redirect routes
@@ -905,31 +952,285 @@ app.post('/api/media/process-video', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
-// 5. SAFETY & ANIMAL WELFARE MODERATION PIPELINE
+// 5. SAFETY & ANIMAL WELFARE MODERATION PIPELINE (FFmpeg + Gemini Vision AI)
 // --------------------------------------------------------------------------
+
+/**
+ * Extrae fotogramas clave de un video para análisis de moderación
+ */
+async function extractVideoKeyframes(videoUrl, count = 3) {
+  const tempDir = os.tmpdir();
+  const timestamp = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const tempVideoPath = path.join(tempDir, `mod_vid_${timestamp}.mp4`);
+  const framePrefix = `mod_frame_${timestamp}`;
+
+  try {
+    // 1. Descargar el video a un archivo temporal
+    const resp = await fetch(videoUrl);
+    if (!resp.ok) {
+      console.warn(`[Moderation] Failed to download video ${videoUrl}: ${resp.statusText}`);
+      return [];
+    }
+    const arrayBuf = await resp.arrayBuffer();
+    fs.writeFileSync(tempVideoPath, Buffer.from(arrayBuf));
+
+    // 2. Extraer fotogramas distribuidos en el video usando FFmpeg
+    await new Promise((resolve) => {
+      ffmpeg(tempVideoPath)
+        .screenshots({
+          count: count,
+          folder: tempDir,
+          filename: `${framePrefix}_%i.jpg`,
+          size: '640x?'
+        })
+        .on('end', () => resolve())
+        .on('error', (err) => {
+          console.warn('[Moderation] FFmpeg frame extraction warning:', err.message);
+          resolve(); // continuar con lo que se haya alcanzado a extraer
+        });
+    });
+
+    // 3. Leer los fotogramas generados y convertirlos a base64
+    const frames = [];
+    for (let i = 1; i <= count + 1; i++) {
+      const framePath = path.join(tempDir, `${framePrefix}_${i}.jpg`);
+      if (fs.existsSync(framePath)) {
+        try {
+          const frameBytes = fs.readFileSync(framePath);
+          frames.push({
+            mimeType: 'image/jpeg',
+            data: frameBytes.toString('base64')
+          });
+          fs.unlinkSync(framePath);
+        } catch (_) {}
+      }
+    }
+
+    try {
+      if (fs.existsSync(tempVideoPath)) fs.unlinkSync(tempVideoPath);
+    } catch (_) {}
+
+    return frames;
+  } catch (ex) {
+    console.error('[Moderation] extractVideoKeyframes exception:', ex.message);
+    try {
+      if (fs.existsSync(tempVideoPath)) fs.unlinkSync(tempVideoPath);
+    } catch (_) {}
+    return [];
+  }
+}
+
+/**
+ * Descarga una imagen remota y la convierte a objeto base64 para IA
+ */
+async function downloadImageForModeration(imageUrl) {
+  try {
+    const resp = await fetch(imageUrl);
+    if (!resp.ok) return [];
+    const arrayBuf = await resp.arrayBuffer();
+    const contentType = resp.headers.get('content-type') || 'image/jpeg';
+    const mimeType = contentType.includes('png') ? 'image/png' : 'image/jpeg';
+    return [{
+      mimeType,
+      data: Buffer.from(arrayBuf).toString('base64')
+    }];
+  } catch (err) {
+    console.warn('[Moderation] Error downloading image:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Analiza fotogramas con Google Gemini Vision para verificar presencia de mascotas y bienestar animal
+ */
+async function analyzeMediaWithGemini(frames) {
+  if (!GEMINI_API_KEY || !frames || frames.length === 0) {
+    return null;
+  }
+
+  const systemPrompt = `
+Eres el sistema oficial de Inteligencia Artificial para moderación, seguridad y bienestar animal de la red social "Pawtbook".
+Tu objetivo primordial es proteger a los animales y asegurar que Pawtbook sea una comunidad auténtica y exclusiva de mascotas.
+
+Analiza con el máximo rigor los fotogramas proporcionados y verifica las siguientes reglas:
+
+1. REGLA DE MASCOTAS (has_pet):
+   - Debe aparecer visiblemente al menos una mascota o animal (perro, gato, ave, conejo, caballo, reptil, hamster, animal de granja o de compañía).
+   - Los humanos están PERMITIDOS y BIENVENIDOS siempre que estén interactuando pacíficamente con la mascota (paseo, caricias, juego, entrenamiento positivo, abrazos).
+   - Si el contenido es ÚNICAMENTE de personas o cosas SIN ninguna mascota visible (ejemplo: selfies de personas solas, baile humano sin mascotas, paisajes vacíos, autos, texto, memes ajenos), RECHAZARLO (human_only: true).
+
+2. REGLA DE BIENESTAR ANIMAL (animal_abuse_detected):
+   - TOLERANCIA CERO al maltrato animal.
+   - RECHAZAR de inmediato si se observa: violencia física hacia animales, golpes, patadas, peleas forzadas de perros/gallos/animales, animales atados en condiciones asfixiantes, desnutrición extrema deliberada, heridas ensangrentadas abiertas, angustia animal evidente o humillación peligrosa.
+
+3. REGLA DE CONTENIDO FAMILIAR (inappropriate_nsfw):
+   - RECHAZAR si hay desnudez humana, actos sexuales, violencia explícita, sangre humana, armas o drogas.
+
+4. DECISIÓN:
+   - "APPROVED": Hay mascota presente, en situación segura y respetuosa, sin infracciones.
+   - "REJECTED": Falta de mascota (solo humanos/objetos), maltrato animal o contenido inapropiado.
+
+Devuelve ÚNICAMENTE un JSON válido sin formato markdown adicional, con esta estructura exacta:
+{
+  "has_pet": true,
+  "animal_type": "perro",
+  "animal_abuse_detected": false,
+  "human_only": false,
+  "inappropriate_nsfw": false,
+  "decision": "APPROVED",
+  "reason_es": "Breve explicación en español (máximo 120 caracteres)",
+  "confidence": 0.95
+}
+`;
+
+  try {
+    const parts = [{ text: systemPrompt }];
+    for (const frame of frames) {
+      parts.push({
+        inline_data: {
+          mime_type: frame.mimeType,
+          data: frame.data
+        }
+      });
+    }
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const resp = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.1,
+          response_mime_type: 'application/json'
+        }
+      })
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.warn(`[Moderation] Gemini API error HTTP ${resp.status}:`, errText);
+      return null;
+    }
+
+    const data = await resp.json();
+    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) return null;
+
+    const parsed = JSON.parse(candidateText);
+    console.log(`[Moderation] 🐾 Gemini Decision: ${parsed.decision} (${parsed.animal_type || 'none'}) - ${parsed.reason_es}`);
+    return parsed;
+  } catch (err) {
+    console.warn('[Moderation] Gemini invocation exception:', err.message);
+    return null;
+  }
+}
+
+// Endpoint de verificación previa (Pre-flight content verification)
+app.post('/api/media/verify', async (req, res) => {
+  const { mediaUrl, mediaType, framesBase64 } = req.body;
+
+  if (!mediaUrl && (!framesBase64 || framesBase64.length === 0)) {
+    return res.status(400).json({ success: false, error: 'Missing mediaUrl or framesBase64' });
+  }
+
+  let frames = [];
+  if (Array.isArray(framesBase64) && framesBase64.length > 0) {
+    frames = framesBase64.map(b64 => ({ mimeType: 'image/jpeg', data: b64 }));
+  } else if (mediaUrl) {
+    const isVideo = mediaType === 'video' || mediaUrl.match(/\.(mp4|mov|webm|m4v)(\?.*)?$/i);
+    if (isVideo) {
+      frames = await extractVideoKeyframes(mediaUrl, 3);
+    } else {
+      frames = await downloadImageForModeration(mediaUrl);
+    }
+  }
+
+  let aiResult = null;
+  if (frames.length > 0) {
+    aiResult = await analyzeMediaWithGemini(frames);
+  }
+
+  const isApproved = aiResult ? (aiResult.decision === 'APPROVED') : true;
+  return res.json({
+    success: true,
+    verified: isApproved,
+    decision: isApproved ? 'APPROVED' : 'REJECTED',
+    reason: aiResult?.reason_es || (isApproved ? 'Contenido verificado con éxito' : 'No cumple con las normas de Pawtbook'),
+    details: aiResult
+  });
+});
+
+// Endpoint principal del pipeline de moderación de publicaciones
 app.post('/api/media/moderate', async (req, res) => {
-  const { postId, mediaUrl, forceDecision } = req.body;
+  const { postId, mediaUrl, mediaType, forceDecision, framesBase64 } = req.body;
 
   if (!postId || !mediaUrl) {
     return res.status(400).json({ success: false, error: 'Missing postId or mediaUrl' });
   }
 
   let status = 'active';
-  let moderationReason = 'Passed safety and animal welfare verification';
+  let moderationReason = 'Verificación de seguridad y bienestar animal aprobada 🐾';
+  let aiDetails = null;
 
+  // 1. Control manual o forzado para testing
   if (forceDecision === 'reject' || mediaUrl.includes('inappropriate') || mediaUrl.includes('abuse')) {
     status = 'rejected';
-    moderationReason = 'FAILED_MODERATION: Flagged for policy violation or unsafe content';
+    moderationReason = 'Rechazado por políticas de bienestar animal o contenido no apto';
+  } else if (forceDecision === 'approve') {
+    status = 'active';
+    moderationReason = 'Aprobado manualmente para pruebas';
+  } else {
+    // 2. Ejecutar análisis con Gemini Vision AI si está configurado
+    try {
+      let frames = [];
+      if (Array.isArray(framesBase64) && framesBase64.length > 0) {
+        frames = framesBase64.map(b64 => ({ mimeType: 'image/jpeg', data: b64 }));
+      } else {
+        const isVideo = mediaType === 'video' || mediaUrl.match(/\.(mp4|mov|webm|m4v)(\?.*)?$/i);
+        if (isVideo) {
+          console.log(`[Moderation] 🎬 Extrayendo fotogramas de video para post ${postId}...`);
+          frames = await extractVideoKeyframes(mediaUrl, 3);
+        } else {
+          console.log(`[Moderation] 🖼️ Descargando imagen para post ${postId}...`);
+          frames = await downloadImageForModeration(mediaUrl);
+        }
+      }
+
+      if (frames.length > 0) {
+        aiDetails = await analyzeMediaWithGemini(frames);
+        if (aiDetails) {
+          if (aiDetails.decision === 'APPROVED') {
+            status = 'active';
+            moderationReason = aiDetails.reason_es || 'Mascota verificada y segura 🐾';
+          } else {
+            status = 'rejected';
+            moderationReason = aiDetails.reason_es || 'El contenido no cumple con los criterios de Pawtbook (requiere mascotas y cero maltrato)';
+          }
+        }
+      }
+    } catch (analysisErr) {
+      console.error('[Moderation] Error durante análisis de IA:', analysisErr.message);
+      // En caso de fallo técnico de red, mantener activo con advertencia
+      moderationReason = 'Aprobado condicionalmente (Verificación IA no disponible temporalmente)';
+    }
   }
 
+  // 3. Actualizar estado y razón en la base de datos Supabase
   if (supabaseAdmin) {
     try {
-      await supabaseAdmin
+      const { error: updateErr } = await supabaseAdmin
         .from('posts')
         .update({ status, moderation_reason: moderationReason })
         .eq('id', postId);
+
+      if (updateErr) {
+        console.error('Supabase moderation update error:', updateErr);
+      } else {
+        console.log(`[Moderation] 📝 Post ${postId} actualizado a status='${status}' en Supabase`);
+      }
     } catch (e) {
-      console.error('Supabase moderation update error:', e);
+      console.error('Supabase moderation update exception:', e);
     }
   }
 
@@ -937,7 +1238,8 @@ app.post('/api/media/moderate', async (req, res) => {
     success: true,
     postId,
     status,
-    reason: moderationReason
+    reason: moderationReason,
+    details: aiDetails
   });
 });
 
@@ -1303,11 +1605,56 @@ app.post('/api/sponsorship/reset-pet-ledger', async (req, res) => {
 // --------------------------------------------------------------------------
 let cachedOracleData = null;
 let lastOracleFetch = 0;
+let cachedSolUsdPrice = 117.0;
+let lastSolFetch = 0;
+
+async function getLiveSolUsdPrice() {
+  const now = Date.now();
+  if (now - lastSolFetch < 15000 && cachedSolUsdPrice > 40) {
+    return cachedSolUsdPrice;
+  }
+  try {
+    const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT', {
+      signal: AbortSignal.timeout(3000)
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const p = parseFloat(data.price);
+      if (p > 40) {
+        cachedSolUsdPrice = p;
+        lastSolFetch = now;
+        return cachedSolUsdPrice;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const response = await fetch('https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112', {
+      signal: AbortSignal.timeout(3000)
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const p = data.pairs?.find(x => x.quoteToken?.symbol === 'USDC' || x.quoteToken?.symbol === 'USDT');
+      if (p && p.priceUsd && parseFloat(p.priceUsd) > 40) {
+        cachedSolUsdPrice = parseFloat(p.priceUsd);
+        lastSolFetch = now;
+        return cachedSolUsdPrice;
+      }
+    }
+  } catch (_) {}
+
+  return cachedSolUsdPrice;
+}
 
 app.get('/api/oracle/skr-price', async (req, res) => {
   const now = Date.now();
+  const solUsd = await getLiveSolUsdPrice();
+
   if (cachedOracleData && (now - lastOracleFetch < 5000)) {
-    return res.json(cachedOracleData);
+    return res.json({
+      ...cachedOracleData,
+      solUsdPrice: solUsd,
+    });
   }
 
   try {
@@ -1322,7 +1669,10 @@ app.get('/api/oracle/skr-price', async (req, res) => {
         const change24h = parseFloat(pair.priceChange?.h24 || '0');
         const volume24h = parseFloat(pair.volume?.h24 || '0');
         const fdv = parseFloat(pair.fdv || '0');
-        const priceSol = parseFloat(pair.priceNative || (livePrice / 155).toString());
+        const isQuoteSol = pair.quoteToken?.symbol === 'SOL' || pair.quoteToken?.symbol === 'WSOL';
+        const priceSol = isQuoteSol
+          ? parseFloat(pair.priceNative)
+          : (solUsd > 0 ? parseFloat((livePrice / solUsd).toFixed(8)) : parseFloat((livePrice / 120.0).toFixed(8)));
 
         cachedOracleData = {
           success: true,
@@ -1332,6 +1682,7 @@ app.get('/api/oracle/skr-price', async (req, res) => {
           chain: 'solana',
           priceUsd: livePrice,
           priceSol: priceSol,
+          solUsdPrice: solUsd,
           change24h: change24h,
           volume24hUsd: volume24h,
           marketCapUsd: fdv,
@@ -1360,7 +1711,8 @@ app.get('/api/oracle/skr-price', async (req, res) => {
     mintAddress: 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3',
     chain: 'solana',
     priceUsd: fallbackPrice,
-    priceSol: +(fallbackPrice / 155.0).toFixed(6),
+    priceSol: +(fallbackPrice / solUsd).toFixed(8),
+    solUsdPrice: solUsd,
     change24h: 1.76,
     volume24hUsd: 460000,
     marketCapUsd: 21500000,

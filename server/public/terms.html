@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Términos y Condiciones de Uso | Pawbooklife 🐾</title>
+  <meta name="description" content="Términos y Condiciones Oficiales de Uso de la plataforma Pawbooklife - Red Social y SocialFi para mascotas en la blockchain Solana.">
+
+  <!-- Favicon & Icons -->
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Google Fonts: Fredoka & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #E07A5F;
+      --primary-hover: #D26447;
+      --brand-coral: #F4A261;
+      --solana-mint: #14F195;
+      --solana-purple: #9945FF;
+      --bg-cream: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --bg-dark: #0F172A;
+      --text-dark: #264653;
+      --text-muted: #64748B;
+      --border-light: rgba(224, 122, 95, 0.18);
+      --shadow-sm: 0 4px 14px rgba(224, 122, 95, 0.08);
+      --shadow-md: 0 12px 32px rgba(224, 122, 95, 0.14);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-pill: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-dark);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, .brand-font {
+      font-family: 'Fredoka', cursive, sans-serif;
+      line-height: 1.3;
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    .legal-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 247, 242, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--primary), var(--brand-coral));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 22px;
+      box-shadow: 0 4px 14px rgba(224, 122, 95, 0.3);
+    }
+
+    .brand-text h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-outline {
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid var(--border-light);
+      font-weight: 600;
+      font-size: 14px;
+      background: #fff;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      padding: 8px 20px;
+      border-radius: var(--radius-pill);
+      background: linear-gradient(135deg, var(--primary), #E63946);
+      color: #fff;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 600;
+      font-size: 14.5px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(224, 122, 95, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(224, 122, 95, 0.45);
+    }
+
+    /* Header Banner */
+    .legal-header {
+      padding: 48px 0 32px;
+      text-align: center;
+    }
+
+    .legal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(224, 122, 95, 0.12);
+      color: var(--primary);
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    .legal-header h2 {
+      font-size: 38px;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    .legal-meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    /* Tabs Bar */
+    .tabs-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 24px 0 40px;
+      flex-wrap: wrap;
+    }
+
+    .tab-link {
+      padding: 10px 22px;
+      border-radius: var(--radius-pill);
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-light);
+      font-weight: 700;
+      font-size: 14.5px;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-link.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+      box-shadow: 0 6px 18px rgba(224, 122, 95, 0.35);
+    }
+
+    .tab-link:hover:not(.active) {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    /* Content Card */
+    .legal-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 44px 48px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(224, 122, 95, 0.15);
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 768px) {
+      .legal-card { padding: 26px 20px; }
+      .legal-header h2 { font-size: 28px; }
+    }
+
+    /* Alert Banner */
+    .legal-alert {
+      background: linear-gradient(135deg, rgba(224, 122, 95, 0.08), rgba(244, 162, 97, 0.08));
+      border: 1.5px solid rgba(224, 122, 95, 0.25);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      margin-bottom: 36px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .legal-alert .alert-icon {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .legal-alert p {
+      font-size: 14.5px;
+      color: var(--text-dark);
+      margin: 0;
+    }
+
+    /* Legal Sections */
+    .legal-section {
+      margin-bottom: 38px;
+      scroll-margin-top: 90px;
+    }
+
+    .legal-section h3 {
+      font-size: 21px;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(224, 122, 95, 0.12);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .legal-section p {
+      font-size: 15px;
+      color: #334155;
+      margin-bottom: 14px;
+    }
+
+    .legal-section ul {
+      margin-left: 24px;
+      margin-bottom: 16px;
+      color: #334155;
+      font-size: 14.5px;
+    }
+
+    .legal-section li {
+      margin-bottom: 8px;
+    }
+
+    .highlight-box {
+      background: #F8FAFC;
+      border-left: 4px solid var(--primary);
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin: 14px 0;
+      font-size: 14px;
+      color: #475569;
+    }
+
+    .highlight-box strong {
+      color: var(--text-dark);
+    }
+
+    .footer {
+      border-top: 1px solid var(--border-light);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="legal-navbar">
+    <div class="container nav-inner">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">🐾</div>
+        <div class="brand-text">
+          <h1>Pawbooklife</h1>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="/" class="btn-outline">← Volver al Inicio</a>
+        <a href="/privacy" class="btn-outline">Políticas de Privacidad 🛡️</a>
+        <a href="https://pawbook-358b.onrender.com" class="btn-primary">Abrir App 🚀</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="legal-header">
+      <div class="legal-badge">📄 Marco Legal y Regulatorio</div>
+      <h2>Términos y Condiciones de Uso</h2>
+      <div class="legal-meta">
+        <span>📅 Última actualización: Marzo 2026</span>
+        <span>•</span>
+        <span>🐾 Aplicable a Móvil, Web y dApp Solana</span>
+        <span>•</span>
+        <span>🌐 Versión 1.2.0</span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-bar">
+        <a href="/terms" class="tab-link active">📜 Términos de Uso</a>
+        <a href="/privacy" class="tab-link">🛡️ Privacidad y Seguridad</a>
+        <a href="/#patrocinios" class="tab-link">⚡ SocialFi Solana</a>
+        <a href="/#tienda-exclusiva" class="tab-link">🛍️ Tienda de Mascotas</a>
+      </div>
+    </div>
+
+    <div class="legal-card">
+      <div class="legal-alert">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <strong>Aviso Importante a la Comunidad:</strong>
+          <p>Pawbooklife es una red social y plataforma SocialFi en la blockchain de Solana pensada exclusivamente para el bienestar, entretenimiento y protección animal. Al registrarte o navegar en Pawbooklife, aceptas íntegramente estas normas de convivencia, responsabilidad Web3 y tolerancia cero ante el maltrato animal.</p>
+        </div>
+      </div>
+
+      <!-- 1. Identificación y Naturaleza del Servicio -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🐾</span> 1. Identidad de la Plataforma y Naturaleza del Servicio</h3>
+        <p>Pawbooklife ("Pawbook", "la Plataforma" o "nosotros") es una plataforma digital de medios sociales, video interactivo y SocialFi descentralizado construida sobre la red blockchain de Solana. El objetivo principal de Pawbooklife es que las mascotas sean los protagonistas y creadores de contenido digital, administrados responsablemente por sus tutores humanos ("Tutores" o "Usuarios").</p>
+        <p>La plataforma integra canales de video en formato corto (hasta 30 segundos), filtros multimedia, tienda boutique de productos para el cuidado animal, un sistema de puntuación y lealtad ("PawtScore") y micro-patrocinios on-chain directos en tokens SOL y $SKR.</p>
+      </section>
+
+      <!-- 2. Elegibilidad y Cuentas -->
+      <section class="legal-section">
+        <h3><span class="section-icon">👤</span> 2. Elegibilidad, Representación y Cuentas de Usuario</h3>
+        <p>Para crear una cuenta en Pawbooklife, interactuar mediante "likes", comentarios o patrocinios, el usuario debe cumplir con los siguientes requisitos:</p>
+        <ul>
+          <li>Tener al menos 13 años de edad (o la edad mínima legal exigida en su jurisdicción de residencia). Los menores de edad deben contar con la autorización y supervisión expresa de sus padres o tutores legales.</li>
+          <li>Actuar en calidad de tutor legal o cuidador autorizado de la mascota que se registra en el perfil de creador.</li>
+          <li>Proporcionar información veraz, precisa y actualizada durante el registro a través de correo electrónico, cuenta de Google o billetera Solana mediante Dynamic.xyz.</li>
+          <li>Custodiar diligentemente sus credenciales de acceso y dispositivos autorizados. Cada usuario es legalmente responsable de cualquier actividad realizada desde su cuenta.</li>
+        </ul>
+      </section>
+
+      <!-- 3. Política de Tolerancia Cero al Maltrato Animal -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🛡️</span> 3. Política Estricta de Tolerancia Cero al Maltrato y Crueldad Animal</h3>
+        <div class="highlight-box">
+          <strong>Mandato Fundamental:</strong> La protección física y emocional de los animales es el pilar innegociable de Pawbooklife. Se prohíbe de forma terminante cualquier manifestación de maltrato, sufrimiento, negligencia o explotación.
+        </div>
+        <p>Queda terminantemente prohibido publicar, transmitir o promover contenido que incluya:</p>
+        <ul>
+          <li>Violencia física, castigos corporales, peleas organizadas de perros u otros animales, o tormento infligido a cualquier especie.</li>
+          <li>Negligencia visible, desnutrición deliberada, falta de higiene básica, abandono o condiciones de vida insalubres.</li>
+          <li>Uso forzado de disfraces, tintes nocivos, posturas antinaturales o retos virales que causen incomodidad evidente, estrés o peligro de asfixia al animal.</li>
+          <li>Comercialización ilegal de fauna silvestre protegida o venta indiscriminada de camadas sin las licencias de cría correspondientes.</li>
+        </ul>
+        <p>Pawbooklife implementa moderación automatizada con visión artificial (Google Gemini AI) y revisión humana. Cualquier infracción ocasionará la <strong>cancelación inmediata y definitiva de la cuenta</strong>, la retención de accesos a la plataforma y, de ser requerido por ley, la entrega de evidencia a las autoridades judiciales y protectoras de animales correspondientes.</p>
+      </section>
+
+      <!-- 4. Propiedad Intelectual y Licencia de Contenido -->
+      <section class="legal-section">
+        <h3><span class="section-icon">📸</span> 4. Contenido Generado por el Usuario y Derechos de Licencia</h3>
+        <p>Usted conserva la titularidad y los derechos de autor de las fotografías, videos y audios que suba a la plataforma.</p>
+        <p>Al publicar contenido en Pawbooklife, usted otorga a la plataforma una licencia internacional, no exclusiva, libre de regalías, sublicenciable y transferible para alojar, almacenar en la nube (Cloudflare R2), optimizar, reproducir, distribuir, exhibir y promover dicho contenido en el feed global, interfaces web, aplicaciones móviles y materiales promocionales de Pawbooklife.</p>
+        <p>Usted declara y garantiza que posee los derechos necesarios sobre todo el material audiovisual subido, incluyendo música de fondo y pistas de audio no protegidas o autorizadas.</p>
+      </section>
+
+      <!-- 5. Ecosistema Web3, Solana Blockchain y SocialFi -->
+      <section class="legal-section">
+        <h3><span class="section-icon">⚡</span> 5. Integración Web3, Patrocinios On-Chain y Descargo de Responsabilidad</h3>
+        <p>Pawbooklife integra tecnología blockchain a través de la red Solana para facilitar patrocinios transparentes, micro-pagos y asignación de insignias digitales:</p>
+        <ul>
+          <li><strong>Naturaleza Descentralizada:</strong> Las transferencias de SOL y $SKR ocurren directamente entre billeteras a través de la infraestructura descentralizada de Solana. Pawbooklife no actúa como custodio bancario ni casa de cambio fiduciaria.</li>
+          <li><strong>Irreversibilidad de Transacciones:</strong> Las transacciones validadas en la blockchain de Solana son definitivas e irreversibles por diseño de la red. Pawbooklife no tiene la capacidad técnica de revertir, congelar ni reembolsar transacciones enviadas a direcciones erróneas por el usuario.</li>
+          <li><strong>Custodia de Claves:</strong> Usted es el único responsable de la seguridad de su frase semilla y claves privadas. Pawbooklife y el proveedor de autenticación Dynamic.xyz <em>nunca</em> le solicitarán su clave privada.</li>
+          <li><strong>PawtScore y Recompensas:</strong> El puntaje "PawtScore" es un mecanismo de gamificación y fidelidad interno. No constituye valor mobiliario, instrumento financiero ni garantía de rendimiento económico.</li>
+        </ul>
+      </section>
+
+      <!-- 6. Tienda Exclusiva y Compras -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🛍️</span> 6. Tienda de Mascotas, Canjes y Pagos</h3>
+        <p>Los artículos ofrecidos en la tienda oficial de Pawbooklife han sido seleccionados bajo criterios de calidad y bienestar animal. Las transacciones pueden procesarse mediante pasarelas de pago seguras (Stripe) o canje de puntos PawtScore:</p>
+        <ul>
+          <li>Los precios y la disponibilidad están sujetos a cambios sin previo aviso.</li>
+          <li>Los tiempos de envío dependen de la ubicación del tutor y la disponibilidad logística de los fabricantes certificados.</li>
+          <li>Las reclamaciones por productos defectuosos deberán presentarse dentro de los primeros 14 días naturales tras la recepción del producto acompañadas de fotografías y comprobante de compra.</li>
+        </ul>
+      </section>
+
+      <!-- 7. Moderación, Suspensión y Terminación -->
+      <section class="legal-section">
+        <h3><span class="section-icon">⚖️</span> 7. Moderación de Contenido, Suspensión y Cierre de Cuenta</h3>
+        <p>Nos reservamos el derecho de moderar, ocultar o eliminar cualquier contenido que vulnere estos Términos, así como suspender o cancelar cuentas de forma temporal o permanente en casos de:</p>
+        <ul>
+          <li>Suplantación de identidad o robo de fotografías/videos de mascotas ajenas.</li>
+          <li>Acoso, lenguaje de odio o difamación dirigida hacia otros tutores o miembros de la comunidad.</li>
+          <li>Uso de bots, granjas de clicks o automatizaciones para inflar artificialmente vistas, likes o PawtScore.</li>
+          <li>Intentos de ingeniería inversa, vulneración de APIs o explotación de vulnerabilidades en contratos inteligentes de Solana.</li>
+        </ul>
+      </section>
+
+      <!-- 8. Limitación de Responsabilidad -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🔒</span> 8. Limitación de Responsabilidad y Exención de Garantías</h3>
+        <p>La plataforma y sus servicios se suministran "tal cual" y "según disponibilidad", sin garantías expresas ni implícitas de ninguna índole. Pawbooklife no garantiza que el servicio esté libre de errores o interrupciones imprevistas derivadas de congestión en la red Solana, mantenimiento de servidores o incidentes de proveedores en la nube.</p>
+        <p>En ningún caso Pawbooklife, sus fundadores o colaboradores serán responsables por daños indirectos, incidentales, pérdida de datos o lucro cesante derivados del uso o la imposibilidad de uso de la plataforma.</p>
+      </section>
+
+      <!-- 9. Modificaciones y Ley Aplicable -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🌍</span> 9. Modificaciones del Servicio, Legislación y Soporte Oficial</h3>
+        <p>Pawbooklife se reserva el derecho de actualizar o modificar estos Términos en cualquier momento para reflejar mejoras en la plataforma o cambios legislativos. Las modificaciones sustanciales serán notificadas a través de la aplicación o en nuestra página web.</p>
+        <p>Para consultas generales, asistencia técnica, mecánicas de la plataforma o resolución de controversias:</p>
+        <ul>
+          <li><strong>Chat de Soporte en Vivo:</strong> <a href="https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c" target="_blank" rel="noopener" style="color:var(--primary); font-weight:700;">¡Únete a mi grupo "support pawbooklife" en SolChat Plus! 💬</a></li>
+          <li><strong>Correo de Soporte Directo:</strong> <a href="mailto:oc4389331@gmail.com" style="color:var(--primary); font-weight:700;">oc4389331@gmail.com</a></li>
+          <li><strong>Asuntos Legales y Cumplimiento:</strong> <a href="mailto:legal@pawbooklife.com" style="color:var(--primary); font-weight:700;">legal@pawbooklife.com</a></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 Pawbooklife. Todos los derechos reservados. Desarrollado con ❤️ para los animales en la blockchain Solana ⚡</p>
+    </div>
+  </footer>
+
+</body>
+</html>

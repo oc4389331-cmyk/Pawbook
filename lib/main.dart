@@ -13,6 +13,7 @@ import 'services/render_backend_service.dart';
 import 'services/dynamic_auth_service.dart';
 import 'controllers/marketplace_controller.dart';
 import 'services/auth_storage_service.dart';
+import 'config/app_routes.dart';
 import 'theme/app_theme.dart';
 import 'views/screens/home_screen.dart';
 
@@ -92,6 +93,7 @@ class PawtbookApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      navigatorObservers: [appRouteObserver],
       home: const HomeScreen(), // TikTok Guest-First Entry
     );
   }

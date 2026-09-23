@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_config.dart';
 import '../../controllers/language_controller.dart';
 import '../../theme/app_theme.dart';
@@ -206,24 +207,207 @@ class AboutPawbookModal extends StatelessWidget {
                     description: lang.t('aboutMarketplaceDesc'),
                   ),
 
+                  const SizedBox(height: 14),
+
+                  // Section 5: Official Support & Web3 Community (SolChat Plus & Email)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF9945FF).withValues(alpha: 0.08),
+                          const Color(0xFF14F195).withValues(alpha: 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF9945FF).withValues(alpha: 0.3), width: 1.2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF9945FF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.support_agent_rounded, color: Color(0xFF9945FF), size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                lang.t('supportTitle'),
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.warmBrown,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // SolChat Plus Group Card Action
+                        InkWell(
+                          onTap: () => _launchExternalUrl('https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c'),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFF14F195).withValues(alpha: 0.5), width: 1.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF14F195).withValues(alpha: 0.12),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF14F195).withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF0F9D58), size: 17),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        lang.t('supportSolChat'),
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textPrimaryDark,
+                                        ),
+                                      ),
+                                      Text(
+                                        lang.t('supportSolChatDesc'),
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11,
+                                          color: AppTheme.textMutedWarm,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.open_in_new_rounded, size: 15, color: Color(0xFF0F9D58)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Direct Email Support
+                        InkWell(
+                          onTap: () => _launchExternalUrl('mailto:oc4389331@gmail.com'),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.borderWarm),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryTerracotta.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.email_rounded, color: AppTheme.primaryTerracotta, size: 17),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        lang.t('supportEmail'),
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textPrimaryDark,
+                                        ),
+                                      ),
+                                      Text(
+                                        lang.t('supportEmailDesc'),
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11,
+                                          color: AppTheme.textMutedWarm,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppTheme.textMutedWarm),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 20),
 
-                  // Terms & Conditions Button
-                  Center(
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryTerracotta,
+                  // Legal Hub Buttons (Terms of Use & Privacy/Security Policy)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryTerracotta,
+                        ),
+                        icon: const Icon(Icons.description_outlined, size: 15),
+                        label: Text(
+                          lang.t('termsAndConditions'),
+                          style: GoogleFonts.fredoka(fontSize: 12.5, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          TermsAndConditionsModal.show(context, showAuthButtons: false, initialTabIndex: 0);
+                        },
                       ),
-                      icon: const Icon(Icons.description_outlined, size: 16),
-                      label: Text(
-                        lang.t('termsAndConditions'),
-                        style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.emeraldGreen,
+                        ),
+                        icon: const Icon(Icons.security_outlined, size: 15),
+                        label: Text(
+                          lang.t('termsTabPrivacy').isNotEmpty ? lang.t('termsTabPrivacy') : 'Seguridad & Privacidad',
+                          style: GoogleFonts.fredoka(fontSize: 12.5, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          TermsAndConditionsModal.show(context, showAuthButtons: false, initialTabIndex: 1);
+                        },
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        TermsAndConditionsModal.show(context);
-                      },
-                    ),
+                    ],
                   ),
 
                   const SizedBox(height: 8),
@@ -298,5 +482,16 @@ class AboutPawbookModal extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _launchExternalUrl(String urlString) async {
+    final uri = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error launching url $urlString: $e');
+    }
   }
 }

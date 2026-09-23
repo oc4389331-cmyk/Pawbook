@@ -36,8 +36,8 @@ class AppConfig {
   // Sponsorship Platform Fee Percentage (10%)
   static const double sponsorshipPlatformFeePercent = 10.0;
 
-  // Sponsorship Payout / Claim Conditions (Min $100 USD & Mondays starting at 00:00 UTC)
-  static const double minClaimAmountUsd = 100.0;
+  // Sponsorship Payout / Claim Conditions (Min $10.0 USD in SOL/SKR & Mondays starting at 00:00 UTC)
+  static const double minClaimAmountUsd = 10.0;
   static const int claimDayOfWeek = DateTime.monday; // 1 = Monday (00:00 UTC - 23:59 UTC)
 
   // Admin Credentials Configuration

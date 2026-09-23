@@ -10,6 +10,17 @@ import '../services/supabase_service.dart';
 import '../services/r2_storage_service.dart';
 import '../services/render_backend_service.dart';
 
+/// Excepción lanzada cuando una publicación es rechazada por el filtro de bienestar animal o presencia de mascotas
+class ModerationRejectedException implements Exception {
+  final String reason;
+  final dynamic details;
+
+  const ModerationRejectedException(this.reason, {this.details});
+
+  @override
+  String toString() => reason;
+}
+
 class FeedController extends ChangeNotifier {
   final SupabaseService _supabaseService;
   final R2StorageService _r2StorageService;
@@ -218,6 +229,7 @@ class FeedController extends ChangeNotifier {
       final modRes = await _renderBackendService.triggerModeration(
         postId: postId,
         mediaUrl: finalUploadedUrl,
+        mediaType: mediaType,
         forceDecision: forceModerationDecision,
       );
 
@@ -225,12 +237,17 @@ class FeedController extends ChangeNotifier {
       if (finalStatusStr == 'active') {
         await _supabaseService.updatePostStatus(postId, PostStatus.active);
         final activePost = insertedPost.copyWith(status: PostStatus.active);
+        _supabaseService.cachePost(activePost);
         _posts.insert(0, activePost);
         notifyListeners();
         return activePost;
       } else {
         await _supabaseService.updatePostStatus(postId, PostStatus.rejected);
-        throw Exception('MODERATION_REJECTED');
+        final reason = (modRes['reason'] as String?)?.trim();
+        final displayReason = (reason != null && reason.isNotEmpty)
+            ? reason
+            : 'No pudimos verificar la presencia de una mascota o el contenido infringió las políticas de bienestar animal de Pawtbook.';
+        throw ModerationRejectedException(displayReason, details: modRes['details']);
       }
     } finally {
       _setLoading(false);

@@ -26,6 +26,7 @@ import '../widgets/pet_attribute_bar.dart';
 import '../widgets/pet_analytics_curve_card.dart';
 import '../widgets/follows_dashboard_modal.dart';
 import '../widgets/pet_verification_modal.dart';
+import '../widgets/video_thumbnail_widget.dart';
 import 'login_screen.dart';
 import 'create_post_screen.dart';
 
@@ -378,9 +379,10 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               tooltip: langController.t('logOut'),
               onPressed: () async {
                 await authController.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushReplacement(
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
                   );
                 }
               },
@@ -584,14 +586,28 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                 ),
                                 if (isPetVerified) ...[
                                   const SizedBox(width: 5),
-                                  Tooltip(
-                                    message: isExempted
-                                        ? 'Cuenta Oficial Verificada (Vitalicia / Exonerada)'
-                                        : 'Cuenta Oficial Verificada (Vence en $daysRemaining días)',
-                                    child: const Icon(
-                                      Icons.verified_rounded,
-                                      color: Color(0xFF0284C7),
-                                      size: 20,
+                                  GestureDetector(
+                                    onTap: isOwner
+                                        ? () => PetVerificationModal.show(
+                                              context,
+                                              pet: currentPetInstance,
+                                              onVerified: (updated) {
+                                                setState(() {
+                                                  _verifiedNftAddress = updated.nftMintAddress;
+                                                });
+                                                _refreshPosts();
+                                              },
+                                            )
+                                        : null,
+                                    child: Tooltip(
+                                      message: isExempted
+                                          ? 'Cuenta Oficial Verificada (Vitalicia / Exonerada) • Toca para gestionar'
+                                          : 'Cuenta Oficial Verificada (Vence en $daysRemaining días) • Toca para gestionar',
+                                      child: const Icon(
+                                        Icons.verified_rounded,
+                                        color: Color(0xFF0284C7),
+                                        size: 20,
+                                      ),
                                     ),
                                   ),
                                   if (!isExempted && isOwner && daysRemaining <= 7) ...[
@@ -1200,25 +1216,44 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
 
                   // Solana Verified Account & Verification Button Section ($10 USD / SOL / SKR)
                   if (isPetVerified) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFF0284C7)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 20),
-                          const SizedBox(width: 6),
-                          Text(
-                            isExempted
-                                ? 'Cuenta Oficial Verificada • Vitalicia (Exonerada)'
-                                : 'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
-                            style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                        ],
+                    InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: isOwner
+                          ? () => PetVerificationModal.show(
+                                context,
+                                pet: currentPetInstance,
+                                onVerified: (updated) {
+                                  setState(() {
+                                    _verifiedNftAddress = updated.nftMintAddress;
+                                  });
+                                  _refreshPosts();
+                                },
+                              )
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFF0284C7)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              isExempted
+                                  ? 'Cuenta Oficial Verificada • Vitalicia (Exonerada)'
+                                  : 'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
+                              style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            if (isOwner) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.touch_app_rounded, color: Color(0xFF0284C7), size: 16),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1316,9 +1351,10 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         ),
                         onPressed: () async {
                           await authController.logout();
-                          if (context.mounted) {
-                            Navigator.of(context).pushReplacement(
+                          if (mounted) {
+                            Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              (route) => false,
                             );
                           }
                         },
@@ -1506,25 +1542,54 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.network(
-                              post.mediaUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta),
-                              ),
+                            VideoThumbnailWidget(
+                              mediaUrl: post.mediaUrl,
+                              mediaType: post.mediaType,
+                              fallbackImageUrl: widget.pet.avatarUrl,
                             ),
                             // Video Icon indicator overlay
-                            if (post.mediaType == 'video')
+                            if (post.mediaType == 'video' || post.mediaUrl.toLowerCase().contains('.mp4'))
                               Center(
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.55),
+                                    color: Colors.black.withValues(alpha: 0.55),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
                                 ),
                               ),
+                            // Bottom Views / Likes Indicator
+                            Positioned(
+                              left: 8,
+                              bottom: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      post.mediaType == 'video' ? Icons.play_arrow_rounded : Icons.favorite_rounded,
+                                      color: Colors.white,
+                                      size: 13,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${post.viewsCount > 0 ? post.viewsCount : post.likesCount}',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                             if (isOwner)
                               Positioned(
                                 top: 4,

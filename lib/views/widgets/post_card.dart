@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import 'pet_badge.dart';
 import 'sponsor_dialog.dart';
 import 'app_video_player_widget.dart';
+import 'share_post_modal.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -72,6 +73,13 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share_outlined, size: 20, color: AppTheme.textMuted),
+                  tooltip: langController.t('sharePost'),
+                  onPressed: () {
+                    SharePostModal.show(context, post: widget.post);
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.textMuted),

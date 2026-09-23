@@ -67,10 +67,15 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
+      _flushWatchTime();
       if (_audioPlayer != null && _isPlayingSound) {
         _audioPlayer!.pause();
       }
     } else if (state == AppLifecycleState.resumed) {
+      if (widget.isCurrentPage) {
+        _watchStopwatch.reset();
+        _watchStopwatch.start();
+      }
       if (widget.isCurrentPage && !_isMuted && widget.post.hasSound && widget.post.soundUrl != null) {
         _audioPlayer?.play(widget.post.soundUrl!, loop: true);
       }
@@ -81,6 +86,22 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
     if (_viewRecorded) return;
     _viewRecorded = true;
     _supabaseService.recordPostView(widget.post.id, userId: widget.currentUserId);
+  }
+
+  void _flushWatchTime() {
+    if (_watchStopwatch.isRunning) {
+      _watchStopwatch.stop();
+      final elapsedSeconds = _watchStopwatch.elapsed.inSeconds;
+      if (elapsedSeconds > 0) {
+        _supabaseService.recordWatchTime(
+          widget.post.id,
+          elapsedSeconds,
+          userId: widget.currentUserId,
+          species: widget.post.petSpecies,
+          tags: widget.post.tags,
+        );
+      }
+    }
   }
 
   Future<void> _initAudioPlayer() async {
@@ -110,6 +131,17 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
   @override
   void didUpdateWidget(covariant TikTokFeedItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.isCurrentPage && !widget.isCurrentPage) {
+      // User scrolled away to another video in the feed
+      _flushWatchTime();
+    } else if (!oldWidget.isCurrentPage && widget.isCurrentPage) {
+      // User scrolled onto this video
+      _watchStopwatch.reset();
+      _watchStopwatch.start();
+      _recordView();
+    }
+
     if (widget.post.hasSound && _audioPlayer != null) {
       if (widget.isCurrentPage && !_isMuted) {
         if (!_isPlayingSound && widget.post.soundUrl != null) {
@@ -137,11 +169,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _watchStopwatch.stop();
-    final elapsedSeconds = _watchStopwatch.elapsed.inSeconds;
-    if (elapsedSeconds > 0) {
-      _supabaseService.recordWatchTime(widget.post.id, elapsedSeconds);
-    }
+    _flushWatchTime();
     _imagePageController.dispose();
     _discAnimationController.dispose();
     _audioPlayer?.dispose();

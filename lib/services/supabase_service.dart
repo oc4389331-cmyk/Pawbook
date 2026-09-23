@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +12,7 @@ import '../models/reward_order_model.dart';
 import '../models/pet_analytics_model.dart';
 import '../models/bandana_product_model.dart';
 import 'render_backend_service.dart';
+import 'auth_storage_service.dart';
 
 class SupabaseService {
   SupabaseClient? _client;
@@ -28,6 +30,8 @@ class SupabaseService {
   final Map<String, int> _commentLikesCounts = {}; // "commentId" -> count
   final Set<String> _mockFollows = {}; // "humanId_petId"
   final Map<String, Map<String, int>> _userSpeciesAffinity = {}; // userId -> { 'Dog': 15, 'Cat': 5 }
+  final Map<String, Map<String, int>> _userTagAffinity = {}; // userId -> { 'golden': 10, 'summer': 5 }
+  final Map<String, PostModel> _cachedPosts = {}; // Global unified cache for fast lookup
   final List<RewardOrderModel> _mockOrders = [];
 
   SupabaseService({bool useMockFallback = true}) : _useMockFallback = useMockFallback {
@@ -372,45 +376,118 @@ class SupabaseService {
     return null;
   }
 
+  // --- Unified Post Cache Operations ---
+  void cachePost(PostModel post) {
+    _cachedPosts[post.id] = post;
+  }
+
+  void _loadUserAffinities(String userId) {
+    if (userId.isEmpty) return;
+    try {
+      // 1. Restore species affinity from persistent storage
+      final speciesJson = AuthStorageService.instance.getItem('affinity_species_$userId');
+      if (speciesJson != null && speciesJson.isNotEmpty) {
+        final decoded = jsonDecode(speciesJson);
+        if (decoded is Map) {
+          _userSpeciesAffinity[userId] = decoded.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+        }
+      }
+
+      // 2. Restore tag affinity from persistent storage
+      final tagJson = AuthStorageService.instance.getItem('affinity_tags_$userId');
+      if (tagJson != null && tagJson.isNotEmpty) {
+        final decoded = jsonDecode(tagJson);
+        if (decoded is Map) {
+          _userTagAffinity[userId] = decoded.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+        }
+      }
+
+      // 3. Fallback to profile favorite_species if local affinity is still empty
+      if ((_userSpeciesAffinity[userId] == null || _userSpeciesAffinity[userId]!.isEmpty) && _mockProfiles.containsKey(userId)) {
+        final favs = _mockProfiles[userId]?.favoriteSpecies ?? [];
+        if (favs.isNotEmpty) {
+          _userSpeciesAffinity[userId] = {};
+          for (int i = 0; i < favs.length; i++) {
+            _userSpeciesAffinity[userId]![favs[i]] = (favs.length - i) * 5;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[SupabaseService] Error loading user affinities: $e');
+    }
+  }
+
   // --- User Animal Preference Tracking & Recommendation Algorithm ---
   Future<void> recordUserInteraction({
     required String userId,
     required String species,
+    List<String>? tags,
     int weight = 1,
   }) async {
-    if (userId.isEmpty || species.isEmpty) return;
+    final effectiveUserId = userId.isNotEmpty ? userId : 'usr_guest';
     final cleanSpecies = species.trim();
     if (cleanSpecies.isEmpty) return;
 
-    _userSpeciesAffinity.putIfAbsent(userId, () => {});
-    _userSpeciesAffinity[userId]![cleanSpecies] = (_userSpeciesAffinity[userId]![cleanSpecies] ?? 0) + weight;
+    _userSpeciesAffinity.putIfAbsent(effectiveUserId, () => {});
+    _userSpeciesAffinity[effectiveUserId]![cleanSpecies] =
+        (_userSpeciesAffinity[effectiveUserId]![cleanSpecies] ?? 0) + weight;
+
+    // Track tag preferences
+    if (tags != null && tags.isNotEmpty) {
+      _userTagAffinity.putIfAbsent(effectiveUserId, () => {});
+      for (final rawTag in tags) {
+        final cleanTag = rawTag.toLowerCase().replaceAll('#', '').trim();
+        if (cleanTag.isNotEmpty) {
+          final tagWeight = max(1, weight ~/ 2);
+          _userTagAffinity[effectiveUserId]![cleanTag] =
+              (_userTagAffinity[effectiveUserId]![cleanTag] ?? 0) + tagWeight;
+        }
+      }
+    }
+
+    // Persist locally for 0ms retrieval and cross-session persistence
+    try {
+      AuthStorageService.instance.setItem(
+        'affinity_species_$effectiveUserId',
+        jsonEncode(_userSpeciesAffinity[effectiveUserId]),
+      );
+      if (_userTagAffinity.containsKey(effectiveUserId)) {
+        AuthStorageService.instance.setItem(
+          'affinity_tags_$effectiveUserId',
+          jsonEncode(_userTagAffinity[effectiveUserId]),
+        );
+      }
+    } catch (_) {}
 
     // Derive top favorite species list sorted by interaction affinity points
-    final entries = _userSpeciesAffinity[userId]!.entries.toList()
+    final entries = _userSpeciesAffinity[effectiveUserId]!.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final topSpecies = entries.map((e) => e.key).take(5).toList();
 
     // Update local profile
-    if (_mockProfiles.containsKey(userId)) {
-      _mockProfiles[userId] = _mockProfiles[userId]!.copyWith(favoriteSpecies: topSpecies);
+    if (_mockProfiles.containsKey(effectiveUserId)) {
+      _mockProfiles[effectiveUserId] = _mockProfiles[effectiveUserId]!.copyWith(favoriteSpecies: topSpecies);
     }
 
-    // Persist to Backend & Supabase
-    try {
-      final backend = RenderBackendService();
-      await backend.updateUserPreferences(userId: userId, favoriteSpecies: topSpecies);
-    } catch (_) {}
-
-    if (_client != null) {
+    // Persist to Backend & Supabase if not guest
+    if (effectiveUserId != 'usr_guest') {
       try {
-        await _client!.from('profiles').update({'favorite_species': topSpecies}).eq('id', userId);
+        final backend = RenderBackendService();
+        await backend.updateUserPreferences(userId: effectiveUserId, favoriteSpecies: topSpecies);
       } catch (_) {}
+
+      if (_client != null) {
+        try {
+          await _client!.from('profiles').update({'favorite_species': topSpecies}).eq('id', effectiveUserId);
+        } catch (_) {}
+      }
     }
   }
 
   // --- Posts & Personalized Recommendation Algorithm Operations ---
   Future<List<PostModel>> getActivePosts({String? currentUserId}) async {
     List<PostModel> posts = [];
+    final effectiveUserId = (currentUserId != null && currentUserId.isNotEmpty) ? currentUserId : 'usr_guest';
 
     if (_client != null) {
       try {
@@ -422,6 +499,7 @@ class SupabaseService {
 
         posts = (res as List).map((e) => PostModel.fromJson(e)).toList();
         for (final p in posts) {
+          _cachedPosts[p.id] = p;
           if (!_mockPets.containsKey(p.petId)) {
             _mockPets[p.petId] = PetModel(
               id: p.petId,
@@ -458,33 +536,77 @@ class SupabaseService {
       }).toList();
     }
 
-    // Recommendation Algorithm: Personalized ranking
-    if (currentUserId != null && currentUserId.isNotEmpty) {
-      final userFavs = _userSpeciesAffinity[currentUserId]?.keys.toList() ?? [];
+    // Cache all posts into unified cache
+    for (final p in posts) {
+      _cachedPosts[p.id] = p;
+    }
 
-      int scorePost(PostModel post) {
-        int score = (post.likesCount * 3) + post.viewsCount + (post.commentsCount * 4);
-        final pet = _mockPets[post.petId];
-        final species = pet?.species ?? 'Dog';
+    // Load persisted affinities for this user/guest
+    _loadUserAffinities(effectiveUserId);
 
-        // Species preference affinity bonus
-        if (userFavs.contains(species)) {
-          final rankIndex = userFavs.indexOf(species);
-          score += (200 - (rankIndex * 40));
-        }
+    final now = DateTime.now();
+    final userSpeciesMap = _userSpeciesAffinity[effectiveUserId] ?? {};
+    final userTagMap = _userTagAffinity[effectiveUserId] ?? {};
 
-        // Followed pet bonus
-        if (_mockFollows.contains('${currentUserId}_${post.petId}')) {
-          score += 100;
-        }
+    // Ranking Score Formula:
+    // Balance freshness (newest videos first), quality engagement, and personalized animal/tag tastes
+    double scorePost(PostModel post) {
+      // 1. Freshness / Recency Boost: Exponential-like decay over hours.
+      // Brand new video (<1 hour) gets ~1200 points.
+      // 12 hours ago gets ~800 points.
+      // 24 hours ago gets ~600 points.
+      // 48 hours ago gets ~350 points.
+      // 7 days ago gets ~75 points.
+      final ageHours = max(0.0, now.difference(post.createdAt).inMinutes / 60.0);
+      final double freshnessScore = 1200.0 / (1.0 + pow(ageHours / 24.0, 1.4));
 
-        return score;
+      // 2. Engagement Quality: Logarithmic views prevents old posts from dominating
+      final double viewsScore = min(50.0, log(1.0 + max(0, post.viewsCount)) * 8.0);
+      final double likesScore = post.likesCount * 15.0;
+      final double commentsScore = post.commentsCount * 25.0;
+
+      // 3. Media Type: Short videos have natural feed preference
+      final double mediaTypeScore = post.mediaType == 'video' ? 100.0 : 0.0;
+
+      // 4. Personalized Tastes & Affinities
+      double affinityScore = 0.0;
+      final pet = _mockPets[post.petId];
+      final species = post.petSpecies ?? pet?.species ?? 'Dog';
+
+      if (userSpeciesMap.containsKey(species)) {
+        final points = userSpeciesMap[species] ?? 0;
+        // Up to +400 points based on species preference
+        affinityScore += min(400.0, points * 20.0);
       }
 
-      posts.sort((a, b) => scorePost(b).compareTo(scorePost(a)));
-    } else {
-      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Tags affinity
+      for (final rawTag in post.tags) {
+        final cleanTag = rawTag.toLowerCase().replaceAll('#', '').trim();
+        if (userTagMap.containsKey(cleanTag)) {
+          final tagPoints = userTagMap[cleanTag] ?? 0;
+          affinityScore += min(150.0, tagPoints * 10.0);
+        }
+      }
+
+      // Followed pet bonus
+      if (_mockFollows.contains('${effectiveUserId}_${post.petId}')) {
+        affinityScore += 250.0;
+      }
+
+      return freshnessScore + viewsScore + likesScore + commentsScore + mediaTypeScore + affinityScore;
     }
+
+    // Sort by composite score descending.
+    // If scores are virtually identical (difference < 0.001), guarantee newest first!
+    posts.sort((a, b) {
+      final scoreA = scorePost(a);
+      final scoreB = scorePost(b);
+      final diff = scoreB - scoreA;
+      if (diff.abs() > 0.001) {
+        return diff.compareTo(0.0);
+      }
+      return b.createdAt.compareTo(a.createdAt);
+    });
 
     return posts;
   }
@@ -615,13 +737,21 @@ class SupabaseService {
       }
     }
 
-    // Interaction signal: +3 points for liked species
+    // Interaction signal: +6 points for liked species & tags
     if (isLiked) {
-      final post = _mockPosts.firstWhere((p) => p.id == postId, orElse: () => PostModel(id: '', petId: '', mediaUrl: '', caption: '', createdAt: DateTime.now()));
+      final post = _cachedPosts[postId] ??
+          _mockPosts.firstWhere(
+            (p) => p.id == postId,
+            orElse: () => PostModel(id: '', petId: '', mediaUrl: '', caption: '', createdAt: DateTime.now()),
+          );
       final pet = _mockPets[post.petId];
-      if (pet != null) {
-        recordUserInteraction(userId: userId, species: pet.species, weight: 3);
-      }
+      final effectiveSpecies = post.petSpecies ?? pet?.species ?? 'Dog';
+      recordUserInteraction(
+        userId: userId,
+        species: effectiveSpecies,
+        tags: post.tags,
+        weight: 6,
+      );
     }
 
     return isLiked;
@@ -642,23 +772,56 @@ class SupabaseService {
 
     // Interaction signal: +1 point for watched species
     if (userId != null && userId.isNotEmpty) {
-      final post = idx != -1 ? _mockPosts[idx] : null;
+      final post = _cachedPosts[postId] ?? (idx != -1 ? _mockPosts[idx] : null);
       if (post != null) {
         final pet = _mockPets[post.petId];
-        if (pet != null) {
-          recordUserInteraction(userId: userId, species: pet.species, weight: 1);
-        }
+        final effectiveSpecies = post.petSpecies ?? pet?.species ?? 'Dog';
+        recordUserInteraction(
+          userId: userId,
+          species: effectiveSpecies,
+          tags: post.tags,
+          weight: 1,
+        );
       }
     }
   }
 
-  /// Records watch time retention in seconds for video analytics
-  Future<void> recordWatchTime(String postId, int seconds) async {
-    // In local and Supabase session
+  /// Records watch time retention in seconds for video analytics & feeds user tastes into algorithm
+  Future<void> recordWatchTime(
+    String postId,
+    int seconds, {
+    String? userId,
+    String? species,
+    List<String>? tags,
+  }) async {
+    // 1. Supabase Video Analytics RPC
     if (_client != null) {
       try {
         await _client!.rpc('record_watch_time', params: {'post_id': postId, 'seconds': seconds});
       } catch (_) {}
+    }
+
+    // 2. Personalization Signals:
+    // Watching video for substantial time indicates strong user interest / taste!
+    if (seconds >= 3) {
+      final effectiveUserId = (userId != null && userId.isNotEmpty) ? userId : 'usr_guest';
+      final post = _cachedPosts[postId];
+      final pet = post != null ? _mockPets[post.petId] : null;
+      final effectiveSpecies = species ?? post?.petSpecies ?? pet?.species ?? 'Dog';
+      final effectiveTags = tags ?? post?.tags ?? [];
+
+      // Weight scale based on watch time retention:
+      // >= 15 seconds: 8 points (watched full video / loved it!)
+      // >= 8 seconds: 5 points (watched substantial portion)
+      // >= 3 seconds: 2 points (watched initial hook)
+      final int weight = seconds >= 15 ? 8 : (seconds >= 8 ? 5 : 2);
+
+      recordUserInteraction(
+        userId: effectiveUserId,
+        species: effectiveSpecies,
+        tags: effectiveTags,
+        weight: weight,
+      );
     }
   }
 
@@ -920,6 +1083,21 @@ class SupabaseService {
         commentsCount: _mockPosts[idx].commentsCount + 1,
       );
     }
+
+    // Interaction signal: +8 points for commented species & tags (High active engagement)
+    final post = _cachedPosts[postId] ??
+        _mockPosts.firstWhere(
+          (p) => p.id == postId,
+          orElse: () => PostModel(id: '', petId: '', mediaUrl: '', caption: '', createdAt: DateTime.now()),
+        );
+    final pet = _mockPets[post.petId];
+    final effectiveSpecies = post.petSpecies ?? pet?.species ?? 'Dog';
+    recordUserInteraction(
+      userId: userId,
+      species: effectiveSpecies,
+      tags: post.tags,
+      weight: 8,
+    );
 
     if (_client != null) {
       try {
@@ -1343,9 +1521,16 @@ class SupabaseService {
   Future<void> followPet(String humanId, String petId) async {
     _mockFollows.add('${humanId}_$petId');
     final pet = _mockPets[petId];
-    if (pet != null) {
-      recordUserInteraction(userId: humanId, species: pet.species, weight: 5);
+    String species = pet?.species ?? 'Dog';
+    if (pet == null) {
+      for (final p in _cachedPosts.values) {
+        if (p.petId == petId && p.petSpecies != null && p.petSpecies!.isNotEmpty) {
+          species = p.petSpecies!;
+          break;
+        }
+      }
     }
+    recordUserInteraction(userId: humanId, species: species, weight: 10);
 
     try {
       final backend = RenderBackendService();

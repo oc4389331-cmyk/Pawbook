@@ -1063,11 +1063,124 @@
         grid-template-columns: 1fr;
       }
 
-      .footer-bottom {
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
-      }
+    /* Legal Interactive Modal */
+    .legal-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .legal-modal-backdrop.active {
+      display: flex;
+      animation: modalFadeIn 0.25s ease;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .legal-modal-window {
+      background: #FFFFFF;
+      width: 100%;
+      max-width: 860px;
+      max-height: 88vh;
+      border-radius: 28px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1.5px solid rgba(224, 122, 95, 0.25);
+    }
+    .legal-modal-header {
+      padding: 18px 24px;
+      background: var(--bg-cream);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .legal-modal-header h3 {
+      font-size: 20px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+    .btn-modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+      padding: 4px;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+    .btn-modal-close:hover {
+      color: var(--primary);
+    }
+    .legal-modal-tabs {
+      display: flex;
+      gap: 10px;
+      padding: 12px 24px;
+      background: #FAF7F2;
+      border-bottom: 1px solid var(--border-light);
+      overflow-x: auto;
+    }
+    .modal-tab-btn {
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-light);
+      background: #FFFFFF;
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .modal-tab-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+    .legal-modal-body {
+      padding: 24px 28px;
+      overflow-y: auto;
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #334155;
+    }
+    .legal-tab-pane {
+      display: none;
+    }
+    .legal-tab-pane.active {
+      display: block;
+      animation: tabFade 0.2s ease;
+    }
+    @keyframes tabFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .legal-modal-footer {
+      padding: 14px 24px;
+      background: var(--bg-cream);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
     }
   </style>
 </head>
@@ -1173,7 +1286,7 @@
 
       <div class="hero-media-wrapper">
         <div class="hero-image-frame">
-          <img src="/landing_assets/hero_pets.jpg" onerror="this.src='assets/hero_pets.jpg'" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
+          <img src="assets/hero_pets.jpg" onerror="this.src='/landing_assets/hero_pets.jpg'" alt="Mascotas creadoras de contenido en Pawbooklife con tablet mostrando el feed de videos cortos">
         </div>
 
         <!-- Floating Badge: Instant Sponsorship -->
@@ -1245,7 +1358,7 @@
 
       <div class="sponsorship-grid">
         <div class="sponsorship-image-wrapper">
-          <img src="/landing_assets/sponsorships_stats.jpg" onerror="this.src='assets/sponsorships_stats.jpg'" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
+          <img src="assets/sponsorships_stats.jpg" onerror="this.src='/landing_assets/sponsorships_stats.jpg'" alt="Estadísticas de patrocinio en Solana para mascotas creadoras en Pawbooklife">
           <div class="sponsorship-badge-overlay">
             <div class="badge-stat-box">
               <h5 data-i18n="spons_badge_network">Decentralized Network</h5>
@@ -1356,7 +1469,7 @@
       </div>
 
       <div class="store-image-wrapper">
-        <img src="/landing_assets/exclusive_pet_store.jpg" onerror="this.src='assets/exclusive_pet_store.jpg'" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
+        <img src="assets/exclusive_pet_store.jpg" onerror="this.src='/landing_assets/exclusive_pet_store.jpg'" alt="Exhibición boutique de productos exclusivos para mascotas en Pawbooklife">
         <div class="store-callout-pill">
           <span data-i18n="store_pill">✨ 100% Pet-Only Certified</span>
         </div>
@@ -1451,11 +1564,20 @@
         </div>
 
         <div class="footer-col">
+          <h5 data-i18n="footer_col_support">Support & Community</h5>
+          <ul>
+            <li><a href="https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c" target="_blank" rel="noopener" style="color:#14F195; font-weight:700;">💬 SolChat Plus ("support pawbooklife")</a></li>
+            <li><a href="mailto:oc4389331@gmail.com">✉️ oc4389331@gmail.com</a></li>
+            <li><a href="mailto:support@pawbooklife.com">🐾 support@pawbooklife.com</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
           <h5 data-i18n="footer_col_legal">Legal</h5>
           <ul>
-            <li><a href="#" data-i18n="footer_legal_terms">Terms & Conditions</a></li>
-            <li><a href="#" data-i18n="footer_legal_welfare">Animal Welfare Policy</a></li>
-            <li><a href="#" data-i18n="footer_legal_privacy">Privacy</a></li>
+            <li><a href="/terms" onclick="openLegalModal('terms'); return false;" data-i18n="footer_legal_terms">Terms & Conditions</a></li>
+            <li><a href="/terms#welfare" onclick="openLegalModal('welfare'); return false;" data-i18n="footer_legal_welfare">Animal Welfare Policy</a></li>
+            <li><a href="/privacy" onclick="openLegalModal('privacy'); return false;" data-i18n="footer_legal_privacy">Privacy & Security</a></li>
           </ul>
         </div>
       </div>
@@ -1466,6 +1588,70 @@
       </div>
     </div>
   </footer>
+
+  <!-- Legal Interactive Modal -->
+  <div class="legal-modal-backdrop" id="legal-modal-backdrop" onclick="handleLegalBackdropClick(event)">
+    <div class="legal-modal-window" role="dialog" aria-modal="true">
+      <div class="legal-modal-header">
+        <h3 id="legal-modal-title"><span>🐾</span> Marco Legal & Políticas de Pawbooklife</h3>
+        <button class="btn-modal-close" onclick="closeLegalModal()" aria-label="Cerrar modal">✕</button>
+      </div>
+      <div class="legal-modal-tabs">
+        <button class="modal-tab-btn active" id="tab-btn-terms" onclick="switchLegalTab('terms')">📜 Términos de Uso</button>
+        <button class="modal-tab-btn" id="tab-btn-privacy" onclick="switchLegalTab('privacy')">🛡️ Seguridad & Privacidad</button>
+        <button class="modal-tab-btn" id="tab-btn-welfare" onclick="switchLegalTab('welfare')">🐾 Bienestar Animal (Tolerancia Cero)</button>
+      </div>
+      <div class="legal-modal-body">
+        <!-- Tab Terms -->
+        <div class="legal-tab-pane active" id="pane-terms">
+          <h4 style="color:var(--primary); font-size:18px; margin-bottom:12px;">📜 Términos y Condiciones de Uso</h4>
+          <p><strong>1. Identificación y Ecosistema:</strong> Pawbooklife es la red social y SocialFi descentralizada para mascotas en la blockchain de Solana. Los perfiles corresponden exclusivamente a creadores caninos, felinos y otras mascotas bajo la custodia responsable de sus tutores humanos.</p>
+          <p><strong>2. Cuentas y Responsabilidad:</strong> Los tutores deben tener al menos 13 años (o consentimiento legal de padres/tutores). Usted es el único custodio de su cuenta y de sus credenciales de acceso vinculadas vía Dynamic.xyz o billeteras de Solana.</p>
+          <p><strong>3. Web3 y Transacciones On-Chain:</strong> Los patrocinios, propinas en SOL o $SKR y las transferencias de PawtScore operan sobre la infraestructura pública descentralizada de Solana. Las transacciones son irreversibles por diseño de la red. Pawbooklife no almacena ni solicita jamás sus llaves privadas.</p>
+          <p><strong>4. Contenido y Licencia:</strong> Usted mantiene la propiedad de sus videos y fotos. Al publicarlos, otorga a Pawbooklife una licencia global no exclusiva para exhibirlos en el feed global, app móvil y versiones web.</p>
+          <p><strong>5. Tienda de Mascotas y Canjes:</strong> Todos los productos de la tienda boutique están certificados para el bienestar animal. Las devoluciones o reclamaciones deben gestionarse dentro de los 14 días naturales siguientes a la recepción.</p>
+          <p style="margin-top:16px;">
+            <a href="/terms" target="_blank" style="color:var(--primary); font-weight:700; text-decoration:underline;">Ver documento completo de Términos de Uso en página dedicada →</a>
+          </p>
+        </div>
+
+        <!-- Tab Privacy -->
+        <div class="legal-tab-pane" id="pane-privacy">
+          <h4 style="color:var(--emerald-green); font-size:18px; margin-bottom:12px;">🛡️ Políticas de Seguridad y Privacidad</h4>
+          <p><strong>1. No Comercialización de Datos:</strong> Pawbooklife <em>jamás</em> vende ni comercializa sus datos personales a terceros con fines publicitarios. Recopilamos únicamente datos necesarios para operar la cuenta y el perfil de la mascota.</p>
+          <p><strong>2. Almacenamiento Seguro en Cloudflare R2:</strong> Los videos y fotos se almacenan con cifrado AES-256 en reposo en buckets protegidos de Cloudflare R2 con entrega ultrarrápida vía CDN global.</p>
+          <p><strong>3. Base de Datos Supabase con RLS:</strong> Nuestra arquitectura utiliza Row Level Security (RLS) en PostgreSQL, garantizando aislamiento criptográfico entre cuentas.</p>
+          <p><strong>4. No Custodia de Llaves Privadas:</strong> Al interactuar con Solana vía Dynamic.xyz, Phantom o Solflare, su frase de recuperación y sus llaves privadas permanecen 100% bajo su propio control y resguardo local.</p>
+          <p><strong>5. Derechos ARCO, GDPR y CCPA:</strong> Puede solicitar acceso, rectificación, portabilidad o eliminación total de su cuenta y videos escribiendo a <a href="mailto:privacy@pawbooklife.com" style="color:var(--primary); font-weight:700;">privacy@pawbooklife.com</a>.</p>
+          <div style="background:rgba(20,241,149,0.08); border:1px solid rgba(20,241,149,0.3); border-radius:12px; padding:12px 14px; margin-top:14px;">
+            <p style="margin:0 0 6px 0; font-weight:700; color:#10B981;">💬 Soporte en Vivo & Comunidad Web3:</p>
+            <p style="margin:0 0 6px 0;"><strong>SolChat Plus:</strong> <a href="https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c" target="_blank" rel="noopener" style="color:#10B981; font-weight:700;">¡Únete a mi grupo "support pawbooklife" en SolChat Plus! ↗</a></p>
+            <p style="margin:0;"><strong>Correo de Soporte:</strong> <a href="mailto:oc4389331@gmail.com" style="color:var(--primary); font-weight:700;">oc4389331@gmail.com</a></p>
+          </div>
+          <p style="margin-top:16px;">
+            <a href="/privacy" target="_blank" style="color:var(--primary); font-weight:700; text-decoration:underline;">Ver documento completo de Privacidad y Seguridad en página dedicada →</a>
+          </p>
+        </div>
+
+        <!-- Tab Welfare -->
+        <div class="legal-tab-pane" id="pane-welfare">
+          <h4 style="color:#E63946; font-size:18px; margin-bottom:12px;">🐾 Política de Bienestar Animal y Tolerancia Cero al Maltrato</h4>
+          <p><strong>1. Cero Tolerancia a la Violencia:</strong> Queda terminantemente prohibido publicar o promover contenido que involucre agresión física, dolor infligido, peleas de animales, negligencia alimenticia o confinamiento dañino.</p>
+          <p><strong>2. Moderación Activa con Google Gemini AI:</strong> Analizamos de manera automatizada las publicaciones para detectar estrés o malestar en las mascotas antes de su propagación.</p>
+          <p><strong>3. Sanciones y Denuncias Judiciales:</strong> Cualquier usuario que vulnere esta política sufrirá el bloqueo definitivo e irreversible de su cuenta y, en casos de maltrato evidente, los antecedentes serán remitidos a las autoridades competentes y organizaciones de protección animal.</p>
+          <p><strong>4. Retos y Comportamientos Forzados:</strong> Se prohíben bromas pesadas que provoquen pánico, ahogamiento o asfixia en el animal.</p>
+        </div>
+      </div>
+      <div class="legal-modal-footer">
+        <span style="font-size:12.5px; color:var(--text-muted);">© 2026 Pawbooklife • Protección Animal en Solana</span>
+        <div style="display:flex; gap:10px;">
+          <a href="/terms" target="_blank" class="btn-outline" style="font-size:13px; padding:6px 14px;">Ver Términos Web 📄</a>
+          <a href="/privacy" target="_blank" class="btn-outline" style="font-size:13px; padding:6px 14px;">Ver Privacidad Web 🛡️</a>
+          <button class="btn-primary" onclick="closeLegalModal()" style="font-size:13px; padding:6px 18px; cursor:pointer;">Entendido 🐾</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Multi-Language Translation Script (Default: English) -->
   <script>
@@ -1549,6 +1735,7 @@
         footer_brand_desc: "The first decentralized SocialFi platform for pets on the Solana blockchain. Made with love for animals everywhere.",
         footer_col_nav: "Navigation",
         footer_col_platform: "Platform",
+        footer_col_support: "Support & Community",
         footer_col_legal: "Legal",
         footer_legal_terms: "Terms & Conditions",
         footer_legal_welfare: "Animal Welfare Policy",
@@ -1635,6 +1822,7 @@
         footer_brand_desc: "La primera plataforma SocialFi descentralizada para mascotas en la blockchain de Solana. Hecho con amor por y para los animales.",
         footer_col_nav: "Navegación",
         footer_col_platform: "Plataforma",
+        footer_col_support: "Soporte y Comunidad",
         footer_col_legal: "Legal",
         footer_legal_terms: "Términos y Condiciones",
         footer_legal_welfare: "Política de Bienestar Animal",
@@ -1721,6 +1909,7 @@
         footer_brand_desc: "Solana 区块链上首个去中心化宠物 SocialFi 平台。满怀对动物的关爱倾心打造。",
         footer_col_nav: "快速导航",
         footer_col_platform: "平台链接",
+        footer_col_support: "支持与社区",
         footer_col_legal: "法律与政策",
         footer_legal_terms: "服务条款",
         footer_legal_welfare: "动物福祉政策",
@@ -1807,6 +1996,7 @@
         footer_brand_desc: "Solana ブロックチェーン上の初の分散型ペット SocialFi プラットフォーム。動物たちへの愛を込めて。",
         footer_col_nav: "ナビゲーション",
         footer_col_platform: "プラットフォーム",
+        footer_col_support: "サポート＆コミュニティ",
         footer_col_legal: "規約・情報",
         footer_legal_terms: "利用規約",
         footer_legal_welfare: "動物福祉ポリシー",
@@ -1910,6 +2100,44 @@
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
+    });
+
+    // Legal Interactive Modal Controls
+    function openLegalModal(tab) {
+      const modal = document.getElementById('legal-modal-backdrop');
+      if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        switchLegalTab(tab || 'terms');
+      }
+    }
+
+    function closeLegalModal() {
+      const modal = document.getElementById('legal-modal-backdrop');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    function handleLegalBackdropClick(e) {
+      if (e.target && e.target.id === 'legal-modal-backdrop') {
+        closeLegalModal();
+      }
+    }
+
+    function switchLegalTab(tabName) {
+      const tabs = ['terms', 'privacy', 'welfare'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        const pane = document.getElementById('pane-' + t);
+        if (btn) btn.classList.toggle('active', t === tabName);
+        if (pane) pane.classList.toggle('active', t === tabName);
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLegalModal();
     });
   </script>
 </body>

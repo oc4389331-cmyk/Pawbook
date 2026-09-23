@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,12 +24,15 @@ import '../widgets/floating_bottom_nav_bar.dart';
 import '../widgets/live_comment_bubbles.dart';
 import '../widgets/spinning_vinyl_disc.dart';
 import '../widgets/language_selector.dart';
+import '../widgets/pet_verification_modal.dart';
+import '../widgets/share_post_modal.dart';
 import 'create_pet_screen.dart';
 import 'create_post_screen.dart';
 import 'login_screen.dart';
 import 'marketplace_screen.dart';
 import 'pet_profile_screen.dart';
 import 'rewards_store_screen.dart';
+import '../../config/app_routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,15 +41,44 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
   int _currentFeedPage = 0;
   final Set<String> _followedPetIds = {};
+  bool _isRouteActive = true;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    // Another screen was pushed on top of HomeScreen (e.g. LoginScreen, CreatePostScreen)
+    if (mounted) {
+      setState(() => _isRouteActive = false);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Returned back to HomeScreen
+    if (mounted) {
+      setState(() => _isRouteActive = true);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _initDeepLinks();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authController = Provider.of<AuthController>(context, listen: false);
       final feedController = Provider.of<FeedController>(context, listen: false);
@@ -61,8 +95,51 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _initDeepLinks() {
+    try {
+      _appLinks = AppLinks();
+      _appLinks.getInitialLink().then((uri) {
+        if (uri != null) _handleIncomingUri(uri);
+      }).catchError((err) {
+        debugPrint('Deep link initial link fallback: $err');
+      });
+
+      _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+        _handleIncomingUri(uri);
+      }, onError: (err) {
+        debugPrint('Deep link stream fallback: $err');
+      });
+    } catch (e) {
+      debugPrint('AppLinks init error: $e');
+    }
+  }
+
+  void _handleIncomingUri(Uri uri) {
+    debugPrint('🐾 Deep Link received in Pawbook: $uri');
+    final queryPost = uri.queryParameters['post'];
+    final queryPet = uri.queryParameters['pet'];
+    String? resolvedPostId = queryPost;
+
+    if (resolvedPostId == null && uri.pathSegments.contains('post')) {
+      final idx = uri.pathSegments.indexOf('post');
+      if (idx + 1 < uri.pathSegments.length) {
+        resolvedPostId = uri.pathSegments[idx + 1];
+      }
+    }
+
+    if (resolvedPostId != null && mounted) {
+      final feedController = Provider.of<FeedController>(context, listen: false);
+      final postIndex = feedController.posts.indexWhere((p) => p.id == resolvedPostId);
+      if (postIndex != -1 && _pageController.hasClients) {
+        _pageController.jumpToPage(postIndex);
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _linkSubscription?.cancel();
+    appRouteObserver.unsubscribe(this);
     _pageController.dispose();
     super.dispose();
   }
@@ -1321,7 +1398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return TikTokFeedItem(
                   post: post,
                   currentUserId: currentUserId,
-                  isCurrentPage: _currentFeedPage == index,
+                  isCurrentPage: _isRouteActive && _currentIndex == 0 && _currentFeedPage == index,
                   onPlayAttempt: () async => true,
                   onLikeToggled: () {
                     if (!authController.isAuthenticated) {
@@ -1739,7 +1816,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const SizedBox(height: 12),
                     Container(width: 40, height: 5, decoration: BoxDecoration(color: AppTheme.borderWarm, borderRadius: BorderRadius.circular(3))),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // 1. Share Post Option (Always visible for all users & visitors)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentOrange.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.share_rounded, color: AppTheme.accentOrange, size: 20),
+                      ),
+                      title: Text(
+                        langController.t('sharePost'),
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark, fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        langController.t('sharePostSubtitle'),
+                        style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textMutedWarm),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        SharePostModal.show(context, post: post);
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(height: 1, color: AppTheme.borderWarm),
+                    ),
+
                     if (isOwner)
                       ListTile(
                         leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
@@ -1771,7 +1878,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (mounted) setState(() {});
                         },
                       ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -2075,9 +2182,10 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: langController.t('logOut'),
             onPressed: () async {
               await authController.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
                 );
               }
             },
@@ -2281,6 +2389,112 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 14),
+
+            // --- Pet Verification Card (Only if user has a registered pet) ---
+            if (authController.hasPet && authController.activePet != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0xFF7DD3FC), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Verificación de Mascota',
+                              style: GoogleFonts.fredoka(
+                                color: const Color(0xFF0369A1),
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF7DD3FC)),
+                          ),
+                          child: Text(
+                            authController.activePet!.isVerified
+                                ? (authController.activePet!.isExempted
+                                    ? 'Verificada (Vitalicia) 🌟'
+                                    : 'Verificada (40d) 🌟')
+                                : 'No Verificada',
+                            style: GoogleFonts.fredoka(
+                              color: authController.activePet!.isVerified
+                                  ? const Color(0xFF0284C7)
+                                  : Colors.orange.shade800,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Obtén o renueva la insignia oficial para @${authController.activePet!.name} por \$10 USD (pagable en SOL o \$SKR).',
+                      style: GoogleFonts.outfit(color: const Color(0xFF0C4A6E), fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          elevation: 1,
+                        ),
+                        icon: const Icon(Icons.verified_rounded, size: 16),
+                        label: Text(
+                          authController.activePet!.isVerified
+                              ? 'Gestionar / Ver Detalles de Verificación'
+                              : 'Verificar a @${authController.activePet!.name} (\$10 USD)',
+                          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        onPressed: () {
+                          PetVerificationModal.show(
+                            context,
+                            pet: authController.activePet!,
+                            onVerified: (updated) {
+                              feedController.fetchActivePosts(currentUserId: profile?.id);
+                              if (mounted) setState(() {});
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
 
             // Edit Profile Button
             OutlinedButton.icon(
@@ -2493,9 +2707,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   onPressed: () async {
                     await authController.logout();
-                    if (context.mounted) {
-                      Navigator.of(context).pushReplacement(
+                    if (mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
                       );
                     }
                   },

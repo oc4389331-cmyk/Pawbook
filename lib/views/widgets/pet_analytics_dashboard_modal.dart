@@ -8,6 +8,7 @@ import '../../models/pet_model.dart';
 import '../../models/pet_analytics_model.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import 'video_thumbnail_widget.dart';
 
 class PetAnalyticsDashboardModal extends StatefulWidget {
   final PetModel pet;
@@ -274,10 +275,10 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                   height: 44,
                                   color: AppTheme.surfaceWarm,
                                   child: currentVideo.mediaUrl.isNotEmpty
-                                      ? Image.network(
-                                          currentVideo.mediaUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(Icons.movie_rounded, color: AppTheme.accentOrange),
+                                      ? VideoThumbnailWidget(
+                                          mediaUrl: currentVideo.mediaUrl,
+                                          mediaType: 'video',
+                                          fallbackImageUrl: widget.pet.avatarUrl,
                                         )
                                       : const Icon(Icons.movie_rounded, color: AppTheme.accentOrange),
                                 ),
@@ -863,12 +864,10 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             height: 64,
                             color: AppTheme.surfaceWarm,
                             child: video.mediaUrl.isNotEmpty
-                                ? Image.network(
-                                    video.mediaUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Center(
-                                      child: Icon(Icons.movie_rounded, color: AppTheme.primaryTerracotta, size: 28),
-                                    ),
+                                ? VideoThumbnailWidget(
+                                    mediaUrl: video.mediaUrl,
+                                    mediaType: 'video',
+                                    fallbackImageUrl: widget.pet.avatarUrl,
                                   )
                                 : const Center(
                                     child: Icon(Icons.movie_rounded, color: AppTheme.primaryTerracotta, size: 28),

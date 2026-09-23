@@ -51,6 +51,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   PetModel? _selectedPet;
   String _mediaType = 'image';
   bool _isUploading = false;
+  String _uploadStatusMessage = 'Publicando...';
 
   // Multi-image / video support
   final List<_PickedMedia> _pickedMedia = [];
@@ -1072,9 +1073,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     : const Icon(Icons.send_rounded, color: Colors.white),
                 label: Text(
                   _isUploading
-                      ? langController.t('publishingPost')
+                      ? _uploadStatusMessage
                       : '${langController.t("publishBtn")} (@${_selectedPet?.name ?? "Mascota"})',
-                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 onPressed: _isUploading ? null : () => _submitPost(feedController),
               ),
@@ -1319,7 +1320,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
 
     final caption = ProfanityFilterService.sanitize(rawCaption);
-    setState(() => _isUploading = true);
+    setState(() {
+      _isUploading = true;
+      _uploadStatusMessage = _mediaType == 'video'
+          ? 'Verificando bienestar animal con IA 🐾...'
+          : 'Publicando en Pawtbook...';
+    });
     await _audioPlayer.stop();
 
     try {
@@ -1362,10 +1368,133 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ));
         Navigator.of(context).pop();
       }
+    } on ModerationRejectedException catch (modEx) {
+      if (mounted) {
+        _showModerationRejectionDialog(modEx.reason);
+      }
     } catch (e) {
-      if (mounted) _showSnack('Error al publicar: $e', isError: true);
+      if (e.toString().contains('MODERATION_REJECTED') || e.toString().contains('Rechazado')) {
+        if (mounted) _showModerationRejectionDialog(e.toString());
+      } else {
+        if (mounted) _showSnack('Error al publicar: $e', isError: true);
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  void _showModerationRejectionDialog(String reason) {
+    final cleanReason = reason
+        .replaceAll('Exception:', '')
+        .replaceAll('MODERATION_REJECTED:', '')
+        .trim();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgWarmCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryTerracotta.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 26),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Filtro de Seguridad 🐾',
+                style: GoogleFonts.fredoka(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: AppTheme.textPrimaryDark,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.red.withOpacity(0.25)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      cleanReason.isNotEmpty
+                          ? cleanReason
+                          : 'No pudimos verificar la presencia de una mascota o el contenido no cumple las políticas de bienestar animal de Pawtbook.',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Colors.red.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Políticas de la comunidad Pawtbook:',
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimaryDark),
+            ),
+            const SizedBox(height: 6),
+            _buildModerationRuleItem('🐾', 'Las mascotas deben ser visibles en el video (perros, gatos, aves, etc.).'),
+            _buildModerationRuleItem('❤️', 'Los tutores humanos son bienvenidos interactuando con cariño con su mascota.'),
+            _buildModerationRuleItem('🚫', 'Tolerancia cero a maltrato, peleas, dolor forzado o negligencia animal.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.primaryTerracotta,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Entendido',
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModerationRuleItem(String emoji, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$emoji ', style: const TextStyle(fontSize: 12)),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm, height: 1.25),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

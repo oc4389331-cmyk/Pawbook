@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Políticas de Privacidad y Seguridad | Pawbooklife 🛡️</title>
+  <meta name="description" content="Políticas Oficiales de Seguridad de la Información y Protección de Datos Personales de Pawbooklife - Red Social y SocialFi para mascotas.">
+
+  <!-- Favicon & Icons -->
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Google Fonts: Fredoka & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #E07A5F;
+      --primary-hover: #D26447;
+      --brand-coral: #F4A261;
+      --solana-mint: #14F195;
+      --solana-purple: #9945FF;
+      --emerald-green: #10B981;
+      --bg-cream: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --bg-dark: #0F172A;
+      --text-dark: #264653;
+      --text-muted: #64748B;
+      --border-light: rgba(224, 122, 95, 0.18);
+      --shadow-sm: 0 4px 14px rgba(224, 122, 95, 0.08);
+      --shadow-md: 0 12px 32px rgba(224, 122, 95, 0.14);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-pill: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-dark);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, .brand-font {
+      font-family: 'Fredoka', cursive, sans-serif;
+      line-height: 1.3;
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    .legal-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 247, 242, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 14px 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--emerald-green), var(--solana-mint));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 22px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .brand-text h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-outline {
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid var(--border-light);
+      font-weight: 600;
+      font-size: 14px;
+      background: #fff;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      padding: 8px 20px;
+      border-radius: var(--radius-pill);
+      background: linear-gradient(135deg, var(--primary), #E63946);
+      color: #fff;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 600;
+      font-size: 14.5px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(224, 122, 95, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(224, 122, 95, 0.45);
+    }
+
+    /* Header Banner */
+    .legal-header {
+      padding: 48px 0 32px;
+      text-align: center;
+    }
+
+    .legal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--emerald-green);
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    .legal-header h2 {
+      font-size: 38px;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    .legal-meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    /* Tabs Bar */
+    .tabs-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 24px 0 40px;
+      flex-wrap: wrap;
+    }
+
+    .tab-link {
+      padding: 10px 22px;
+      border-radius: var(--radius-pill);
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-light);
+      font-weight: 700;
+      font-size: 14.5px;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-link.active {
+      background: var(--emerald-green);
+      color: #FFFFFF;
+      border-color: var(--emerald-green);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+    }
+
+    .tab-link:hover:not(.active) {
+      border-color: var(--emerald-green);
+      color: var(--emerald-green);
+      transform: translateY(-2px);
+    }
+
+    /* Content Card */
+    .legal-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 44px 48px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(224, 122, 95, 0.15);
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 768px) {
+      .legal-card { padding: 26px 20px; }
+      .legal-header h2 { font-size: 28px; }
+    }
+
+    /* Security Highlight Banner */
+    .security-hero-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(20, 241, 149, 0.08));
+      border: 1.5px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      margin-bottom: 36px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .security-hero-banner .banner-icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .security-hero-banner p {
+      font-size: 14.5px;
+      color: #1F2937;
+      margin: 0;
+    }
+
+    /* Legal Sections */
+    .legal-section {
+      margin-bottom: 38px;
+      scroll-margin-top: 90px;
+    }
+
+    .legal-section h3 {
+      font-size: 21px;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(16, 185, 129, 0.12);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--emerald-green);
+    }
+
+    .legal-section p {
+      font-size: 15px;
+      color: #334155;
+      margin-bottom: 14px;
+    }
+
+    .legal-section ul {
+      margin-left: 24px;
+      margin-bottom: 16px;
+      color: #334155;
+      font-size: 14.5px;
+    }
+
+    .legal-section li {
+      margin-bottom: 8px;
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+
+    .spec-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .spec-card h5 {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .spec-card p {
+      font-size: 13px;
+      color: #64748B;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .highlight-box {
+      background: #F0FDF4;
+      border-left: 4px solid var(--emerald-green);
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin: 14px 0;
+      font-size: 14px;
+      color: #166534;
+    }
+
+    .footer {
+      border-top: 1px solid var(--border-light);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="legal-navbar">
+    <div class="container nav-inner">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-text">
+          <h1>Pawbooklife</h1>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="/" class="btn-outline">← Volver al Inicio</a>
+        <a href="/terms" class="btn-outline">Términos de Uso 📜</a>
+        <a href="https://pawbook-358b.onrender.com" class="btn-primary">Abrir App 🚀</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="legal-header">
+      <div class="legal-badge">🔒 Protección y Seguridad de Datos</div>
+      <h2>Políticas de Seguridad y Privacidad</h2>
+      <div class="legal-meta">
+        <span>📅 Última actualización: Marzo 2026</span>
+        <span>•</span>
+        <span>🛡️ Cumplimiento GDPR, CCPA y Estándares Web3</span>
+        <span>•</span>
+        <span>⚡ Infraestructura Cloudflare R2 + Supabase RLS</span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-bar">
+        <a href="/privacy" class="tab-link active">🛡️ Privacidad y Seguridad</a>
+        <a href="/terms" class="tab-link">📜 Términos de Uso</a>
+        <a href="/#patrocinios" class="tab-link">⚡ SocialFi Solana</a>
+        <a href="/#tienda-exclusiva" class="tab-link">🛍️ Tienda de Mascotas</a>
+      </div>
+    </div>
+
+    <div class="legal-card">
+      <div class="security-hero-banner">
+        <div class="banner-icon">🔐</div>
+        <div>
+          <strong>Compromiso Inquebrantable con tu Privacidad:</strong>
+          <p>En Pawbooklife protegemos tus datos y los de tus mascotas con los más altos estándares tecnológicos de la industria. <strong>Nunca vendemos ni comercializamos tus datos personales con terceros con fines publicitarios ajenos.</strong> Aplicamos el principio de mínima recopilación de datos y soberanía del usuario.</p>
+        </div>
+      </div>
+
+      <!-- 1. Información que Recopilamos -->
+      <section class="legal-section">
+        <h3><span class="section-icon">📋</span> 1. Información que Recopilamos</h3>
+        <p>Para brindarle la mejor experiencia en la comunidad y permitir que su mascota tenga su propio canal y reciba patrocinios, recopilamos las siguientes categorías de datos:</p>
+        <div class="spec-grid">
+          <div class="spec-card">
+            <h5>👤 Datos del Tutor</h5>
+            <p>Dirección de correo electrónico, nombre para mostrar, foto de avatar y configuración de idioma preferido.</p>
+          </div>
+          <div class="spec-card">
+            <h5>🐾 Perfil de la Mascota</h5>
+            <p>Nombre, especie (perro, gato u otros), raza, fecha aproximada de nacimiento y biografía pública.</p>
+          </div>
+          <div class="spec-card">
+            <h5>🎬 Contenido Audiovisual</h5>
+            <p>Videos cortos (hasta 30s), fotografías, audios originales, stickers seleccionados y subtítulos agregados.</p>
+          </div>
+          <div class="spec-card">
+            <h5>⚡ Identificadores Web3</h5>
+            <p>Dirección pública de billetera en la red Solana (Public Key) para recepción de patrocinios y visualización de badges.</p>
+          </div>
+        </div>
+        <p><strong>Lo que NUNCA recopilamos:</strong> Pawbooklife jamás recopila, almacena ni tiene acceso a sus llaves privadas (private keys), frases mnemónicas de recuperación (seed phrases) ni contraseñas bancarias.</p>
+      </section>
+
+      <!-- 2. Finalidad del Tratamiento -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🎯</span> 2. Finalidad y Bases Legales del Tratamiento</h3>
+        <p>Los datos recopilados son tratados estrictamente para los siguientes fines legítimos:</p>
+        <ul>
+          <li><strong>Provisión del Servicio:</strong> Crear y administrar su cuenta, reproducir videos en el feed global, sincronizar comentarios, favoritos y "likes".</li>
+          <li><strong>Facilitación de SocialFi y Patrocinios:</strong> Generar los registros transparentes de aportes on-chain en Solana y calcular el puntaje PawtScore de su mascota.</li>
+          <li><strong>Seguridad y Protección Comunitaria:</strong> Detección temprana de granjas de bots, intentos de fraude, suplantación y comportamientos maliciosos.</li>
+          <li><strong>Moderación Ética y Bienestar Animal:</strong> Análisis automático para prevenir la difusión de contenidos de abuso o maltrato animal.</li>
+        </ul>
+      </section>
+
+      <!-- 3. Arquitectura de Seguridad y Almacenamiento -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🏰</span> 3. Arquitectura de Seguridad y Almacenamiento de Datos</h3>
+        <p>Pawbooklife implementa una arquitectura tecnológica distribuida de nivel empresarial:</p>
+        <div class="spec-grid">
+          <div class="spec-card">
+            <h5>☁️ Cloudflare R2 & CDN Global</h5>
+            <p>Todos los archivos de video y fotos son almacenados en buckets privados Cloudflare R2 con cifrado AES-256 en reposo y servidos mediante CDN optimizado con compresión HLS.</p>
+          </div>
+          <div class="spec-card">
+            <h5>🗄️ Supabase Postgres con RLS</h5>
+            <p>Nuestra base de datos aplica políticas estrictas de Seguridad a Nivel de Fila (Row Level Security - RLS). Ningún usuario puede alterar ni consultar registros privados de otro usuario.</p>
+          </div>
+          <div class="spec-card">
+            <h5>🔒 Comunicaciones Cifradas</h5>
+            <p>Toda la transferencia de datos entre la app móvil, navegador web y nuestros servidores backend utiliza cifrado TLS 1.3 / SSL de extremo a extremo.</p>
+          </div>
+          <div class="spec-card">
+            <h5>🛡️ Google Gemini AI Vision Guard</h5>
+            <p>Modelos de visión artificial moderan en milisegundos las publicaciones para salvaguardar la integridad de la comunidad sin almacenar metadatos biométricos humanos invasivos.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Seguridad Web3 y No Custodia -->
+      <section class="legal-section">
+        <h3><span class="section-icon">⚡</span> 4. Seguridad Web3 y Principio de No Custodia</h3>
+        <div class="highlight-box">
+          <strong>Arquitectura No Custodial:</strong> Al vincular su billetera Solana a través de Dynamic.xyz o conectores de billeteras externas (Phantom, Solflare), usted mantiene el 100% del control sobre sus fondos. Pawbooklife nunca puede transferir criptoactivos sin su firma expresa y aprobación biométrica en su dispositivo.
+        </div>
+        <p>Las direcciones de billetera públicas registradas en perfiles de mascotas son visibles públicamente en la blockchain para garantizar que cualquier persona pueda auditar las donaciones y propinas recibidas por la mascota sin intermediarios.</p>
+      </section>
+
+      <!-- 5. Derechos del Usuario (ARCO / GDPR / CCPA) -->
+      <section class="legal-section">
+        <h3><span class="section-icon">⚖️</span> 5. Sus Derechos de Privacidad (ARCO, GDPR y CCPA)</h3>
+        <p>Independientemente del país donde resida, Pawbooklife le garantiza los siguientes derechos fundamentales sobre sus datos:</p>
+        <ul>
+          <li><strong>Derecho de Acceso:</strong> Solicitar una copia completa de los datos personales asociados a su cuenta.</li>
+          <li><strong>Derecho de Rectificación:</strong> Modificar en cualquier momento el nombre, correo, biografía o datos de su mascota desde la pantalla de perfil.</li>
+          <li><strong>Derecho de Cancelación / Supresión (Derecho al Olvido):</strong> Solicitar la eliminación total y permanente de su cuenta, eliminando sus publicaciones de la base de datos y de los servidores de medios Cloudflare R2.</li>
+          <li><strong>Derecho de Oposición y Portabilidad:</strong> Oponerse a tratamientos específicos y recibir sus datos en un formato digital estructurado y legible por máquina (JSON).</li>
+        </ul>
+        <p>Para ejercer cualquiera de estos derechos, basta con enviar una solicitud a nuestro Delegado de Protección de Datos al correo: <a href="mailto:privacy@pawbooklife.com" style="color:var(--emerald-green); font-weight:700;">privacy@pawbooklife.com</a>. Su petición será procesada en un plazo máximo de 72 horas hábiles.</p>
+      </section>
+
+      <!-- 6. Retención y Eliminación de Datos -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🗑️</span> 6. Retención de Datos y Cierre de Cuenta</h3>
+        <p>Conservamos su información mientras su cuenta permanezca activa. Si usted decide eliminar su cuenta:</p>
+        <ul>
+          <li>Se revocarán inmediatamente todos los tokens de autenticación activos.</li>
+          <li>Sus videos y fotografías serán programados para borrado irreversible en nuestros buckets de Cloudflare R2.</li>
+          <li>Por exigencias de la propia tecnología blockchain, las transacciones pasadas firmadas en la red pública de Solana permanecerán inmutables en el registro distribuido descentralizado, pero desvinculadas de cualquier perfil activo en Pawbooklife.</li>
+        </ul>
+      </section>
+
+      <!-- 7. Cookies y Almacenamiento Local -->
+      <section class="legal-section">
+        <h3><span class="section-icon">🍪</span> 7. Cookies y Tecnologías de Almacenamiento Local</h3>
+        <p>En la versión web de Pawbooklife y el Dashboard utilizamos únicamente almacenamiento local técnico (Local Storage / Session Storage) para:</p>
+        <ul>
+          <li>Mantener la sesión iniciada del tutor de forma persistente y segura.</li>
+          <li>Recordar su preferencia de idioma seleccionada (Español, Inglés, Chino o Japonés).</li>
+          <li>Almacenar en caché temporal miniaturas de videos para reducir el consumo de datos y acelerar la navegación.</li>
+        </ul>
+        <p><strong>No utilizamos cookies de seguimiento publicitario de terceros ni píxeles invasivos de rastreo cruzado.</strong></p>
+      </section>
+
+      <!-- 8. Privacidad de Menores -->
+      <section class="legal-section">
+        <h3><span class="section-icon">👶</span> 8. Protección Especial para Menores de Edad</h3>
+        <p>Pawbooklife es un entorno familiar orientado a los animales. No recopilamos intencionalmente datos de menores de 13 años sin el consentimiento verificable de sus tutores legales. Si tenemos conocimiento de que un menor de 13 años ha creado una cuenta sin autorización parental, procederemos a la cancelación inmediata de dicha cuenta y a la supresión de sus datos.</p>
+      </section>
+
+      <!-- 9. Contacto de Cumplimiento -->
+      <section class="legal-section">
+        <h3><span class="section-icon">📬</span> 9. Canal Oficial de Soporte, Seguridad y Privacidad</h3>
+        <p>Si tiene dudas, preguntas sobre el tratamiento de sus datos, asistencia técnica en la app o desea reportar una vulnerabilidad de seguridad en nuestra plataforma o contratos de Solana, comuníquese con nuestro equipo:</p>
+        <ul>
+          <li><strong>Chat de Soporte en Vivo (Solana Web3):</strong> <a href="https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c" target="_blank" rel="noopener" style="color:var(--emerald-green); font-weight:700;">¡Únete a mi grupo "support pawbooklife" en SolChat Plus! 💬</a></li>
+          <li><strong>Correo de Soporte Directo:</strong> <a href="mailto:oc4389331@gmail.com" style="color:var(--emerald-green); font-weight:700;">oc4389331@gmail.com</a></li>
+          <li><strong>Soporte General a Tutores:</strong> <a href="mailto:support@pawbooklife.com" style="color:var(--emerald-green); font-weight:700;">support@pawbooklife.com</a></li>
+          <li><strong>Correo de Privacidad:</strong> <a href="mailto:privacy@pawbooklife.com" style="color:var(--emerald-green); font-weight:700;">privacy@pawbooklife.com</a></li>
+          <li><strong>Equipo Legal y Cumplimiento:</strong> <a href="mailto:legal@pawbooklife.com" style="color:var(--emerald-green); font-weight:700;">legal@pawbooklife.com</a></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 Pawbooklife. Todos los derechos reservados. Seguridad de nivel bancario y respeto a la privacidad animal en Solana ⚡</p>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -48,7 +48,7 @@ class MarketplaceScreen extends StatelessWidget {
     int selectedQuantity = 1;
     final dynamicAuthService = DynamicAuthService();
     final recipientWallet = AppConfig.marketplaceTreasuryWallet;
-    final double solRate = 150.0; // Approx SOL rate in USD
+    final double solRate = oracleController.solUsdPrice;
 
     showModalBottomSheet(
       context: context,
@@ -58,7 +58,7 @@ class MarketplaceScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final double totalUsd = item.priceUsd * selectedQuantity;
-            final double totalSol = totalUsd / solRate;
+            final double totalSol = oracleController.convertUsdToSol(totalUsd);
             final double totalSkr = oracleController.convertUsdToSkr(totalUsd);
 
             if (awaitingWalletConfirmation) {

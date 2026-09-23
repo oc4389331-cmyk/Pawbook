@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -198,9 +197,16 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
     final claimableUsd = double.parse(oracleController.convertSkrToUsd(totalSkr).toStringAsFixed(2));
     final claimableSol = oracleController.convertSkrToSol(totalSkr);
 
+    final minClaimUsd = AppConfig.minClaimAmountUsd;
+    final minClaimSol = oracleController.convertUsdToSol(minClaimUsd);
+    final minClaimSkr = oracleController.convertUsdToSkr(minClaimUsd);
+    final neededUsd = (minClaimUsd - claimableUsd).clamp(0.0, minClaimUsd);
+    final neededSol = oracleController.convertUsdToSol(neededUsd);
+    final neededSkr = oracleController.convertUsdToSkr(neededUsd);
+
     final nowUtc = DateTime.now().toUtc();
     final isMonday = nowUtc.weekday == AppConfig.claimDayOfWeek;
-    final hasMinBalance = claimableUsd >= 100.0;
+    final hasMinBalance = claimableUsd >= minClaimUsd;
     final canClaim = totalSkr > 0 && hasMinBalance && isMonday;
 
     return Container(
@@ -395,8 +401,10 @@ class _ClaimSponsorshipModalState extends State<ClaimSponsorshipModal> {
                           ),
                           Text(
                             hasMinBalance
-                                ? '✓ (\$${claimableUsd.toStringAsFixed(2)} USD)'
-                                : '✗ (\$${claimableUsd.toStringAsFixed(2)} / \$100.00 USD. Needed: \$${(100.0 - claimableUsd).toStringAsFixed(2)} USD)',
+                                ? '✓ \$${claimableUsd.toStringAsFixed(2)} USD (≈ ${claimableSol.toStringAsFixed(4)} SOL / ${totalSkr.toStringAsFixed(0)} \$SKR)'
+                                : (langController.currentLanguage == 'es'
+                                    ? '✗ \$${claimableUsd.toStringAsFixed(2)} / \$${minClaimUsd.toStringAsFixed(2)} USD (≈ ${minClaimSol.toStringAsFixed(4)} SOL / ${minClaimSkr.toStringAsFixed(0)} \$SKR). Faltan: \$${neededUsd.toStringAsFixed(2)} USD (≈ ${neededSol.toStringAsFixed(4)} SOL / ${neededSkr.toStringAsFixed(0)} \$SKR)'
+                                    : '✗ \$${claimableUsd.toStringAsFixed(2)} / \$${minClaimUsd.toStringAsFixed(2)} USD (≈ ${minClaimSol.toStringAsFixed(4)} SOL / ${minClaimSkr.toStringAsFixed(0)} \$SKR). Needed: \$${neededUsd.toStringAsFixed(2)} USD (≈ ${neededSol.toStringAsFixed(4)} SOL / ${neededSkr.toStringAsFixed(0)} \$SKR)'),
                             style: GoogleFonts.outfit(
                               fontSize: 11,
                               color: hasMinBalance ? AppTheme.emeraldGreen : AppTheme.textMutedWarm,
