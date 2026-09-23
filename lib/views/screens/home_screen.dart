@@ -146,18 +146,25 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   void _showTikTokRegistrationWall(BuildContext context, AuthController authController) {
     final langController = Provider.of<LanguageController>(context, listen: false);
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 650;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.bgWarmCream,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Column(
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            width: isDesktop ? 550 : double.infinity,
+            decoration: BoxDecoration(
+              color: AppTheme.bgWarmCream,
+              borderRadius: isDesktop
+                  ? const BorderRadius.all(Radius.circular(32))
+                  : const BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
@@ -264,10 +271,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   void _showCommentsModal(BuildContext context, PostModel post, String currentUserId, AuthController authController, LanguageController langController) {
     final commentController = TextEditingController();

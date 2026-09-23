@@ -70,29 +70,28 @@ class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 650;
     final lang = Provider.of<LanguageController>(context);
+    final modalHeight = (size.height * 0.90).clamp(480.0, 800.0);
 
-    final contentWidget = Container(
-      constraints: BoxConstraints(
-        maxHeight: size.height * 0.92,
-        maxWidth: isDesktop ? 650 : double.infinity,
-      ),
-      margin: isDesktop ? EdgeInsets.symmetric(horizontal: (size.width - 650) / 2) : EdgeInsets.zero,
-      decoration: BoxDecoration(
-        color: AppTheme.bgWarmCream,
-        borderRadius: isDesktop
-            ? const BorderRadius.all(Radius.circular(32))
-            : const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 28,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        height: modalHeight,
+        width: isDesktop ? 650 : double.infinity,
+        decoration: BoxDecoration(
+          color: AppTheme.bgWarmCream,
+          borderRadius: isDesktop
+              ? const BorderRadius.all(Radius.circular(32))
+              : const BorderRadius.vertical(top: Radius.circular(32)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 28,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
           // Drag handle indicator
           Padding(
             padding: const EdgeInsets.only(top: 14, bottom: 8),
@@ -490,10 +489,9 @@ class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
           ],
         ],
       ),
-    );
-
-    return contentWidget;
-  }
+    ),
+  );
+}
 
   // Segment Tab Button Builder
   Widget _buildTabButton({
