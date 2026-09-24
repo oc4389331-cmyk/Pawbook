@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const Stripe = require('stripe');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
@@ -323,6 +324,371 @@ app.get('/', (req, res, next) => {
     service: 'Pawtbook Backend API',
     version: '1.1.0',
     stripeWebhookPath: '/api/webhooks/stripe'
+  });
+});
+
+// --------------------------------------------------------------------------
+// 2B. DEVELOPER ANALYTICS & TRAFFIC DASHBOARD ENGINE
+// --------------------------------------------------------------------------
+const DEV_ADMIN_EMAILS = [
+  (process.env.DEV_ADMIN_EMAIL || 'oscar.romero@anda.gob.sv').toLowerCase().trim(),
+  'oscar.romero@anda.gob.sv',
+  'wernesto66@gmail.com'
+];
+const DEV_ADMIN_SALT = process.env.DEV_ADMIN_SALT || '8c69ae753cd022c2e034692546953f11';
+const DEV_ADMIN_PASSWORD_HASH = process.env.DEV_ADMIN_PASSWORD_HASH || '4bc3b10942bf1a29d09de85cd99d9a6e0a9999f30ddd9af978377468088a20d1a8bb9938ac8f519463eda8685e26844f5b3c577b8fc8c380454677d8a002f280';
+
+function verifyDevPassword(inputPassword) {
+  if (!inputPassword) return false;
+  try {
+    const inputHash = crypto.pbkdf2Sync(inputPassword, DEV_ADMIN_SALT, 100000, 64, 'sha512').toString('hex');
+    const inputBuf = Buffer.from(inputHash, 'hex');
+    const expectedBuf = Buffer.from(DEV_ADMIN_PASSWORD_HASH, 'hex');
+    if (inputBuf.length !== expectedBuf.length) return false;
+    return crypto.timingSafeEqual(inputBuf, expectedBuf);
+  } catch (err) {
+    console.error('Password verification error:', err);
+    return false;
+  }
+}
+
+// Active Dev Sessions (Token -> Session)
+const devSessions = new Map();
+
+function verifyDevToken(token) {
+  if (!token) return null;
+  const session = devSessions.get(token);
+  if (!session) return null;
+  if (Date.now() > session.expiresAt) {
+    devSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+// Resilient Traffic Analytics Store (Disk + Memory + Supabase)
+const trafficDataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(trafficDataDir)) {
+  fs.mkdirSync(trafficDataDir, { recursive: true });
+}
+const trafficDataFile = path.join(trafficDataDir, 'traffic_analytics.json');
+
+let trafficStore = {
+  events: [],
+  daily: {},
+  monthly: {}
+};
+
+try {
+  if (fs.existsSync(trafficDataFile)) {
+    const raw = fs.readFileSync(trafficDataFile, 'utf8');
+    trafficStore = JSON.parse(raw);
+    if (!trafficStore.events) trafficStore.events = [];
+    if (!trafficStore.daily) trafficStore.daily = {};
+    if (!trafficStore.monthly) trafficStore.monthly = {};
+  }
+} catch (e) {
+  console.warn('Initializing fresh traffic store:', e.message);
+}
+
+let saveTrafficTimer = null;
+function persistTrafficStore() {
+  if (saveTrafficTimer) return;
+  saveTrafficTimer = setTimeout(() => {
+    saveTrafficTimer = null;
+    try {
+      fs.writeFileSync(trafficDataFile, JSON.stringify(trafficStore, null, 2), 'utf8');
+    } catch (e) {
+      console.error('Error writing traffic_analytics.json:', e.message);
+    }
+  }, 1500);
+}
+
+function parseUserAgent(ua = '') {
+  let deviceType = 'desktop';
+  let os = 'Other';
+  let browser = 'Other';
+
+  if (/Mobile|Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+    deviceType = 'mobile';
+  } else if (/iPad|Tablet/i.test(ua)) {
+    deviceType = 'tablet';
+  }
+
+  if (/Android/i.test(ua)) os = 'Android';
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+  else if (/Windows NT/i.test(ua)) os = 'Windows';
+  else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+  else if (/Linux/i.test(ua)) os = 'Linux';
+
+  if (/Edg/i.test(ua)) browser = 'Edge';
+  else if (/Chrome/i.test(ua) && !/Chromium|Edg/i.test(ua)) browser = 'Chrome';
+  else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+  else if (/Firefox/i.test(ua)) browser = 'Firefox';
+  else if (/Opera|OPR/i.test(ua)) browser = 'Opera';
+
+  return { deviceType, os, browser };
+}
+
+function recordTrafficEvent(ev) {
+  trafficStore.events.unshift(ev);
+  if (trafficStore.events.length > 5000) {
+    trafficStore.events.length = 5000;
+  }
+
+  const dateStr = ev.created_at.slice(0, 10);
+  const monthStr = ev.created_at.slice(0, 7);
+
+  if (!trafficStore.daily[dateStr]) {
+    trafficStore.daily[dateStr] = {
+      landing_views: 0,
+      landing_uniques: [],
+      dashboard_views: 0,
+      dashboard_uniques: [],
+      devices: { mobile: 0, desktop: 0, tablet: 0 },
+      referrers: {},
+      routes: {}
+    };
+  }
+  const day = trafficStore.daily[dateStr];
+  if (ev.page_type === 'dashboard') {
+    day.dashboard_views++;
+    if (!day.dashboard_uniques.includes(ev.visitor_id)) {
+      day.dashboard_uniques.push(ev.visitor_id);
+    }
+  } else {
+    day.landing_views++;
+    if (!day.landing_uniques.includes(ev.visitor_id)) {
+      day.landing_uniques.push(ev.visitor_id);
+    }
+  }
+
+  day.devices[ev.device_type] = (day.devices[ev.device_type] || 0) + 1;
+  const refKey = (ev.referrer || 'direct').toLowerCase();
+  day.referrers[refKey] = (day.referrers[refKey] || 0) + 1;
+  day.routes[ev.path] = (day.routes[ev.path] || 0) + 1;
+
+  if (!trafficStore.monthly[monthStr]) {
+    trafficStore.monthly[monthStr] = {
+      landing_views: 0,
+      dashboard_views: 0,
+      uniques: []
+    };
+  }
+  const month = trafficStore.monthly[monthStr];
+  if (ev.page_type === 'dashboard') month.dashboard_views++;
+  else month.landing_views++;
+  if (!month.uniques.includes(ev.visitor_id)) {
+    month.uniques.push(ev.visitor_id);
+  }
+
+  persistTrafficStore();
+}
+
+// Dev Dashboard HTML Web View
+app.get(['/dev', '/dev-dashboard', '/admin/traffic', '/analytics'], (req, res) => {
+  const devDashboardPath = path.join(__dirname, 'public/dev_dashboard.html');
+  if (fs.existsSync(devDashboardPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(devDashboardPath);
+  }
+  return res.status(404).send('Dev Dashboard not found');
+});
+
+// Dev Auth Login
+app.post('/api/dev/auth/login', (req, res) => {
+  const { email, password } = req.body || {};
+  const normalizedEmail = (email || '').toLowerCase().trim();
+
+  const isValidEmail = DEV_ADMIN_EMAILS.includes(normalizedEmail);
+  const isValidPass = verifyDevPassword(password);
+
+  if (!isValidEmail || !isValidPass) {
+    return res.status(401).json({
+      success: false,
+      error: 'Credenciales inválidas. Verifica tu correo y contraseña.'
+    });
+  }
+
+  const token = 'pawt_dev_' + crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+  devSessions.set(token, { email: normalizedEmail, expiresAt });
+
+  return res.json({
+    success: true,
+    token,
+    dev: {
+      email: normalizedEmail,
+      role: 'Lead Developer'
+    }
+  });
+});
+
+// Telemetry Event Tracker (Landing & Dashboard)
+app.post('/api/analytics/track', async (req, res) => {
+  try {
+    const { visitorId, pageType, path: reqPath, referrer, screenWidth, language } = req.body || {};
+    if (!visitorId) return res.status(400).json({ error: 'Missing visitorId' });
+
+    const ua = req.headers['user-agent'] || '';
+    const parsed = parseUserAgent(ua);
+    let deviceType = parsed.deviceType;
+    if (screenWidth && screenWidth < 768) deviceType = 'mobile';
+    else if (screenWidth && screenWidth <= 1024) deviceType = 'tablet';
+
+    const country = req.headers['cf-ipcountry'] || req.headers['x-country-code'] || 'Desconocido';
+    const now = new Date();
+    const event = {
+      id: 'tr_' + crypto.randomBytes(8).toString('hex'),
+      visitor_id: visitorId,
+      page_type: pageType === 'dashboard' ? 'dashboard' : 'landing',
+      path: reqPath || (pageType === 'dashboard' ? '/dashboard' : '/'),
+      referrer: referrer || 'direct',
+      device_type: deviceType,
+      browser: parsed.browser,
+      os: parsed.os,
+      country: country,
+      created_at: now.toISOString()
+    };
+
+    recordTrafficEvent(event);
+
+    if (supabaseAdmin) {
+      supabaseAdmin.from('site_traffic').insert([{
+        visitor_id: event.visitor_id,
+        page_type: event.page_type,
+        path: event.path,
+        referrer: event.referrer,
+        device_type: event.device_type,
+        browser: event.browser,
+        os: event.os,
+        country: event.country,
+        created_at: event.created_at
+      }]).catch(() => {});
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Analytics track error:', err.message);
+    return res.status(500).json({ error: 'Track error' });
+  }
+});
+
+// Dev Traffic Stats Endpoint
+app.get('/api/dev/traffic/stats', (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const session = verifyDevToken(token);
+
+  if (!session) {
+    return res.status(401).json({ success: false, error: 'No autorizado. Sesión expirada.' });
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const thisMonthStr = new Date().toISOString().slice(0, 7);
+
+  const today = trafficStore.daily[todayStr] || {
+    landing_views: 0,
+    landing_uniques: [],
+    dashboard_views: 0,
+    dashboard_uniques: [],
+    devices: { mobile: 0, desktop: 0, tablet: 0 },
+    referrers: {},
+    routes: {}
+  };
+
+  const todayAllUniques = new Set([...today.landing_uniques, ...today.dashboard_uniques]);
+  const thisMonth = trafficStore.monthly[thisMonthStr] || { landing_views: 0, dashboard_views: 0, uniques: [] };
+
+  let totalLandingViews = 0;
+  let totalDashboardViews = 0;
+  let landingUniquesSet = new Set();
+  let dashboardUniquesSet = new Set();
+  let aggregatedDevices = { mobile: 0, desktop: 0, tablet: 0 };
+  let aggregatedReferrers = {};
+  let aggregatedRoutes = {};
+
+  const history_daily = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dKey = d.toISOString().slice(0, 10);
+    const dayData = trafficStore.daily[dKey];
+    if (dayData) {
+      const uSet = new Set([...dayData.landing_uniques, ...dayData.dashboard_uniques]);
+      history_daily.push({
+        date: dKey.slice(5),
+        fullDate: dKey,
+        landing_views: dayData.landing_views,
+        dashboard_views: dayData.dashboard_views,
+        uniques: uSet.size
+      });
+      totalLandingViews += dayData.landing_views;
+      totalDashboardViews += dayData.dashboard_views;
+      dayData.landing_uniques.forEach(id => landingUniquesSet.add(id));
+      dayData.dashboard_uniques.forEach(id => dashboardUniquesSet.add(id));
+      aggregatedDevices.mobile += dayData.devices.mobile || 0;
+      aggregatedDevices.desktop += dayData.devices.desktop || 0;
+      aggregatedDevices.tablet += dayData.devices.tablet || 0;
+      for (const [r, c] of Object.entries(dayData.referrers || {})) {
+        aggregatedReferrers[r] = (aggregatedReferrers[r] || 0) + c;
+      }
+      for (const [p, c] of Object.entries(dayData.routes || {})) {
+        aggregatedRoutes[p] = (aggregatedRoutes[p] || 0) + c;
+      }
+    } else {
+      history_daily.push({
+        date: dKey.slice(5),
+        fullDate: dKey,
+        landing_views: 0,
+        dashboard_views: 0,
+        uniques: 0
+      });
+    }
+  }
+
+  const history_monthly = [];
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const mKey = d.toISOString().slice(0, 7);
+    const mData = trafficStore.monthly[mKey];
+    const mIndex = parseInt(mKey.slice(5, 7), 10) - 1;
+    const label = `${monthNames[mIndex]} ${mKey.slice(2, 4)}`;
+    if (mData) {
+      history_monthly.push({
+        month: label,
+        uniques: mData.uniques.length,
+        views: mData.landing_views + mData.dashboard_views
+      });
+    } else {
+      history_monthly.push({
+        month: label,
+        uniques: 0,
+        views: 0
+      });
+    }
+  }
+
+  return res.json({
+    success: true,
+    summary: {
+      dau_today: todayAllUniques.size,
+      views_today: today.landing_views + today.dashboard_views,
+      mau_month: thisMonth.uniques.length,
+      views_month: thisMonth.landing_views + thisMonth.dashboard_views,
+      landing_views: totalLandingViews,
+      landing_uniques: landingUniquesSet.size,
+      dashboard_views: totalDashboardViews,
+      dashboard_uniques: dashboardUniquesSet.size
+    },
+    history_daily,
+    history_monthly,
+    devices: aggregatedDevices,
+    referrers: aggregatedReferrers,
+    routes: aggregatedRoutes,
+    recent_events: trafficStore.events.slice(0, 20)
   });
 });
 

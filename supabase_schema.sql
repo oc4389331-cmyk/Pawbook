@@ -300,4 +300,31 @@ CREATE POLICY "Public Products Update Access" ON public.marketplace_products FOR
 DROP POLICY IF EXISTS "Public Products Delete Access" ON public.marketplace_products;
 CREATE POLICY "Public Products Delete Access" ON public.marketplace_products FOR DELETE USING (true);
 
+-- ====================================================================
+-- 8. Developer Analytics & Traffic Tracking Table
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.site_traffic (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    visitor_id TEXT NOT NULL,
+    page_type TEXT NOT NULL,          -- 'landing' or 'dashboard'
+    path TEXT NOT NULL DEFAULT '/',
+    referrer TEXT DEFAULT 'direct',
+    device_type TEXT DEFAULT 'desktop', -- 'mobile', 'tablet', 'desktop'
+    browser TEXT DEFAULT 'Other',
+    os TEXT DEFAULT 'Other',
+    country TEXT DEFAULT 'Desconocido',
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_traffic_created_at ON public.site_traffic(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_site_traffic_page_type ON public.site_traffic(page_type);
+CREATE INDEX IF NOT EXISTS idx_site_traffic_visitor_id ON public.site_traffic(visitor_id);
+
+ALTER TABLE public.site_traffic ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Traffic Insert Access" ON public.site_traffic;
+CREATE POLICY "Public Traffic Insert Access" ON public.site_traffic FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admin Traffic Read Access" ON public.site_traffic;
+CREATE POLICY "Admin Traffic Read Access" ON public.site_traffic FOR SELECT USING (true);
+
 

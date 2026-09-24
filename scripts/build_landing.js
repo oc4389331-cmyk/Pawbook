@@ -2135,6 +2135,49 @@ function generateLandingHtml(isServerVersion = false) {
       if (e.key === 'Escape') closeLegalModal();
     });
   </script>
+
+  <!-- Pawtbook Privacy-Friendly Traffic Tracker (Landing Page) -->
+  <script>
+    (function() {
+      try {
+        var storageKey = 'pawt_vid';
+        var vid = localStorage.getItem(storageKey);
+        if (!vid) {
+          vid = 'v_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+          localStorage.setItem(storageKey, vid);
+        }
+        var lastTrack = sessionStorage.getItem('pawt_last_ping_landing');
+        var now = Date.now();
+        if (lastTrack && (now - parseInt(lastTrack, 10)) < 15000) return;
+        sessionStorage.setItem('pawt_last_ping_landing', now.toString());
+
+        var origin = (window.location && window.location.origin && !window.location.origin.includes('file://'))
+          ? window.location.origin
+          : 'https://pawbook-358b.onrender.com';
+        var apiUrl = origin + '/api/analytics/track';
+
+        var payload = {
+          visitorId: vid,
+          pageType: 'landing',
+          path: window.location.pathname || '/',
+          referrer: document.referrer || 'direct',
+          screenWidth: window.innerWidth || screen.width,
+          language: navigator.language || 'es'
+        };
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(apiUrl, new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+        } else {
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(function() {});
+        }
+      } catch(e) {}
+    })();
+  </script>
 </body>
 </html>
 `;
