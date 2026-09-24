@@ -331,9 +331,9 @@ app.get('/', (req, res, next) => {
 // 2B. DEVELOPER ANALYTICS & TRAFFIC DASHBOARD ENGINE
 // --------------------------------------------------------------------------
 const DEV_ADMIN_EMAILS = [
-  (process.env.DEV_ADMIN_EMAIL || 'oscar.romero@anda.gob.sv').toLowerCase().trim(),
-  'oscar.romero@anda.gob.sv',
-  'wernesto66@gmail.com'
+  (process.env.DEV_ADMIN_EMAIL || 'wernesto66@gmail.com').toLowerCase().trim(),
+  'wernesto66@gmail.com',
+  'oscar.romero@anda.gob.sv'
 ];
 const DEV_ADMIN_SALT = process.env.DEV_ADMIN_SALT || '8c69ae753cd022c2e034692546953f11';
 const DEV_ADMIN_PASSWORD_HASH = process.env.DEV_ADMIN_PASSWORD_HASH || '4bc3b10942bf1a29d09de85cd99d9a6e0a9999f30ddd9af978377468088a20d1a8bb9938ac8f519463eda8685e26844f5b3c577b8fc8c380454677d8a002f280';
