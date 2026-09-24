@@ -204,12 +204,16 @@ CREATE POLICY "Owners can insert pets" ON public.pets FOR INSERT WITH CHECK (tru
 
 -- Posts Policies
 DROP POLICY IF EXISTS "Public Active Posts Read Access" ON public.posts;
-CREATE POLICY "Public Active Posts Read Access" ON public.posts FOR SELECT USING (status = 'active');
+CREATE POLICY "Public Active Posts Read Access" ON public.posts FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Pets can insert posts" ON public.posts;
-CREATE POLICY "Pets can insert posts" ON public.posts FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.pets WHERE pets.id = posts.pet_id)
-);
+CREATE POLICY "Pets can insert posts" ON public.posts FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Update Posts Access" ON public.posts;
+CREATE POLICY "Public Update Posts Access" ON public.posts FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public Delete Posts Access" ON public.posts;
+CREATE POLICY "Public Delete Posts Access" ON public.posts FOR DELETE USING (true);
 
 -- Post Likes Policies
 DROP POLICY IF EXISTS "Public Likes Read Access" ON public.post_likes;

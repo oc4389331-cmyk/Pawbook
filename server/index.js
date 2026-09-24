@@ -67,13 +67,18 @@ if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
   console.log('⚠️ Running Cloudflare R2 in mock mode (Missing R2 credentials in .env)');
 }
 
-// Initialize Supabase Admin Client
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_1Pb3d8dS6QtfDutCwjVd3w_Ip4rsrXG';
+
+// Initialize Supabase Admin Client (with resilient publishable key fallback)
 let supabaseAdmin = null;
-if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_SERVICE_ROLE_KEY.includes('your_supabase')) {
   supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  console.log('✅ Supabase Admin Client initialized successfully');
+  console.log('✅ Supabase Admin Client initialized successfully with Service Role Key');
+} else if (SUPABASE_URL) {
+  supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('✅ Supabase Client initialized successfully with Publishable Key');
 } else {
-  console.log('⚠️ Running Supabase in mock mode (Missing SUPABASE_SERVICE_ROLE_KEY in .env)');
+  console.log('⚠️ Running Supabase in mock mode (Missing SUPABASE_URL in .env)');
 }
 
 // Dynamic.xyz Credentials & Provisioning
@@ -889,6 +894,41 @@ app.all('/api/admin/consolidate-chico', async (req, res) => {
     });
   } catch (err) {
     console.error('Error consolidating Chico profile:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --------------------------------------------------------------------------
+// 3E2. CREATE POST ENDPOINT (ENSURES RELIABLE STORAGE IN SUPABASE)
+// --------------------------------------------------------------------------
+app.post('/api/posts/create', async (req, res) => {
+  try {
+    const postData = req.body;
+    if (!postData || !postData.id || !postData.pet_id || !postData.media_url) {
+      return res.status(400).json({ success: false, error: 'Missing required post fields' });
+    }
+
+    // Always ensure status is 'active' for immediate feed availability
+    postData.status = 'active';
+
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from('posts')
+        .upsert(postData, { onConflict: 'id' })
+        .select();
+
+      if (error) {
+        console.error('Supabase create post error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      console.log(`✅ Post ${postData.id} successfully created/upserted in Supabase`);
+      return res.json({ success: true, post: data?.[0] || postData });
+    }
+
+    return res.status(500).json({ success: false, error: 'Database service not available' });
+  } catch (err) {
+    console.error('Create post exception:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

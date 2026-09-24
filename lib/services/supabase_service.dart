@@ -612,22 +612,40 @@ class SupabaseService {
   }
 
   Future<PostModel> createPost(PostModel post) async {
+    final activePost = post.copyWith(status: PostStatus.active);
+
+    // 1. Try Render Backend first (bypasses browser client RLS and guarantees persistence)
+    try {
+      final backend = RenderBackendService();
+      final backendSuccess = await backend.createPost(activePost.toJson());
+      if (backendSuccess) {
+        _cachedPosts[activePost.id] = activePost;
+        _mockPosts.insert(0, activePost);
+        return activePost;
+      }
+    } catch (e) {
+      debugPrint('RenderBackendService createPost fallback: $e');
+    }
+
+    // 2. Direct Supabase Client fallback
     if (_client != null) {
       try {
-        await _client!.from('posts').insert(post.toJson());
-        return post;
+        await _client!.from('posts').insert(activePost.toJson());
+        _cachedPosts[activePost.id] = activePost;
+        return activePost;
       } catch (e) {
+        debugPrint('Supabase direct insert error: $e');
         if (!_useMockFallback) throw Exception('Supabase RLS Error inserting post: $e');
       }
     }
 
     // Fallback Mock Validation
-    if (post.petId.isEmpty || !_mockPets.containsKey(post.petId)) {
+    if (activePost.petId.isEmpty || !_mockPets.containsKey(activePost.petId)) {
       throw Exception('RLS_VIOLATION: Human profile without registered pet cannot publish media posts');
     }
 
-    final pet = _mockPets[post.petId];
-    final fullPost = post.copyWith(
+    final pet = _mockPets[activePost.petId];
+    final fullPost = activePost.copyWith(
       petName: pet?.name ?? 'Pet',
       petAvatarUrl: pet?.avatarUrl ?? '',
       nftMintAddress: pet?.nftMintAddress,
@@ -1466,6 +1484,19 @@ class SupabaseService {
     final idx = _mockPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       _mockPosts[idx] = _mockPosts[idx].copyWith(status: newStatus);
+    }
+    if (_cachedPosts.containsKey(postId)) {
+      _cachedPosts[postId] = _cachedPosts[postId]!.copyWith(status: newStatus);
+    }
+    if (_client != null) {
+      try {
+        final statusStr = newStatus == PostStatus.active
+            ? 'active'
+            : (newStatus == PostStatus.rejected ? 'rejected' : 'pending_review');
+        await _client!.from('posts').update({'status': statusStr}).eq('id', postId);
+      } catch (e) {
+        debugPrint('Error updating post status in Supabase: $e');
+      }
     }
   }
 

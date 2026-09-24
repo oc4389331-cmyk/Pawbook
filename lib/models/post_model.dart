@@ -121,6 +121,7 @@ class PostModel {
       'caption': caption,
       'likes_count': likesCount,
       'views_count': viewsCount,
+      'comments_count': commentsCount,
       'tags': tags,
       'status': statusStr,
       'report_count': reportCount,

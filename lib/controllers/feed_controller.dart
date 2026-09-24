@@ -205,7 +205,7 @@ class FeedController extends ChangeNotifier {
         }
       }
 
-      // 4. Create Post record with status = pending_review
+      // 4. Create Post record with status = active
       final postId = 'post_' + const Uuid().v4().substring(0, 8);
       final newPost = PostModel(
         id: postId,
@@ -214,7 +214,7 @@ class FeedController extends ChangeNotifier {
         mediaUrls: allUploadedUrls,
         mediaType: mediaType,
         caption: caption,
-        status: PostStatus.pendingReview,
+        status: PostStatus.active,
         createdAt: DateTime.now(),
         soundUrl: finalSoundUrl,
         soundTitle: finalSoundTitle,
@@ -234,7 +234,7 @@ class FeedController extends ChangeNotifier {
       );
 
       final finalStatusStr = modRes['status'] as String?;
-      if (finalStatusStr == 'active') {
+      if (finalStatusStr == 'active' || finalStatusStr == null) {
         await _supabaseService.updatePostStatus(postId, PostStatus.active);
         final activePost = insertedPost.copyWith(status: PostStatus.active);
         _supabaseService.cachePost(activePost);

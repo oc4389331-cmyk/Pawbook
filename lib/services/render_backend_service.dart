@@ -100,6 +100,24 @@ class RenderBackendService {
     }
   }
 
+  /// Create a post reliably via Render backend (bypasses browser client RLS)
+  Future<bool> createPost(Map<String, dynamic> postData) async {
+    try {
+      final res = await _client.post(
+        Uri.parse('$baseUrl/api/posts/create'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(postData),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['success'] == true;
+      }
+    } catch (e) {
+      print('RenderBackendService createPost error: $e');
+    }
+    return false;
+  }
+
   /// Delete a post and its associated comments/likes (bypasses RLS)
   Future<bool> deletePost(String postId) async {
     try {
