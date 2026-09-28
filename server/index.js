@@ -17,8 +17,17 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ [UnhandledRejection Guard]:', reason);
 });
 
+let ffmpeg = null;
+let ffmpegInstaller = null;
+try {
+  ffmpeg = require('fluent-ffmpeg');
+  ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+} catch (e) {
+  console.warn('⚠️ FFmpeg module load note:', e.message);
+}
+
 let ffmpegPathConfigured = false;
-if (ffmpegInstaller && ffmpegInstaller.path) {
+if (ffmpeg && ffmpegInstaller && ffmpegInstaller.path) {
   try {
     if (fs.existsSync(ffmpegInstaller.path)) {
       if (process.platform !== 'win32') {
