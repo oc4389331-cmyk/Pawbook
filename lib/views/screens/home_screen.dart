@@ -33,6 +33,7 @@ import 'marketplace_screen.dart';
 import 'pet_profile_screen.dart';
 import 'rewards_store_screen.dart';
 import '../../config/app_routes.dart';
+import '../../services/video_cache_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -82,7 +83,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authController = Provider.of<AuthController>(context, listen: false);
       final feedController = Provider.of<FeedController>(context, listen: false);
-      feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id);
+      feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id).then((_) {
+        if (mounted) {
+          _precacheUpcomingVideos(feedController.posts, -1);
+        }
+      });
       if (authController.currentProfile != null) {
         feedController.getFollowedPets(authController.currentProfile!.id).then((pets) {
           if (mounted) {
@@ -1385,6 +1390,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               itemCount: feedController.posts.length,
               onPageChanged: (index) {
                 setState(() => _currentFeedPage = index);
+                _precacheUpcomingVideos(feedController.posts, index);
                 if (!authController.isAuthenticated && index > 0) {
                   TermsAndConditionsModal.show(
                     context,
@@ -2736,5 +2742,18 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ),
       ),
     );
+  }
+
+  void _precacheUpcomingVideos(List<PostModel> posts, int currentIndex) {
+    if (posts.isEmpty) return;
+    for (int offset = 1; offset <= 2; offset++) {
+      final targetIndex = currentIndex + offset;
+      if (targetIndex >= 0 && targetIndex < posts.length) {
+        final targetPost = posts[targetIndex];
+        if (targetPost.mediaType == 'video' && targetPost.mediaUrl.isNotEmpty) {
+          VideoCacheService.instance.precacheVideo(targetPost.mediaUrl);
+        }
+      }
+    }
   }
 }

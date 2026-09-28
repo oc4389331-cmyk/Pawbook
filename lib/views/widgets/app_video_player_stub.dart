@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../services/video_cache_service.dart';
 import '../../theme/app_theme.dart';
 
 class AppVideoPlayerWeb extends StatefulWidget {
@@ -85,11 +87,24 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
     }
 
     try {
-      final uri = Uri.parse(url);
-      final controller = VideoPlayerController.networkUrl(
-        uri,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
+      final cachedFile = await VideoCacheService.instance.getCachedFile(url);
+      final VideoPlayerController controller;
+
+      if (cachedFile != null && cachedFile is File) {
+        debugPrint('[AppVideoPlayer] ⚡ Reproduciendo desde caché local en disco: $url');
+        controller = VideoPlayerController.file(
+          cachedFile,
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
+      } else {
+        final uri = Uri.parse(url);
+        controller = VideoPlayerController.networkUrl(
+          uri,
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
+        // Precache in background for future offline loops/replays
+        VideoCacheService.instance.precacheVideo(url);
+      }
       _controller = controller;
 
       await controller.initialize();
