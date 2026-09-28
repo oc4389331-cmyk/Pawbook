@@ -278,20 +278,9 @@ app.get('/api/health', (req, res) => {
     stripeWebhookPath: '/api/webhooks/stripe'
   });
 });
-// APK Direct Download endpoint (for Solana Seeker / Android users)
-app.get(['/download/apk', '/apk', '/download', '/app.apk', '/pawbook.apk'], (req, res) => {
-  const candidatePaths = [
-    path.join(__dirname, 'public/app-release.apk'),
-    path.join(__dirname, '../build/app/outputs/flutter-apk/app-release.apk'),
-    path.join(__dirname, 'public/Pawbook.apk'),
-  ];
-  for (const apkPath of candidatePaths) {
-    if (fs.existsSync(apkPath)) {
-      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-      return res.download(apkPath, 'pawbooklife.apk');
-    }
-  }
-  return res.status(404).send('APK no disponible para descarga en este momento. Por favor visita la tienda Solana Seeker dApp Store o la versión web.');
+// APK download routes disabled for security (offline local installation only)
+app.get(['/download/apk', '/apk', '/download', '/app.apk', '/pawbook.apk', '/app-release.apk'], (req, res) => {
+  return res.status(403).json({ error: 'Descarga pública deshabilitada por motivos de seguridad.' });
 });
 
 // Explicit route for Pawbooklife Presentation Landing Page & Community / Group Invitations
