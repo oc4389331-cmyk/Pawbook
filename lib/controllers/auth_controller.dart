@@ -103,58 +103,24 @@ class AuthController extends ChangeNotifier {
 
             debugPrint('[Auth] Google OAuth signedIn: email=$email, name=$fullName');
 
-            // Leer intención OAuth desde almacenamiento persistente (sobrevive redirección en web)
-            final storedOauthAction = AuthStorageService.instance.getItem('pawtbook_oauth_action');
-            final isSignUpMode = storedOauthAction == 'signup' || _pendingIsSignUp || (kIsWeb && Uri.base.queryParameters['isSignUp'] == 'true');
-            final isLoginMode = storedOauthAction == 'login' || (kIsWeb && Uri.base.queryParameters['isSignUp'] == 'false');
-
-            // 1. VALIDACIÓN EN MODO "CREAR CUENTA" (Sign Up):
-            // Si el usuario eligió "Crear Cuenta" con Google, pero la cuenta ya existe en base de datos -> BLOQUEAR
-            if (isSignUpMode) {
-              final existingByWallet = await _supabaseService.getProfileByWallet(wallet);
-              final existingByEmail = (email != null && email.isNotEmpty) ? await _supabaseService.getProfileByEmail(email) : null;
-              final existing = existingByWallet ?? existingByEmail;
-
-              if (existing != null) {
-                debugPrint('[Auth] Cuenta existente encontrada para ${email ?? wallet} en modo Crear Cuenta - bloqueando.');
-                AuthStorageService.instance.removeItem('pawtbook_oauth_action');
-                _pendingIsSignUp = false;
-                await Supabase.instance.client.auth.signOut();
-                _errorMessage = '⚠️ Este correo (${email ?? "Google"}) ya tiene una cuenta registrada en Pawbook. Por favor, selecciona "Iniciar Sesión".';
-                _setLoading(false);
-                notifyListeners();
-                return;
-              }
-            }
-
-            // 2. VALIDACIÓN EN MODO "INICIAR SESIÓN" (Login):
-            // Si el usuario eligió "Iniciar Sesión" con Google, pero no tiene cuenta creada -> BLOQUEAR
-            if (isLoginMode) {
-              final existingByWallet = await _supabaseService.getProfileByWallet(wallet);
-              final existingByEmail = (email != null && email.isNotEmpty) ? await _supabaseService.getProfileByEmail(email) : null;
-              final existing = existingByWallet ?? existingByEmail;
-
-              if (existing == null) {
-                debugPrint('[Auth] No existe cuenta para ${email ?? wallet} en modo Iniciar Sesión - bloqueando.');
-                AuthStorageService.instance.removeItem('pawtbook_oauth_action');
-                await Supabase.instance.client.auth.signOut();
-                _errorMessage = '⚠️ No existe una cuenta registrada con el correo (${email ?? "este usuario"}). Por favor, ve a "Crear Cuenta".';
-                _setLoading(false);
-                notifyListeners();
-                return;
-              }
-            }
-
-            // Limpiar la intención de OAuth una vez completada la validación
+            // Limpiar la intención de OAuth tras completar el flujo
             AuthStorageService.instance.removeItem('pawtbook_oauth_action');
             _pendingIsSignUp = false;
 
+            // Buscar perfil existente por email o wallet
+            ProfileModel? existing;
+            if (email != null && email.isNotEmpty) {
+              existing = await _supabaseService.getProfileByEmail(email);
+            }
+            existing ??= await _supabaseService.getProfileByWallet(wallet);
+
             await _processAuthenticatedUser(
-              walletAddress: wallet,
+              walletAddress: existing?.walletAddress ?? wallet,
               email: email,
               fullName: fullName,
               avatarUrl: avatarUrl,
               jwtToken: session.accessToken,
+              existingProfile: existing,
             );
           }
         });
@@ -473,11 +439,11 @@ class AuthController extends ChangeNotifier {
       // 3. Web Redirect OAuth only for Web browsers
       if (kIsWeb && Supabase.instance.client != null) {
         try {
-          final baseRedirect = Uri.base.host.contains('pawbooklife.com')
-              ? 'https://pawbooklife.com'
-              : (Uri.base.host.contains('onrender.com')
-                  ? 'https://pawbook-358b.onrender.com'
-                  : 'http://localhost:3000');
+          final origin = Uri.base.origin;
+          // Use /app on custom domains or origin path to guarantee landing on Flutter Web
+          final baseRedirect = origin.contains('pawbooklife.com')
+              ? '$origin/app'
+              : origin;
 
           _pendingIsSignUp = isSignUp;
           AuthStorageService.instance.setItem('pawtbook_oauth_action', isSignUp ? 'signup' : 'login');
@@ -650,6 +616,43 @@ class AuthController extends ChangeNotifier {
       if (isLoggedOut || _userLoggedOutExplicitly) {
         debugPrint('[Auth] No se restaura sesión: usuario cerró sesión explícitamente.');
         return false;
+      }
+
+      // 0. Si hay una sesión activa de Supabase (ej. retorno de Google OAuth en Web)
+      if (kIsWeb && Supabase.instance.client != null) {
+        try {
+          final supaSession = Supabase.instance.client.auth.currentSession;
+          if (supaSession?.user != null && _currentProfile == null) {
+            final user = supaSession!.user;
+            final meta = user.userMetadata ?? {};
+            final email = user.email ?? meta['email']?.toString();
+            final fullName = meta['full_name']?.toString() ?? meta['name']?.toString();
+            final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString();
+            final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
+
+            ProfileModel? existing;
+            if (email != null && email.isNotEmpty) {
+              existing = await _supabaseService.getProfileByEmail(email);
+            }
+            existing ??= await _supabaseService.getProfileByWallet(wallet);
+
+            await _processAuthenticatedUser(
+              walletAddress: existing?.walletAddress ?? wallet,
+              email: email,
+              fullName: fullName,
+              avatarUrl: avatarUrl,
+              jwtToken: supaSession.accessToken,
+              existingProfile: existing,
+            );
+
+            if (_currentProfile != null) {
+              notifyListeners();
+              return true;
+            }
+          }
+        } catch (e) {
+          debugPrint('[Auth] Error restaurando sesión desde Supabase currentSession: $e');
+        }
       }
 
       final savedUserId = storage.getItem('pawtbook_logged_user_id');

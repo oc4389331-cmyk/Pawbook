@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
@@ -98,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
 
   void _showQuickGoogleFallbackModal(AuthController authController, LanguageController langController) {
-    final emailCtrl = TextEditingController(text: 'wernesto66@gmail.com');
+    final emailCtrl = TextEditingController();
     bool isModalLoading = false;
     String? modalError;
 
@@ -249,7 +250,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ? _nameController.text.trim()
           : null,
     );
-    if (success && mounted) {
+    // On mobile, native 1-tap completes synchronously. On web, signInWithOAuth redirects the browser.
+    // We should only navigate away if the user is ACTUALLY authenticated.
+    if (!kIsWeb && success && mounted) {
+      _onLoginSuccess();
+    } else if (mounted && authController.isAuthenticated) {
       _onLoginSuccess();
     } else if (mounted && authController.errorMessage != null) {
       _showQuickGoogleFallbackModal(authController, langController);

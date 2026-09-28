@@ -494,7 +494,7 @@ class SupabaseService {
         final res = await _client!
             .from('posts')
             .select('*, pets(*)')
-            .eq('status', 'active')
+            .neq('status', 'rejected')
             .order('created_at', ascending: false);
 
         posts = (res as List).map((e) => PostModel.fromJson(e)).toList();

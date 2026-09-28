@@ -103,6 +103,7 @@ class FeedController extends ChangeNotifier {
     double? endSeconds,
     double? originalVolume,
     double? musicVolume,
+    bool? isTrimmed,
   }) async {
     // 1. Role Check: Only Pet Creators can publish
     if (pet == null || pet.id.isEmpty) {
@@ -136,15 +137,15 @@ class FeedController extends ChangeNotifier {
       String? finalSoundUrl = soundUrl;
       String? finalSoundTitle = soundTitle;
 
-      // 3B. Si es video y tiene audio, overlays o recortes, procesarlo mediante el pipeline FFmpeg en backend
+      // 3B. Si es video y tiene audio adicional, stickers o recortes efectivos, procesarlo mediante backend
       if (mediaType == 'video') {
         final hasOverlays = overlayPngBytes != null && overlayPngBytes.isNotEmpty;
         final hasSound = soundUrl != null && soundUrl.isNotEmpty;
-        final hasTrim = (startSeconds != null && startSeconds > 0) || (endSeconds != null && endSeconds < 30.0);
+        final hasTrim = isTrimmed ?? (startSeconds != null && startSeconds > 0.2);
 
         if (hasOverlays || hasSound || hasTrim) {
           try {
-            debugPrint('[FeedController] 🎬 Procesando video con FFmpeg: overlays=$hasOverlays, audio=$hasSound');
+            debugPrint('[FeedController] 🎬 Procesando video: overlays=$hasOverlays, audio=$hasSound, trim=$hasTrim');
             final processRes = await _renderBackendService.processVideo(
               petId: pet.id,
               videoUrl: finalUploadedUrl,
@@ -156,17 +157,17 @@ class FeedController extends ChangeNotifier {
               musicVolume: musicVolume ?? 0.8,
             );
 
-            if (processRes['success'] == true && processRes['publicUrl'] != null) {
+            if (processRes['success'] == true &&
+                processRes['publicUrl'] != null &&
+                (processRes['publicUrl'] as String).isNotEmpty) {
               finalUploadedUrl = processRes['publicUrl'] as String;
               debugPrint('[FeedController] ✅ Video procesado exitosamente: $finalUploadedUrl');
 
-              // Si el audio quedó integrado directamente en la pista del archivo de video,
-              // evitamos que el reproductor de feed reproduzca una pista externa duplicada
               if (processRes['audioIntegrated'] == true) {
                 finalSoundUrl = null;
               }
             } else {
-              debugPrint('[FeedController] ⚠️ FFmpeg no disponible o falló, usando video original: ${processRes["error"]}');
+              debugPrint('[FeedController] ℹ️ Continuando con video original: ${processRes["error"] ?? processRes["message"]}');
             }
           } catch (procEx) {
             debugPrint('[FeedController] ⚠️ Excepción en processVideo, continuando con video base: $procEx');

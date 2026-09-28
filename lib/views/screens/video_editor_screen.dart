@@ -133,6 +133,7 @@ class VideoEditorResult {
   final double originalVolume;
   final double musicVolume;
   final Uint8List? overlayPngBytes;
+  final bool isTrimmed;
 
   const VideoEditorResult({
     required this.videoBytes,
@@ -145,6 +146,7 @@ class VideoEditorResult {
     this.originalVolume = 1.0,
     this.musicVolume = 0.8,
     this.overlayPngBytes,
+    this.isTrimmed = false,
   });
 
   double get duration => endSeconds - startSeconds;
@@ -161,6 +163,7 @@ class VideoEditorResult {
     double? originalVolume,
     double? musicVolume,
     Uint8List? overlayPngBytes,
+    bool? isTrimmed,
   }) {
     return VideoEditorResult(
       videoBytes: videoBytes ?? this.videoBytes,
@@ -173,6 +176,7 @@ class VideoEditorResult {
       originalVolume: originalVolume ?? this.originalVolume,
       musicVolume: musicVolume ?? this.musicVolume,
       overlayPngBytes: overlayPngBytes ?? this.overlayPngBytes,
+      isTrimmed: isTrimmed ?? this.isTrimmed,
     );
   }
 }
@@ -433,6 +437,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
       end = start + AppConfig.maxVideoDurationSeconds;
     }
 
+    final bool actuallyTrimmed = start > 0.2 || (_totalVideoDuration > 0 && (_totalVideoDuration - end) > 0.8);
+
     final result = VideoEditorResult(
       videoBytes: widget.videoBytes,
       filename: widget.filename,
@@ -444,6 +450,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
       originalVolume: _originalVolume,
       musicVolume: _musicVolume,
       overlayPngBytes: overlayBytes,
+      isTrimmed: actuallyTrimmed,
     );
 
     if (mounted) {

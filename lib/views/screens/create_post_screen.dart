@@ -46,7 +46,8 @@ class CreatePostScreen extends StatefulWidget {
   State<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
-class _CreatePostScreenState extends State<CreatePostScreen> {
+class _CreatePostScreenState extends State<CreatePostScreen>
+    with SingleTickerProviderStateMixin {
   final _captionController = TextEditingController();
   PetModel? _selectedPet;
   String _mediaType = 'image';
@@ -66,6 +67,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String? _playingId;
   bool _isAudioPlaying = false;
 
+  // Huellita de carga pulsante
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +78,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (authController.userPets.isNotEmpty) {
       _selectedPet = authController.activePet ?? authController.userPets.first;
     }
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.88, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _audioPlayer.onPlayingChanged.listen((isPlaying) {
       if (mounted) {
@@ -92,6 +105,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _captionController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -461,8 +475,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1084,7 +1101,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ],
         ),
       ),
-    );
+      if (_isUploading) _buildUploadingOverlay(),
+    ],
+  ),
+);
   }
 
   // ── Dimensions Guide Widget ────────────────────────────────────────────────
@@ -1323,7 +1343,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() {
       _isUploading = true;
       _uploadStatusMessage = _mediaType == 'video'
-          ? 'Verificando bienestar animal con IA 🐾...'
+          ? 'Subiendo video a Cloudflare R2 ☁️...'
           : 'Publicando en Pawtbook...';
     });
     await _audioPlayer.stop();
@@ -1336,6 +1356,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final extraNames = _pickedMedia.length > 1
           ? _pickedMedia.sublist(1).map((m) => m.filename).toList()
           : null;
+
+      if (_mediaType == 'video') {
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted && _isUploading) {
+            setState(() {
+              _uploadStatusMessage = 'Verificando bienestar animal con IA 🐾...';
+            });
+          }
+        });
+      }
 
       await feedController.createPetPost(
         pet: _selectedPet,
@@ -1352,6 +1382,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         endSeconds: _videoEditorResult?.endSeconds,
         originalVolume: _videoEditorResult?.originalVolume,
         musicVolume: _videoEditorResult?.musicVolume,
+        isTrimmed: _videoEditorResult?.isTrimmed,
       );
 
       // Award 50 PawtScore points for uploading pet videos/posts
@@ -1359,28 +1390,370 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         final authController = Provider.of<AuthController>(context, listen: false);
         authController.addPawtScore(AppConfig.pointsForVideoUpload);
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            '¡Publicación subida! 🐾 +${AppConfig.pointsForVideoUpload} PawtScore${_selectedSound != null ? " 🎵 Con ${_selectedSound!.title}" : ""}',
-            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: AppTheme.emeraldGreen,
-        ));
-        Navigator.of(context).pop();
+        setState(() => _isUploading = false);
+
+        // Notificar al usuario con el modal de confirmación de subida exitosa
+        _showUploadSuccessDialog(
+          _selectedPet!.name,
+          AppConfig.pointsForVideoUpload,
+          _selectedSound?.title,
+        );
       }
     } on ModerationRejectedException catch (modEx) {
       if (mounted) {
+        setState(() => _isUploading = false);
         _showModerationRejectionDialog(modEx.reason);
       }
     } catch (e) {
-      if (e.toString().contains('MODERATION_REJECTED') || e.toString().contains('Rechazado')) {
-        if (mounted) _showModerationRejectionDialog(e.toString());
-      } else {
-        if (mounted) _showSnack('Error al publicar: $e', isError: true);
+      if (mounted) {
+        setState(() => _isUploading = false);
+        if (e.toString().contains('MODERATION_REJECTED') || e.toString().contains('Rechazado')) {
+          _showModerationRejectionDialog(e.toString());
+        } else {
+          // Notificar al usuario con el modal de error y opción de reintento
+          _showUploadErrorDialog(
+            errorMessage: e.toString().replaceAll('Exception:', '').trim(),
+            onRetry: () => _submitPost(feedController),
+          );
+        }
       }
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted && _isUploading) setState(() => _isUploading = false);
     }
+  }
+
+  // ── Pantalla / Huellita de Carga Animada ──────────────────────────────────
+  Widget _buildUploadingOverlay() {
+    return PopScope(
+      canPop: false,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.72),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 340),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+            decoration: BoxDecoration(
+              color: AppTheme.bgWarmCream,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+              border: Border.all(color: AppTheme.borderWarm, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Huellita animada pulsante con resplandor
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppTheme.brandCoral, AppTheme.accentOrange],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.brandCoral.withValues(alpha: 0.45),
+                              blurRadius: 22 * _pulseAnimation.value,
+                              spreadRadius: 4 * _pulseAnimation.value,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.pets_rounded,
+                          color: Colors.white,
+                          size: 46,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  _mediaType == 'video' ? 'Subiendo Video 🐾' : 'Subiendo Publicación 🐾',
+                  style: GoogleFonts.fredoka(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimaryDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    _uploadStatusMessage,
+                    key: ValueKey(_uploadStatusMessage),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryTerracotta,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: const SizedBox(
+                    width: 180,
+                    height: 6,
+                    child: LinearProgressIndicator(
+                      backgroundColor: AppTheme.borderWarm,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brandCoral),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Por favor no cierres la app mientras aseguramos tu publicación',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: AppTheme.textMutedWarm,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Modal de Confirmación de Subida Exitosa ────────────────────────────────
+  void _showUploadSuccessDialog(String petName, int pawtScore, String? soundTitle) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgWarmCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded, color: AppTheme.emeraldGreen, size: 52),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              '¡Publicación Exitosa! 🎉',
+              style: GoogleFonts.fredoka(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryDark,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'El video de $petName ya se subió y está activo en el feed para toda la comunidad 🐾',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: AppTheme.textPrimaryDark.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.emeraldGreen.withValues(alpha: 0.12),
+                    AppTheme.accentOrange.withValues(alpha: 0.12),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.stars_rounded, color: AppTheme.emeraldGreen, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    '+$pawtScore PawtScore ganados',
+                    style: GoogleFonts.fredoka(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.emeraldGreen,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (soundTitle != null && soundTitle.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.music_note_rounded, size: 16, color: AppTheme.primaryTerracotta),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      soundTitle,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textMutedWarm,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.brandCoral,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 3,
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop(true);
+                },
+                child: Text(
+                  '¡Genial, ver en Feed!',
+                  style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Modal de Notificación de Error con Reintento ───────────────────────────
+  void _showUploadErrorDialog({required String errorMessage, required VoidCallback onRetry}) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgWarmCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 50),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No se pudo subir el video',
+              style: GoogleFonts.fredoka(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryDark,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Ocurrió un problema de conexión o procesamiento al subir tu video. Tu contenido sigue intacto aquí para que no lo pierdas.',
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: AppTheme.textPrimaryDark.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.red.shade800),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(
+                      'Revisar video',
+                      style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.brandCoral,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      'Reintentar',
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      onRetry();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showModerationRejectionDialog(String reason) {
