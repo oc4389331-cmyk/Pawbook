@@ -278,7 +278,6 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                       ? VideoThumbnailWidget(
                                           mediaUrl: currentVideo.mediaUrl,
                                           mediaType: 'video',
-                                          fallbackImageUrl: widget.pet.avatarUrl,
                                         )
                                       : const Icon(Icons.movie_rounded, color: AppTheme.accentOrange),
                                 ),
@@ -867,7 +866,6 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                                 ? VideoThumbnailWidget(
                                     mediaUrl: video.mediaUrl,
                                     mediaType: 'video',
-                                    fallbackImageUrl: widget.pet.avatarUrl,
                                   )
                                 : const Center(
                                     child: Icon(Icons.movie_rounded, color: AppTheme.primaryTerracotta, size: 28),

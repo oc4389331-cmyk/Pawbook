@@ -139,7 +139,7 @@ class SharePostModal extends StatelessWidget {
                     child: VideoThumbnailWidget(
                       mediaUrl: post.mediaUrl,
                       mediaType: post.mediaType,
-                      fallbackImageUrl: post.petAvatarUrl,
+                      fallbackImageUrl: post.mediaType == 'image' ? post.petAvatarUrl : null,
                     ),
                   ),
                 ),

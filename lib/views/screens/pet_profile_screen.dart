@@ -1545,7 +1545,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             VideoThumbnailWidget(
                               mediaUrl: post.mediaUrl,
                               mediaType: post.mediaType,
-                              fallbackImageUrl: widget.pet.avatarUrl,
+                              fallbackImageUrl: post.mediaType == 'image' ? widget.pet.avatarUrl : null,
                             ),
                             // Video Icon indicator overlay
                             if (post.mediaType == 'video' || post.mediaUrl.toLowerCase().contains('.mp4'))
