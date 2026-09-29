@@ -43,6 +43,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
+  final SupabaseService _supabaseService = SupabaseService();
   int _currentIndex = 0;
   final PageController _pageController = PageController();
   int _currentFeedPage = 0;
@@ -82,6 +83,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     _initDeepLinks();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authController = Provider.of<AuthController>(context, listen: false);
+      _supabaseService.recordTrafficVisit(
+        pageType: 'dashboard',
+        path: '/feed',
+        visitorId: authController.currentProfile?.id,
+      );
       final feedController = Provider.of<FeedController>(context, listen: false);
       feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id).then((_) {
         if (mounted) {

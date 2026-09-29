@@ -1784,6 +1784,37 @@ class SupabaseService {
     }
     return false;
   }
+
+  /// Records real user traffic into the `site_traffic` Supabase table.
+  /// Automatically captures device type, path, and page type for Web & Android.
+  Future<void> recordTrafficVisit({
+    required String pageType,
+    String path = '/',
+    String? visitorId,
+  }) async {
+    if (_client == null) return;
+    try {
+      final effectiveVisitorId = visitorId ?? _client?.auth.currentUser?.id ?? 'v_guest_${DateTime.now().millisecondsSinceEpoch}';
+      
+      String deviceType = kIsWeb ? 'desktop' : 'mobile';
+      String osName = kIsWeb ? 'Web' : 'Android';
+
+      await _client!.from('site_traffic').insert({
+        'visitor_id': effectiveVisitorId,
+        'page_type': pageType,
+        'path': path,
+        'referrer': kIsWeb ? 'web_direct' : 'app_android',
+        'device_type': deviceType,
+        'browser': kIsWeb ? 'Browser' : 'FlutterApp',
+        'os': osName,
+        'country': 'Desconocido',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('[Supabase] 📊 Visita registrada en site_traffic ($pageType - $osName)');
+    } catch (e) {
+      debugPrint('[Supabase] Error grabando en site_traffic: $e');
+    }
+  }
 }
 
 

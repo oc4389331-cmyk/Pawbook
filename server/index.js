@@ -56,7 +56,7 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'pawtbook-media';
 const R2_CUSTOM_DOMAIN = process.env.R2_CUSTOM_DOMAIN || 'https://media.pawbooklife.com';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phltvzkhbnjpfrgphvvw.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
@@ -591,17 +591,28 @@ app.post('/api/analytics/track', async (req, res) => {
     recordTrafficEvent(event);
 
     if (supabaseAdmin) {
-      supabaseAdmin.from('site_traffic').insert([{
-        visitor_id: event.visitor_id,
-        page_type: event.page_type,
-        path: event.path,
-        referrer: event.referrer,
-        device_type: event.device_type,
-        browser: event.browser,
-        os: event.os,
-        country: event.country,
-        created_at: event.created_at
-      }]).catch(() => {});
+      try {
+        const { error: insErr } = await supabaseAdmin.from('site_traffic').insert([{
+          visitor_id: event.visitor_id,
+          page_type: event.page_type,
+          path: event.path,
+          referrer: event.referrer,
+          device_type: event.device_type,
+          browser: event.browser,
+          os: event.os,
+          country: event.country,
+          created_at: event.created_at
+        }]);
+        if (insErr) {
+          console.error('⚠️ [SiteTraffic Supabase Error]:', insErr.message || insErr);
+        } else {
+          console.log(`✅ [SiteTraffic] Saved to Supabase: ${event.visitor_id} (${event.page_type})`);
+        }
+      } catch (dbErr) {
+        console.error('⚠️ [SiteTraffic Exception]:', dbErr.message);
+      }
+    } else {
+      console.warn('⚠️ [SiteTraffic] supabaseAdmin is not initialized');
     }
 
     return res.json({ success: true });
