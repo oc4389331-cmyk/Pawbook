@@ -606,7 +606,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                 Expanded(
                   child: ChoiceChip(
                     avatar: Icon(Icons.videocam_rounded, size: 20, color: _mediaType == 'video' ? Colors.white : AppTheme.solanaPurple),
-                    label: Text('Video (<30s)', style: GoogleFonts.fredoka(color: _mediaType == 'video' ? Colors.white : AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
+                    label: Text(langController.t('videoShortLabel'), style: GoogleFonts.fredoka(color: _mediaType == 'video' ? Colors.white : AppTheme.textPrimaryDark, fontWeight: FontWeight.bold)),
                     selected: _mediaType == 'video',
                     selectedColor: AppTheme.solanaPurple,
                     backgroundColor: AppTheme.pastelLavender.withValues(alpha: 0.5),
@@ -637,7 +637,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                     TextButton.icon(
                       onPressed: () => setState(() => _pickedMedia.clear()),
                       icon: const Icon(Icons.clear_all, size: 16, color: Colors.redAccent),
-                      label: Text('Limpiar', style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 12)),
+                      label: Text(langController.t('clearBtn'), style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 12)),
                     ),
                 ],
               ),
@@ -1166,6 +1166,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   // ── Royalty-Free Sound Selection Widget ────────────────────────────────────
   Widget _buildSoundSelectionSection() {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1174,7 +1175,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             const Icon(Icons.music_note_rounded, color: AppTheme.accentOrange, size: 20),
             const SizedBox(width: 8),
             Text(
-              'Sonido / Música para tu Post',
+              lang.t('postSoundTitle'),
               style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.warmBrown, fontSize: 14),
             ),
             const Spacer(),
@@ -1182,7 +1183,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               TextButton.icon(
                 onPressed: _clearSound,
                 icon: const Icon(Icons.close, size: 14, color: Colors.redAccent),
-                label: Text('Quitar sonido', style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 12)),
+                label: Text(lang.t('removeSoundBtn'), style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 12)),
               ),
           ],
         ),
@@ -1536,6 +1537,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   // ── Modal de Confirmación de Subida Exitosa ────────────────────────────────
   void _showUploadSuccessDialog(String petName, int pawtScore, String? soundTitle) {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1556,7 +1558,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             const SizedBox(height: 18),
             Text(
-              '¡Publicación Exitosa! 🎉',
+              lang.t('uploadSuccessTitle'),
               style: GoogleFonts.fredoka(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -1566,7 +1568,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'El video de $petName ya se subió y está activo en el feed para toda la comunidad 🐾',
+              lang.t('uploadSuccessDesc').replaceAll('{name}', petName),
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: AppTheme.textPrimaryDark.withValues(alpha: 0.8),
@@ -1592,7 +1594,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   const Icon(Icons.stars_rounded, color: AppTheme.emeraldGreen, size: 22),
                   const SizedBox(width: 8),
                   Text(
-                    '+$pawtScore PawtScore ganados',
+                    lang.t('pawtScoreEarned').replaceAll('{points}', '$pawtScore'),
                     style: GoogleFonts.fredoka(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.emeraldGreen,
@@ -1639,7 +1641,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                   Navigator.of(context).pop(true);
                 },
                 child: Text(
-                  '¡Genial, ver en Feed!',
+                  lang.t('viewInFeedBtn'),
                   style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1652,6 +1654,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
 
   // ── Modal de Notificación de Error con Reintento ───────────────────────────
   void _showUploadErrorDialog({required String errorMessage, required VoidCallback onRetry}) {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -1672,7 +1675,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No se pudo subir el video',
+              lang.t('uploadErrorTitle'),
               style: GoogleFonts.fredoka(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -1682,7 +1685,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             const SizedBox(height: 10),
             Text(
-              'Ocurrió un problema de conexión o procesamiento al subir tu video. Tu contenido sigue intacto aquí para que no lo pierdas.',
+              lang.t('uploadErrorDesc'),
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 color: AppTheme.textPrimaryDark.withValues(alpha: 0.8),
@@ -1723,7 +1726,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                     ),
                     onPressed: () => Navigator.of(ctx).pop(),
                     child: Text(
-                      'Revisar video',
+                      lang.t('reviewVideoBtn'),
                       style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 14),
                     ),
                   ),
@@ -1739,7 +1742,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                     ),
                     icon: const Icon(Icons.refresh_rounded, size: 18),
                     label: Text(
-                      'Reintentar',
+                      lang.t('retryBtn'),
                       style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     onPressed: () {
@@ -1757,6 +1760,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
   }
 
   void _showModerationRejectionDialog(String reason) {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     final cleanReason = reason
         .replaceAll('Exception:', '')
         .replaceAll('MODERATION_REJECTED:', '')
@@ -1781,7 +1785,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Filtro de Seguridad 🐾',
+                lang.t('securityFilterTitle'),
                 style: GoogleFonts.fredoka(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1812,7 +1816,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                     child: Text(
                       cleanReason.isNotEmpty
                           ? cleanReason
-                          : 'No pudimos verificar la presencia de una mascota o el contenido no cumple las políticas de bienestar animal de Pawtbook.',
+                          : lang.t('moderationDefaultReason'),
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -1825,13 +1829,13 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             const SizedBox(height: 14),
             Text(
-              'Políticas de la comunidad Pawtbook:',
+              lang.t('communityPoliciesTitle'),
               style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimaryDark),
             ),
             const SizedBox(height: 6),
-            _buildModerationRuleItem('🐾', 'Las mascotas deben ser visibles en el video (perros, gatos, aves, etc.).'),
-            _buildModerationRuleItem('❤️', 'Los tutores humanos son bienvenidos interactuando con cariño con su mascota.'),
-            _buildModerationRuleItem('🚫', 'Tolerancia cero a maltrato, peleas, dolor forzado o negligencia animal.'),
+            _buildModerationRuleItem('🐾', lang.t('ruleVisiblePets')),
+            _buildModerationRuleItem('❤️', lang.t('ruleHumanInteraction')),
+            _buildModerationRuleItem('🚫', lang.t('ruleZeroCruelty')),
           ],
         ),
         actions: [
@@ -1844,7 +1848,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>
             ),
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              'Entendido',
+              lang.t('understood'),
               style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),

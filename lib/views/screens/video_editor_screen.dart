@@ -315,6 +315,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   }
 
   void _openTextEditorModal() {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     final textController = TextEditingController();
     Color selectedColor = Colors.white;
     Color selectedBg = Colors.black87;
@@ -339,7 +340,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Agregar Texto al Video', style: GoogleFonts.fredoka(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(lang.t('addTextToVideo'), style: GoogleFonts.fredoka(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white70),
                       onPressed: () => Navigator.pop(ctx),
@@ -352,7 +353,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                   autofocus: true,
                   style: GoogleFonts.fredoka(color: selectedColor, fontSize: 18),
                   decoration: InputDecoration(
-                    hintText: 'Escribe algo divertido...',
+                    hintText: lang.t('writeSomethingFun'),
                     hintStyle: GoogleFonts.fredoka(color: Colors.white38),
                     filled: true,
                     fillColor: selectedBg,
@@ -362,7 +363,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Text('Color de texto:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                    Text(lang.t('textColorLabel'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
                     const SizedBox(width: 10),
                     ...[Colors.white, AppTheme.accentOrange, AppTheme.solanaGreen, AppTheme.solanaPurple, Colors.yellowAccent].map((c) => GestureDetector(
                       onTap: () => setModalState(() => selectedColor = c),
@@ -390,7 +391,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     icon: const Icon(Icons.check_rounded),
-                    label: Text('Agregar al Video', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15)),
+                    label: Text(lang.t('addToVideoBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 15)),
                     onPressed: () {
                       final text = textController.text.trim();
                       if (text.isNotEmpty) {
@@ -580,7 +581,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       children: [
                         const Icon(Icons.movie_filter_rounded, color: AppTheme.accentOrange, size: 16),
                         const SizedBox(width: 6),
-                        Text('Pawtbook Video Studio 🎬', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                        Text(lang.t('videoStudioHeader'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -635,7 +636,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildActiveToolBottomPanel(),
+              child: _buildActiveToolBottomPanel(lang),
             ),
           ],
         ),
@@ -780,22 +781,22 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   }
 
   // ── Bottom Active Tool Drawers ─────────────────────────────────────────────
-  Widget _buildActiveToolBottomPanel() {
+  Widget _buildActiveToolBottomPanel(LanguageController lang) {
     if (_activeTool == 'ratio') {
-      return _buildRatioPanel();
+      return _buildRatioPanel(lang);
     } else if (_activeTool == 'trim') {
-      return _buildTrimPanel();
+      return _buildTrimPanel(lang);
     } else if (_activeTool == 'filter') {
       return _buildFilterPanel();
     } else if (_activeTool == 'stickers') {
-      return _buildStickersPanel();
+      return _buildStickersPanel(lang);
     } else if (_activeTool == 'audio') {
-      return _buildAudioPanel();
+      return _buildAudioPanel(lang);
     }
     return const SizedBox.shrink();
   }
 
-  Widget _buildRatioPanel() {
+  Widget _buildRatioPanel(LanguageController lang) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -809,7 +810,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('📐 Formato & Adaptación de Video', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Text(lang.t('videoFormatTitle'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70, size: 18),
                 onPressed: () => setState(() => _activeTool = 'none'),
@@ -819,27 +820,27 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildRatioOption('📱 Vertical', '9:16', 9 / 16),
+              _buildRatioOption(lang.t('ratioVertical'), '9:16', 9 / 16),
               const SizedBox(width: 8),
-              _buildRatioOption('🖥️ Horizontal', '16:9', 16 / 9),
+              _buildRatioOption(lang.t('ratioHorizontal'), '16:9', 16 / 9),
               const SizedBox(width: 8),
-              _buildRatioOption('⏹️ Cuadrado', '1:1', 1.0),
+              _buildRatioOption(lang.t('ratioSquare'), '1:1', 1.0),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Text('Modo de encuadre:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+              Text(lang.t('framingModeLabel'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
               const Spacer(),
               ChoiceChip(
-                label: Text('Ajustar (Sin cortes)', style: GoogleFonts.fredoka(fontSize: 11)),
+                label: Text(lang.t('fitNoCrop'), style: GoogleFonts.fredoka(fontSize: 11)),
                 selected: _videoFit == BoxFit.contain,
                 selectedColor: AppTheme.primaryTerracotta,
                 onSelected: (s) => setState(() => _videoFit = BoxFit.contain),
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: Text('Rellenar', style: GoogleFonts.fredoka(fontSize: 11)),
+                label: Text(lang.t('fillCrop'), style: GoogleFonts.fredoka(fontSize: 11)),
                 selected: _videoFit == BoxFit.cover,
                 selectedColor: AppTheme.accentOrange,
                 onSelected: (s) => setState(() => _videoFit = BoxFit.cover),
@@ -895,7 +896,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     );
   }
 
-  Widget _buildTrimPanel() {
+  Widget _buildTrimPanel(LanguageController lang) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -908,9 +909,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('✂️ Recortar Video', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(lang.t('trimVideoTitle'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               Text(
-                'Duración: ${(_trimRange.end - _trimRange.start).toStringAsFixed(1)}s (Máx 30s)',
+                lang.t('durationMaxLabel').replaceAll('{sec}', (_trimRange.end - _trimRange.start).toStringAsFixed(1)),
                 style: GoogleFonts.outfit(color: AppTheme.solanaGreen, fontSize: 12, fontWeight: FontWeight.bold),
               ),
               IconButton(
@@ -948,8 +949,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Inicio: ${_trimRange.start.toStringAsFixed(1)}s', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 11)),
-              Text('Fin: ${_trimRange.end.toStringAsFixed(1)}s', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 11)),
+              Text(lang.t('trimStart').replaceAll('{sec}', _trimRange.start.toStringAsFixed(1)), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 11)),
+              Text(lang.t('trimEnd').replaceAll('{sec}', _trimRange.end.toStringAsFixed(1)), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 11)),
             ],
           ),
         ],
@@ -1009,7 +1010,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     );
   }
 
-  Widget _buildStickersPanel() {
+  Widget _buildStickersPanel(LanguageController lang) {
     return Container(
       height: 220,
       padding: const EdgeInsets.all(16),
@@ -1023,7 +1024,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('😀 Stickers & Emojis para Mascotas', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Text(lang.t('stickersTitle'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70, size: 16),
                 onPressed: () => setState(() => _activeTool = 'none'),
@@ -1045,7 +1046,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                   onTap: () => _addOverlay(OverlayType.sticker, sticker),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.white12),
                     ),
@@ -1067,9 +1068,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     setState(() => _selectedSound = null);
   }
 
-  Widget _buildAudioPanel() {
+  Widget _buildAudioPanel(LanguageController lang) {
     return Container(
-      height: 280,
+      height: 310,
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: Color(0xFF18181B),
@@ -1081,7 +1082,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('🎵 Mezclador de Audio & Música', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Text(lang.t('audioMixerTitle'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1093,7 +1094,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                       ),
                       onPressed: _clearSound,
                       icon: const Icon(Icons.close_rounded, size: 14, color: Colors.redAccent),
-                      label: Text('Quitar sonido', style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 11)),
+                      label: Text(lang.t('removeSoundBtn'), style: GoogleFonts.fredoka(color: Colors.redAccent, fontSize: 11)),
                     ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white70, size: 16),
@@ -1109,7 +1110,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
             children: [
               const Icon(Icons.videocam_rounded, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
-              Text('Video:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11)),
+              Text(lang.t('videoLabel'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11)),
               Expanded(
                 child: Slider(
                   value: _originalVolume,
@@ -1122,7 +1123,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
               const SizedBox(width: 8),
               const Icon(Icons.music_note_rounded, color: AppTheme.solanaGreen, size: 16),
               const SizedBox(width: 6),
-              Text('Música:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11)),
+              Text(lang.t('musicLabel'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11)),
               Expanded(
                 child: Slider(
                   value: _musicVolume,
@@ -1138,7 +1139,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
             ],
           ),
           const SizedBox(height: 8),
-          Text('Canciones Royalty-Free:', style: GoogleFonts.fredoka(color: Colors.white60, fontSize: 11)),
+          Text(lang.t('royaltyFreeSongs'), style: GoogleFonts.fredoka(color: Colors.white60, fontSize: 11)),
           const SizedBox(height: 6),
           Expanded(
             child: ListView.separated(
@@ -1151,14 +1152,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
                     dense: true,
                     leading: const Text('🚫', style: TextStyle(fontSize: 20)),
                     title: Text(
-                      'Sin Música (Audio Original)',
+                      lang.t('noMusicOriginalAudio'),
                       style: GoogleFonts.fredoka(
                         color: isNoSound ? AppTheme.accentOrange : Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Text('Usar solo el audio del video', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
+                    subtitle: Text(lang.t('useVideoAudioOnly'), style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
                     trailing: isNoSound
                         ? const Icon(Icons.check_circle_rounded, color: AppTheme.accentOrange, size: 18)
                         : null,

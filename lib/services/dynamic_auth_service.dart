@@ -145,18 +145,43 @@ class DynamicAuthService {
         final res = await SolanaWebBridge.instance.connectWallet(methodName);
         if (res['success'] == true && res['address'] != null) {
           realSolanaAddress = res['address'].toString();
-        } else if (res['error'] != null) {
+          final sig = res['signature']?.toString();
+          final signed = res['signed'] == true;
+
+          // Exigir firma real para billeteras externas en web
+          if (!signed || sig == null || sig.isEmpty) {
+            debugPrint('[$walletType Web] ❌ Conexión rechazada: Falta la firma criptográfica obligatoria.');
+            return DynamicAuthResult(
+              isSuccess: false,
+              errorMessage: 'Firma requerida: Por seguridad, debes firmar la solicitud con $walletType para verificar tu identidad.',
+            );
+          }
+
+          debugPrint('[$walletType Web] ✅ Conectado y verificado con firma criptográfica: $realSolanaAddress');
+          return DynamicAuthResult(
+            isSuccess: true,
+            walletAddress: realSolanaAddress,
+            jwtToken: 'siws_${type}_$sig',
+          );
+        } else {
+          final isCancelled = res['userCancelled'] == true;
+          final isNotInstalled = res['isNotInstalled'] == true;
+          final err = res['error']?.toString();
           return DynamicAuthResult(
             isSuccess: false,
-            errorMessage: res['isNotInstalled'] == true
-                ? 'Wallet $walletType no está instalada.'
-                : res['userCancelled'] == true
-                    ? 'Conexión cancelada por el usuario.'
-                    : res['error'].toString(),
+            errorMessage: isNotInstalled
+                ? 'La extensión de la wallet $walletType no está instalada en tu navegador.'
+                : isCancelled
+                    ? 'Firma cancelada: Se requiere firmar el mensaje con tu wallet para verificar tu identidad y evitar fraudes.'
+                    : (err ?? 'No se pudo autenticar y firmar con la wallet $walletType.'),
           );
         }
       } catch (e) {
         debugPrint('Wallet connect error: $e');
+        return DynamicAuthResult(
+          isSuccess: false,
+          errorMessage: 'Error al conectar con la wallet $walletType: $e',
+        );
       }
     }
 
@@ -195,12 +220,19 @@ class DynamicAuthService {
           // 3. Retardo de estabilización para compatibilidad con Seed Vault / Solflare (patrón SolChatPlus)
           await Future.delayed(const Duration(milliseconds: 1200));
 
-          // 4. Mensaje de autenticación para verificación de identidad mediante huella
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final message = 'AUTH REQUEST: PAWBOOKLIFE\n\nPlease sign this message to verify your identity.\n\nWallet: $address\nTimestamp: $timestamp';
-          final messageBytes = Uint8List.fromList(message.codeUnits);
+          // 4. Mensaje oficial de seguridad anti-estafas SIWS
+          final nonce = '${Random().nextInt(99999999)}_${DateTime.now().millisecondsSinceEpoch}';
+          final message = '🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\n\n'
+              'Por favor firma este mensaje para verificar que eres el propietario de esta billetera e iniciar sesión de forma segura.\n\n'
+              '• Billetera: $address\n'
+              '• Fecha: ${DateTime.now().toIso8601String()}\n'
+              '• Código de Seguridad (Nonce): $nonce\n\n'
+              '🔒 NOTA DE SEGURIDAD:\n'
+              'Esta firma es 100% gratuita (0 SOL gas) y NO realiza ninguna transacción económica ni transferencia de fondos.\n'
+              'Verifica tu identidad y protege tu cuenta contra estafas y suplantaciones.';
+          final messageBytes = Uint8List.fromList(utf8.encode(message));
 
-          debugPrint('[SolanaMWA] Solicitando firma biométrica (Huella Digital / PIN) en Seed Vault...');
+          debugPrint('[SolanaMWA] Solicitando firma biométrica (Huella Digital / PIN) en Seed Vault / Wallet...');
 
           // 5. Firma del mensaje con reintentos para solicitar huella dactilar al usuario
           SignMessagesResult? signResult;
@@ -235,7 +267,7 @@ class DynamicAuthService {
         if (errorStr.contains('cancel') || errorStr.contains('reject') || errorStr.contains('denied') || errorStr.contains('declined') || errorStr.contains('user cancelled')) {
           return DynamicAuthResult(
             isSuccess: false,
-            errorMessage: 'Verificación biométrica cancelada o rechazada en la billetera.',
+            errorMessage: 'Firma cancelada o rechazada en la billetera. Para proteger tu cuenta y evitar fraudes, la verificación de firma es obligatoria.',
           );
         }
         // Si falló por timeout o error real en dispositivo Android (no canal mock de tests unitarios)
@@ -249,6 +281,27 @@ class DynamicAuthService {
         try {
           await session?.close();
         } catch (_) {}
+      }
+    }
+
+    // Safeguard: Tanto en Web como en APK móvil, las billeteras externas (Phantom, Solflare, Seeker) deben firmar obligatoriamente y NUNCA caer en mock fallback
+    if (kIsWeb) {
+      if (!type.contains('dynamic') && !type.contains('embedded') && !type.contains('nueva')) {
+        if (realSolanaAddress == null || realSolanaAddress.isEmpty) {
+          return DynamicAuthResult(
+            isSuccess: false,
+            errorMessage: 'No se pudo verificar la firma criptográfica con la billetera $walletType. La firma es estrictamente obligatoria por seguridad.',
+          );
+        }
+      }
+    } else {
+      if (!type.contains('dynamic') && !type.contains('embedded') && !type.contains('pawtbook') && !type.contains('seeker')) {
+        if (realSolanaAddress == null || realSolanaAddress.isEmpty) {
+          return DynamicAuthResult(
+            isSuccess: false,
+            errorMessage: 'No se pudo verificar la firma criptográfica con la billetera $walletType. Por favor asegúrate de tener la app de $walletType instalada y firmar la solicitud.',
+          );
+        }
       }
     }
 

@@ -1140,7 +1140,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       controller: fullNameController,
                       decoration: InputDecoration(
                         labelText: langController.t('fullNameLabel'),
-                        hintText: 'Ej. Juan Pérez',
+                        hintText: langController.t('tutorFullNameHint'),
                         prefixIcon: const Icon(Icons.badge_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
                         fillColor: AppTheme.surfaceWarm,
@@ -1154,7 +1154,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       controller: usernameController,
                       decoration: InputDecoration(
                         labelText: langController.t('usernameLabel'),
-                        hintText: 'Ej. @juan_pawt',
+                        hintText: langController.t('tutorUsernameHint'),
                         prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryTerracotta),
                         filled: true,
                         fillColor: AppTheme.surfaceWarm,
@@ -1169,7 +1169,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       maxLines: 2,
                       decoration: InputDecoration(
                         labelText: langController.t('humanBioLabel'),
-                        hintText: 'Amante de las mascotas y tutor de Firulais 🐾',
+                        hintText: langController.t('tutorBioHint'),
                         prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primaryTerracotta),
                         filled: true,
                         fillColor: AppTheme.surfaceWarm,
@@ -1393,6 +1393,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
+              allowImplicitScrolling: true,
               itemCount: feedController.posts.length,
               onPageChanged: (index) {
                 setState(() => _currentFeedPage = index);
@@ -1880,7 +1881,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                               SnackBar(
                                 backgroundColor: AppTheme.brandCoral,
                                 content: Text(
-                                  '🗑️ Publicación eliminada con éxito',
+                                  langController.t('postDeletedSuccess'),
                                   style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -2189,12 +2190,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           if (authController.hasPet && onSwitchToPet != null)
             IconButton(
               icon: const Icon(Icons.pets_rounded, color: AppTheme.primaryTerracotta, size: 26),
-              tooltip: 'Cambiar a Perfil de Mascota (@${authController.activePet?.name ?? "Mascota"})',
+              tooltip: '${langController.t('switchToPetProfile')} (@${authController.activePet?.name ?? ""})',
               onPressed: onSwitchToPet,
             ),
           IconButton(
             icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryTerracotta),
-            tooltip: 'Editar Perfil Humano',
+            tooltip: langController.t('editHumanProfileTooltip'),
             onPressed: () => _showEditHumanProfileModal(context, authController),
           ),
           IconButton(
@@ -2752,13 +2753,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
   void _precacheUpcomingVideos(List<PostModel> posts, int currentIndex) {
     if (posts.isEmpty) return;
-    for (int offset = 1; offset <= 2; offset++) {
-      final targetIndex = currentIndex + offset;
-      if (targetIndex >= 0 && targetIndex < posts.length) {
-        final targetPost = posts[targetIndex];
-        if (targetPost.mediaType == 'video' && targetPost.mediaUrl.isNotEmpty) {
-          VideoCacheService.instance.precacheVideo(targetPost.mediaUrl);
-        }
+    // Precache current video (if not already cached) and the next 4 upcoming videos
+    final startIndex = currentIndex < 0 ? 0 : currentIndex;
+    final endIndex = (startIndex + 4 < posts.length) ? startIndex + 4 : posts.length - 1;
+    for (int i = startIndex; i <= endIndex; i++) {
+      final targetPost = posts[i];
+      if (targetPost.mediaType == 'video' && targetPost.mediaUrl.isNotEmpty) {
+        VideoCacheService.instance.precacheVideo(targetPost.mediaUrl);
       }
     }
   }

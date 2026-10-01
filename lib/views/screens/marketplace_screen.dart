@@ -247,7 +247,7 @@ class MarketplaceScreen extends StatelessWidget {
                         TextField(
                           controller: manualSigController,
                           decoration: InputDecoration(
-                            hintText: 'Pega la firma de 88 caracteres de Solana...',
+                            hintText: langController.t('pasteTxSignatureHint'),
                             hintStyle: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             filled: true,
@@ -269,11 +269,11 @@ class MarketplaceScreen extends StatelessWidget {
                               SnackBar(
                                 backgroundColor: AppTheme.primaryTerracotta,
                                 duration: const Duration(seconds: 3),
-                                content: Text('Proceso cerrado. No se descontó el artículo.', style: GoogleFonts.fredoka(color: Colors.white)),
+                                content: Text(langController.t('purchaseCancelledNotice'), style: GoogleFonts.fredoka(color: Colors.white)),
                               ),
                             );
                           },
-                          child: Text('❌ Cancelar (No se realizó el pago)', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 12.5)),
+                          child: Text(langController.t('cancelNoPaymentBtn'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm, fontSize: 12.5)),
                         ),
                       ),
                     ],
@@ -1098,6 +1098,7 @@ class MarketplaceScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setAdminState) {
             final isR2Url = selectedImageUrl.startsWith('https://media.pawbooklife.com');
+            final lang = Provider.of<LanguageController>(context, listen: false);
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.90,
@@ -1141,7 +1142,7 @@ class MarketplaceScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              'Panel Admin: Bandanas & Stock',
+                              lang.t('adminBandanasTitle'),
                               style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                             ),
                           ],
@@ -1170,7 +1171,7 @@ class MarketplaceScreen extends StatelessWidget {
                               const Icon(Icons.add_photo_alternate_rounded, color: AppTheme.primaryTerracotta, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                'Añadir Nueva Bandana (Cloudflare & Supabase)',
+                                lang.t('addNewBandanaHeader'),
                                 style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
                               ),
                             ],
@@ -1181,8 +1182,8 @@ class MarketplaceScreen extends StatelessWidget {
                           TextField(
                             controller: nameCtrl,
                             decoration: InputDecoration(
-                              labelText: 'Nombre de la Bandana',
-                              hintText: 'Ej. Sunset Safari Bandana 🐾',
+                              labelText: lang.t('bandanaNameLabel'),
+                              hintText: lang.t('bandanaNameHint'),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             ),
@@ -1197,7 +1198,7 @@ class MarketplaceScreen extends StatelessWidget {
                                   controller: priceUsdCtrl,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   decoration: InputDecoration(
-                                    labelText: 'Precio USD (\$)',
+                                    labelText: lang.t('priceUsdLabel'),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   ),
@@ -1209,7 +1210,7 @@ class MarketplaceScreen extends StatelessWidget {
                                   controller: pricePtsCtrl,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
-                                    labelText: 'Puntos (pts)',
+                                    labelText: lang.t('pricePtsLabel'),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   ),
@@ -1221,7 +1222,7 @@ class MarketplaceScreen extends StatelessWidget {
                                   controller: stockCtrl,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
-                                    labelText: 'Stock Inicial',
+                                    labelText: lang.t('initialStockLabel'),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   ),
@@ -1235,8 +1236,8 @@ class MarketplaceScreen extends StatelessWidget {
                           TextField(
                             controller: tagCtrl,
                             decoration: InputDecoration(
-                              labelText: 'Etiqueta / Tag',
-                              hintText: 'Ej. Solana Exclusive, Nuevo',
+                              labelText: lang.t('bandanaTagLabel'),
+                              hintText: lang.t('bandanaTagHint'),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             ),
@@ -1275,7 +1276,7 @@ class MarketplaceScreen extends StatelessWidget {
                           const SizedBox(height: 14),
 
                           // IMAGE UPLOAD & PREVIEW SECTION
-                          Text('Foto de la Bandana (Cloudflare R2):', style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold)),
+                          Text(lang.t('bandanaPhotoHeader'), style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
 
                           Row(
@@ -1341,7 +1342,7 @@ class MarketplaceScreen extends StatelessWidget {
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                         icon: const Icon(Icons.camera_alt_rounded, size: 14, color: AppTheme.textMutedWarm),
-                                        label: Text('Tomar Foto', style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.textPrimaryDark)),
+                                        label: Text(lang.t('takePhotoBtn'), style: GoogleFonts.fredoka(fontSize: 11, color: AppTheme.textPrimaryDark)),
                                       ),
                                     ),
                                   ],
@@ -1352,7 +1353,7 @@ class MarketplaceScreen extends StatelessWidget {
                           const SizedBox(height: 12),
 
                           // Preset Images
-                          Text('O elige una de las fotos predefinidas:', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm)),
+                          Text(lang.t('orChoosePredefinedPhoto'), style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMutedWarm)),
                           const SizedBox(height: 6),
                           SizedBox(
                             height: 50,
@@ -1396,7 +1397,7 @@ class MarketplaceScreen extends StatelessWidget {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             backgroundColor: AppTheme.primaryTerracotta,
-                                            content: Text('Por favor ingresa un nombre para la bandana', style: GoogleFonts.fredoka()),
+                                            content: Text(lang.t('enterBandanaNameNotice'), style: GoogleFonts.fredoka()),
                                           ),
                                         );
                                         return;
@@ -1434,7 +1435,7 @@ class MarketplaceScreen extends StatelessWidget {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               icon: const Icon(Icons.cloud_done_rounded, color: Colors.white),
-                              label: Text('Guardar en Supabase y Publicar', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                              label: Text(lang.t('saveBandanaAndPublish'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                             ),
                           ),
                         ],
@@ -1512,12 +1513,12 @@ class MarketplaceScreen extends StatelessWidget {
                                   IconButton(
                                     onPressed: () => mkt.updateStock(prod.id, 2),
                                     icon: const Icon(Icons.replay_rounded, size: 20, color: AppTheme.solanaPurple),
-                                    tooltip: 'Restablecer a 2',
+                                    tooltip: lang.t('resetStockTooltip'),
                                   ),
                                   IconButton(
                                     onPressed: () => mkt.deleteProduct(prod.id),
                                     icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.grey),
-                                    tooltip: 'Eliminar bandana',
+                                    tooltip: lang.t('deleteBandanaTooltip'),
                                   ),
                                 ],
                               ),
@@ -1591,9 +1592,9 @@ class MarketplaceScreen extends StatelessWidget {
                   icon: const Icon(Icons.shopping_bag_outlined, color: AppTheme.textPrimaryDark, size: 24),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Carrito de compras Pawtbook (2 artículos)'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(langController.t('shoppingCartItems').replaceAll('{count}', '2')),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },

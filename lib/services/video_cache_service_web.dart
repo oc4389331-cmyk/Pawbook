@@ -9,6 +9,7 @@ class VideoCachePlatform {
   VideoCachePlatform._internal();
 
   final Set<String> _preloadedUrls = {};
+  final List<html.VideoElement> _activePreloadPool = [];
 
   Future<dynamic> getCachedFile(String url) async {
     // On web, video_player uses browser network caching directly
@@ -22,25 +23,38 @@ class VideoCachePlatform {
 
     try {
       _preloadedUrls.add(cleanUrl);
-      if (_preloadedUrls.length > 15) {
+      if (_preloadedUrls.length > 20) {
         _preloadedUrls.remove(_preloadedUrls.first);
       }
 
-      // 1. Create a lightweight off-screen video element to trigger browser metadata and buffer download
+      // Create an off-screen HTML5 video element attached to the document so the browser network scheduler allocates bandwidth to preload
       final preloadVideo = html.VideoElement()
         ..src = cleanUrl
         ..preload = 'auto'
         ..muted = true
-        ..style.display = 'none';
+        ..style.position = 'fixed'
+        ..style.left = '-9999px'
+        ..style.top = '-9999px'
+        ..style.width = '1px'
+        ..style.height = '1px'
+        ..style.opacity = '0'
+        ..style.pointerEvents = 'none';
 
-      // Attach listener to clean up DOM references once buffer starts
+      html.document.body?.append(preloadVideo);
+      preloadVideo.load();
+
+      // Keep in pool so garbage collection doesn't abort HTTP download
+      _activePreloadPool.add(preloadVideo);
+      if (_activePreloadPool.length > 6) {
+        final oldest = _activePreloadPool.removeAt(0);
+        oldest.remove();
+      }
+
       preloadVideo.onCanPlay.first.then((_) {
-        preloadVideo.remove();
-      }).catchError((_) {
-        preloadVideo.remove();
-      });
+        debugPrint('[VideoCacheWeb] ⚡ Browser canplay reached for: $cleanUrl');
+      }).catchError((_) {});
 
-      debugPrint('[VideoCacheWeb] ⚡ Browser precached chunk for: $cleanUrl');
+      debugPrint('[VideoCacheWeb] ⚡ Browser precaching chunk for: $cleanUrl');
     } catch (e) {
       debugPrint('[VideoCacheWeb] Precache error (non-critical): $e');
     }
@@ -48,5 +62,9 @@ class VideoCachePlatform {
 
   Future<void> clearCache() async {
     _preloadedUrls.clear();
+    for (final el in _activePreloadPool) {
+      el.remove();
+    }
+    _activePreloadPool.clear();
   }
 }

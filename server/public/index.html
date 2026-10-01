@@ -92,33 +92,139 @@
           return {
             success: false,
             isNotInstalled: true,
-            error: 'La extensión de Phantom no está instalada en tu navegador.'
+            error: 'La extensión de Phantom no está instalada en tu navegador. Por favor instala Phantom desde phantom.app'
           };
         }
 
         try {
-          if (!provider.isConnected) {
+          const timestamp = new Date().toISOString();
+          const nonce = Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 8);
+          let address = '';
+          let sigBase64 = '';
+          let authMessage = '';
+
+          // 1. Intentar con estándar nativo SIWS (Sign In With Solana) si la extensión lo soporta (1 solo popup integrado)
+          if (typeof provider.signIn === 'function') {
             try {
-              await provider.connect({ onlyIfTrusted: false });
-            } catch (e) {
-              await provider.connect();
+              const signInData = {
+                domain: window.location.host || 'pawbooklife.com',
+                statement: '🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\nFirma para autenticarte de forma segura en Pawbook.\nEsta firma es 100% gratuita (0 SOL gas) y protege tu cuenta contra accesos no autorizados.',
+                nonce: nonce,
+              };
+              const signInResult = await provider.signIn(signInData);
+              if (signInResult) {
+                const pk = signInResult.publicKey || provider.publicKey;
+                if (pk) {
+                  address = typeof pk.toBase58 === 'function' ? pk.toBase58() : pk.toString();
+                }
+                const rawSig = signInResult.signature;
+                if (rawSig) {
+                  const bytes = rawSig instanceof Uint8Array ? rawSig : new Uint8Array(rawSig);
+                  let binary = '';
+                  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+                  sigBase64 = window.btoa(binary);
+                }
+                authMessage = signInResult.signedMessage ? new TextDecoder().decode(signInResult.signedMessage) : signInData.statement;
+              }
+            } catch (signInErr) {
+              const errStr = (signInErr && (signInErr.message || signInErr.toString())) || '';
+              if (errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || signInErr.code === 4001) {
+                return {
+                  success: false,
+                  userCancelled: true,
+                  error: 'Firma cancelada o rechazada en Phantom. La firma criptográfica es obligatoria para iniciar sesión por seguridad.'
+                };
+              }
             }
           }
-          let address = '';
-          const pk = provider.publicKey || (provider.account && provider.account.publicKey);
-          if (pk) {
-            address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
-          }
-          if (!address) {
-            return { success: false, error: 'No se pudo obtener la dirección pública de Phantom.' };
+
+          // 2. Fallback estándar: connect() + signMessage()
+          if (!address || !sigBase64) {
+            if (!provider.isConnected) {
+              try {
+                await provider.connect({ onlyIfTrusted: false });
+              } catch (e) {
+                await provider.connect();
+              }
+            }
+            const pk = provider.publicKey || (provider.account && provider.account.publicKey);
+            if (pk) {
+              address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+            }
+            if (!address) {
+              return { success: false, error: 'No se pudo obtener la dirección pública de Phantom.' };
+            }
+
+            authMessage = 
+              `🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\n\n` +
+              `Por favor firma este mensaje para verificar que eres el propietario de esta billetera e iniciar sesión de forma segura.\n\n` +
+              `• Billetera: ${address}\n` +
+              `• Fecha: ${timestamp}\n` +
+              `• Código de Seguridad (Nonce): ${nonce}\n\n` +
+              `🔒 NOTA DE SEGURIDAD:\n` +
+              `Esta firma es 100% gratuita (0 SOL gas) y NO realiza ninguna transacción económica ni transferencia de fondos.\n` +
+              `Verifica tu identidad y protege tu cuenta contra estafas y suplantaciones.`;
+
+            if (typeof provider.signMessage !== 'function') {
+              return {
+                success: false,
+                error: 'Tu extensión de Phantom no soporta firma de mensajes de seguridad. Por favor actualízala.'
+              };
+            }
+
+            const encodedMessage = new TextEncoder().encode(authMessage);
+            let signResult;
+            try {
+              signResult = await provider.signMessage(encodedMessage, "utf8");
+            } catch (_) {
+              signResult = await provider.signMessage(encodedMessage);
+            }
+
+            const rawSig = (signResult && signResult.signature) ? signResult.signature : signResult;
+            if (!rawSig) {
+              return {
+                success: false,
+                error: 'No se recibió la confirmación de firma desde Phantom. La firma criptográfica es estrictamente obligatoria.'
+              };
+            }
+            const bytes = rawSig instanceof Uint8Array ? rawSig : new Uint8Array(rawSig);
+            if (bytes.length === 0) {
+              return { success: false, error: 'La firma devuelta por Phantom está vacía.' };
+            }
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            sigBase64 = window.btoa(binary);
           }
 
-          return { success: true, address: address, signed: true };
+          if (!address || !sigBase64) {
+            return {
+              success: false,
+              error: 'No se completó la verificación de firma de seguridad con Phantom.'
+            };
+          }
+
+          return {
+            success: true,
+            address: address,
+            signature: sigBase64,
+            signed: true,
+            message: authMessage
+          };
         } catch (err) {
-          console.error('Phantom connect error:', err);
+          console.error('Phantom connect/sign error:', err);
           const errStr = (err && (err.message || err.toString())) || '';
-          const isCancel = errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || err.code === 4001;
-          return { success: false, userCancelled: isCancel, error: isCancel ? 'Conexión cancelada por el usuario en Phantom.' : (errStr || 'Error al conectar con Phantom.') };
+          const isCancel = errStr.includes('User rejected') ||
+                           errStr.includes('cancelled') ||
+                           errStr.includes('decline') ||
+                           errStr.includes('User cancel') ||
+                           err.code === 4001;
+          return {
+            success: false,
+            userCancelled: isCancel,
+            error: isCancel
+              ? 'Firma cancelada o rechazada por el usuario. La firma es obligatoria para garantizar la seguridad de tu cuenta y evitar estafas.'
+              : (errStr || 'Error al conectar y firmar con Phantom.')
+          };
         }
       },
 
@@ -128,28 +234,135 @@
           return {
             success: false,
             isNotInstalled: true,
-            error: 'La extensión de Solflare no está instalada en tu navegador.'
+            error: 'La extensión de Solflare no está instalada en tu navegador. Por favor instala Solflare desde solflare.com'
           };
         }
 
         try {
-          if (!provider.isConnected) {
-            await provider.connect();
-          }
+          const timestamp = new Date().toISOString();
+          const nonce = Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 8);
           let address = '';
-          const pk = provider.publicKey || (provider.account && provider.account.publicKey);
-          if (pk) {
-            address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+          let sigBase64 = '';
+          let authMessage = '';
+
+          // 1. Intentar con estándar nativo SIWS si lo soporta
+          if (typeof provider.signIn === 'function') {
+            try {
+              const signInData = {
+                domain: window.location.host || 'pawbooklife.com',
+                statement: '🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\nFirma para autenticarte de forma segura en Pawbook.\nEsta firma es 100% gratuita (0 SOL gas) y protege tu cuenta contra accesos no autorizados.',
+                nonce: nonce,
+              };
+              const signInResult = await provider.signIn(signInData);
+              if (signInResult) {
+                const pk = signInResult.publicKey || provider.publicKey;
+                if (pk) {
+                  address = typeof pk.toBase58 === 'function' ? pk.toBase58() : pk.toString();
+                }
+                const rawSig = signInResult.signature;
+                if (rawSig) {
+                  const bytes = rawSig instanceof Uint8Array ? rawSig : new Uint8Array(rawSig);
+                  let binary = '';
+                  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+                  sigBase64 = window.btoa(binary);
+                }
+                authMessage = signInResult.signedMessage ? new TextDecoder().decode(signInResult.signedMessage) : signInData.statement;
+              }
+            } catch (signInErr) {
+              const errStr = (signInErr && (signInErr.message || signInErr.toString())) || '';
+              if (errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || signInErr.code === 4001) {
+                return {
+                  success: false,
+                  userCancelled: true,
+                  error: 'Firma cancelada o rechazada en Solflare. La firma criptográfica es obligatoria para iniciar sesión por seguridad.'
+                };
+              }
+            }
           }
-          if (!address) {
-            return { success: false, error: 'No se pudo obtener la dirección pública de Solflare. Por favor desbloquea la wallet.' };
+
+          // 2. Fallback estándar: connect() + signMessage()
+          if (!address || !sigBase64) {
+            if (!provider.isConnected) {
+              await provider.connect();
+            }
+            const pk = provider.publicKey || (provider.account && provider.account.publicKey);
+            if (pk) {
+              address = typeof pk.toBase58 === 'function' ? pk.toBase58() : (typeof pk.toString === 'function' ? pk.toString() : String(pk));
+            }
+            if (!address) {
+              return { success: false, error: 'No se pudo obtener la dirección pública de Solflare. Por favor desbloquea la wallet.' };
+            }
+
+            authMessage = 
+              `🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\n\n` +
+              `Por favor firma este mensaje para verificar que eres el propietario de esta billetera e iniciar sesión de forma segura.\n\n` +
+              `• Billetera: ${address}\n` +
+              `• Fecha: ${timestamp}\n` +
+              `• Código de Seguridad (Nonce): ${nonce}\n\n` +
+              `🔒 NOTA DE SEGURIDAD:\n` +
+              `Esta firma es 100% gratuita (0 SOL gas) y NO realiza ninguna transacción económica ni transferencia de fondos.\n` +
+              `Verifica tu identidad y protege tu cuenta contra estafas y suplantaciones.`;
+
+            if (typeof provider.signMessage !== 'function') {
+              return {
+                success: false,
+                error: 'Tu extensión de Solflare no soporta firma de mensajes de seguridad. Por favor actualízala.'
+              };
+            }
+
+            const encodedMessage = new TextEncoder().encode(authMessage);
+            let signResult;
+            try {
+              signResult = await provider.signMessage(encodedMessage);
+            } catch (_) {
+              signResult = await provider.signMessage(encodedMessage, "utf8");
+            }
+
+            const rawSig = (signResult && signResult.signature) ? signResult.signature : signResult;
+            if (!rawSig) {
+              return {
+                success: false,
+                error: 'No se recibió la confirmación de firma desde Solflare. La firma criptográfica es estrictamente obligatoria.'
+              };
+            }
+            const bytes = rawSig instanceof Uint8Array ? rawSig : new Uint8Array(rawSig);
+            if (bytes.length === 0) {
+              return { success: false, error: 'La firma devuelta por Solflare está vacía.' };
+            }
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            sigBase64 = window.btoa(binary);
           }
-          return { success: true, address: address, signed: true };
+
+          if (!address || !sigBase64) {
+            return {
+              success: false,
+              error: 'No se completó la verificación de firma de seguridad con Solflare.'
+            };
+          }
+
+          return {
+            success: true,
+            address: address,
+            signature: sigBase64,
+            signed: true,
+            message: authMessage
+          };
         } catch (err) {
-          console.error('Solflare connect error:', err);
+          console.error('Solflare connect/sign error:', err);
           const errStr = (err && (err.message || err.toString())) || '';
-          const isCancel = errStr.includes('User rejected') || errStr.includes('cancelled') || errStr.includes('decline') || errStr.includes('User cancel') || err.code === 4001;
-          return { success: false, userCancelled: isCancel, error: isCancel ? 'Conexión cancelada por el usuario en Solflare.' : (errStr || 'Conexión con Solflare rechazada.') };
+          const isCancel = errStr.includes('User rejected') ||
+                           errStr.includes('cancelled') ||
+                           errStr.includes('decline') ||
+                           errStr.includes('User cancel') ||
+                           err.code === 4001;
+          return {
+            success: false,
+            userCancelled: isCancel,
+            error: isCancel
+              ? 'Firma cancelada o rechazada por el usuario. La firma es obligatoria para garantizar la seguridad de tu cuenta y evitar estafas.'
+              : (errStr || 'Conexión o firma con Solflare rechazada.')
+          };
         }
       },
 
@@ -164,18 +377,37 @@
                 icon: `${window.location.origin}/icons/Icon-192.png`
               }
             });
-            return { success: true, address: resp.address || resp.publicKey, signed: true, isSeeker: true };
+            const addr = resp.address || resp.publicKey;
+            let sigBase64 = '';
+            const timestamp = new Date().toISOString();
+            const msg = `🐾 PAWBOOK - VERIFICACIÓN DE SEGURIDAD 🐾\n\nFirma este mensaje para autenticarte en Pawbook.\n\nWallet: ${addr}\nFecha: ${timestamp}`;
+            if (hasMwa.signMessages) {
+              const signRes = await hasMwa.signMessages({ messages: [new TextEncoder().encode(msg)] });
+              if (signRes && signRes.signedMessages && signRes.signedMessages[0]) {
+                const bytes = new Uint8Array(signRes.signedMessages[0]);
+                let binary = '';
+                for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+                sigBase64 = window.btoa(binary);
+              }
+            }
+            return { success: true, address: addr, signature: sigBase64, signed: true, isSeeker: true };
           } catch (e) {
-            return { success: false, error: e.message || 'Error conectando con Solana Seeker Seed Vault' };
+            const errStr = e.message || e.toString();
+            const isCancel = errStr.includes('User rejected') || errStr.includes('cancel');
+            return {
+              success: false,
+              userCancelled: isCancel,
+              error: isCancel
+                ? 'Firma o autorización cancelada en Seeker.'
+                : (errStr || 'Error conectando con Solana Seeker Seed Vault')
+            };
           }
         }
 
         return {
-          success: true,
-          address: "SeekerNative" + Math.random().toString(36).substring(2, 10) + "7777Vault",
-          isSeeker: true,
-          signed: true,
-          message: 'Solana Mobile Seeker Seed Vault Native Adapter inicializado'
+          success: false,
+          error: 'Solana Seeker Seed Vault solo está disponible en dispositivos móviles Solana (Android). En la versión web de escritorio, por favor conecta con Phantom o Solflare.',
+          isNotInstalled: true
         };
       },
 

@@ -48,8 +48,10 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _watchStopwatch.start();
-    _recordView();
+    if (widget.isCurrentPage) {
+      _watchStopwatch.start();
+      _recordView();
+    }
 
     _discAnimationController = AnimationController(
       vsync: this,
@@ -83,6 +85,7 @@ class _TikTokFeedItemState extends State<TikTokFeedItem>
   }
 
   void _recordView() {
+    if (!widget.isCurrentPage) return;
     if (_viewRecorded) return;
     _viewRecorded = true;
     _supabaseService.recordPostView(widget.post.id, userId: widget.currentUserId);

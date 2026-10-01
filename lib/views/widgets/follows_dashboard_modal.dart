@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/feed_controller.dart';
+import '../../controllers/language_controller.dart';
 import '../../models/pet_model.dart';
 import '../../models/profile_model.dart';
 import '../../theme/app_theme.dart';
@@ -78,6 +79,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageController>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
@@ -120,7 +122,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Comunidad & Suscripciones',
+                        lang.t('communitySubscriptionsTitle'),
                         style: GoogleFonts.fredoka(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -128,7 +130,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                         ),
                       ),
                       Text(
-                        'Canal oficial de ${widget.pet.name}',
+                        lang.t('officialChannelSubtitle').replaceAll('{name}', widget.pet.name),
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           color: AppTheme.textMutedWarm,
@@ -166,8 +168,8 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   children: [
                     Expanded(
                       child: _buildSummaryMetricCard(
-                        title: 'Suscritos a ${widget.pet.name}',
-                        subtitle: 'Seguidores de tu mascota',
+                        title: lang.t('subscribersToPet').replaceAll('{name}', widget.pet.name),
+                        subtitle: lang.t('followersSubtitle'),
                         value: snapshot.hasData ? '$followersCount' : '...',
                         icon: Icons.favorite_rounded,
                         color: AppTheme.brandCoral,
@@ -181,8 +183,8 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildSummaryMetricCard(
-                        title: 'Tus Suscripciones',
-                        subtitle: 'Mascotas que sigues tú',
+                        title: lang.t('mySubscriptionsTitle'),
+                        subtitle: lang.t('followingSubtitle'),
                         value: snapshot.hasData ? '$followingCount' : '...',
                         icon: Icons.pets_rounded,
                         color: const Color(0xFF0284C7),
@@ -242,8 +244,8 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildFollowersTab(),
-                _buildFollowingTab(),
+                _buildFollowersTab(lang),
+                _buildFollowingTab(lang),
               ],
             ),
           ),
@@ -335,7 +337,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
   }
 
   // --- TAB 1: FOLLOWERS OF PET ---
-  Widget _buildFollowersTab() {
+  Widget _buildFollowersTab(LanguageController lang) {
     return FutureBuilder<List<ProfileModel>>(
       future: _followersFuture,
       builder: (context, snapshot) {
@@ -368,7 +370,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   ElevatedButton(
                     onPressed: _loadData,
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryTerracotta),
-                    child: Text('Reintentar', style: GoogleFonts.fredoka(color: Colors.white)),
+                    child: Text(lang.t('retryBtn'), style: GoogleFonts.fredoka(color: Colors.white)),
                   ),
                 ],
               ),
@@ -395,7 +397,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Aún no hay suscriptores',
+                    lang.t('noFollowersYetTitle'),
                     style: GoogleFonts.fredoka(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -404,7 +406,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '¡Publica videos y comparte el perfil de ${widget.pet.name} para ganar tu primer suscriptor!',
+                    lang.t('noFollowersYetDesc').replaceAll('{name}', widget.pet.name),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
@@ -425,7 +427,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
             final profile = followers[index];
             final displayName = profile.fullName?.isNotEmpty == true
                 ? profile.fullName!
-                : (profile.username.isNotEmpty ? profile.username : 'Usuario Pawbook');
+                : (profile.username.isNotEmpty ? profile.username : lang.t('pawbookUser'));
             final usernameHandle = profile.username.isNotEmpty ? '@${profile.username}' : '';
 
             return Container(
@@ -523,7 +525,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
   }
 
   // --- TAB 2: PETS FOLLOWED BY USER ---
-  Widget _buildFollowingTab() {
+  Widget _buildFollowingTab(LanguageController lang) {
     return FutureBuilder<List<PetModel>>(
       future: _followingFuture,
       builder: (context, snapshot) {
@@ -543,14 +545,14 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   const Icon(Icons.error_outline_rounded, size: 42, color: Colors.redAccent),
                   const SizedBox(height: 12),
                   Text(
-                    'Error al cargar tus suscripciones',
+                    lang.t('errorLoadingSubscriptions'),
                     style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _loadData,
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
-                    child: Text('Reintentar', style: GoogleFonts.fredoka(color: Colors.white)),
+                    child: Text(lang.t('retryBtn'), style: GoogleFonts.fredoka(color: Colors.white)),
                   ),
                 ],
               ),
@@ -577,7 +579,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No te has suscrito a mascotas aún',
+                    lang.t('noFollowingYetTitle'),
                     style: GoogleFonts.fredoka(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -586,7 +588,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Explora el feed de Pawbook y sigue a tus mascotas favoritas para ver sus videos y apoyar sus aventuras.',
+                    lang.t('noFollowingYetDesc'),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
@@ -672,7 +674,7 @@ class _FollowsDashboardModalState extends State<FollowsDashboardModal>
                         MaterialPageRoute(builder: (_) => PetProfileScreen(pet: pet)),
                       );
                     },
-                    child: Text('Ver perfil', style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text(lang.t('viewProfileBtn'), style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

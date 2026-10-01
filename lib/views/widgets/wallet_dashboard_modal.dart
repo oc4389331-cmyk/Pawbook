@@ -144,7 +144,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.primaryTerracotta,
-          content: Text('🔒 No tienes saldo de patrocinios acumulado para retirar.', style: GoogleFonts.fredoka()),
+          content: Text(langController.t('noBalanceToWithdraw'), style: GoogleFonts.fredoka()),
         ),
       );
       return;
@@ -381,7 +381,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldGreen),
                           )
                         : const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
-                    tooltip: 'Actualizar',
+                    tooltip: langController.t('refresh'),
                     onPressed: _isLoading ? null : _loadDashboardData,
                   ),
                 ],
@@ -456,7 +456,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    Text('Saldo de Patrocinios para Retirar:', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
+                    Text(langController.t('sponsorshipBalanceToWithdraw'), style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
                     const SizedBox(height: 4),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -504,8 +504,8 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           Expanded(
                             child: Text(
                               _unclaimedSkr > 0
-                                  ? '✓ Fondos listos para transferir a tu wallet.'
-                                  : '🔒 Sin patrocinios pendientes de cobro.',
+                                  ? langController.t('fundsReadyToTransfer')
+                                  : langController.t('noPendingSponsorshipsShort'),
                               style: GoogleFonts.outfit(
                                 color: _unclaimedSkr > 0 ? const Color(0xFF14F195) : Colors.white70,
                                 fontSize: 11,
@@ -531,7 +531,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Total Recaudado', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11)),
+                              Text(langController.t('totalRaised'), style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11)),
                               const SizedBox(height: 2),
                               Text('$_totalLifetimeSkr \$SKR', style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                             ],
@@ -540,7 +540,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Total Retirado', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11)),
+                              Text(langController.t('totalWithdrawn'), style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11)),
                               const SizedBox(height: 2),
                               Text('$_totalWithdrawnSkr \$SKR', style: GoogleFonts.fredoka(color: const Color(0xFFFC8C03), fontSize: 13, fontWeight: FontWeight.bold)),
                             ],
@@ -579,7 +579,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                         const Icon(Icons.shield_rounded, color: AppTheme.solanaPurple, size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          'Billetera Conectada de Retiro',
+                          langController.t('connectedWithdrawWalletTitle'),
                           style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark),
                         ),
                       ],
@@ -599,14 +599,14 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           constraints: const BoxConstraints(),
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           icon: const Icon(Icons.copy_rounded, color: AppTheme.primaryTerracotta, size: 16),
-                          tooltip: 'Copiar',
-                          onPressed: () => _copyToClipboard(widget.walletAddress, 'Billetera copiada al portapapeles'),
+                          tooltip: langController.t('copy'),
+                          onPressed: () => _copyToClipboard(widget.walletAddress, langController.t('walletCopiedClipboard')),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '📌 Los fondos retirables mostrados arriba corresponden exclusivamente a los patrocinios recibidos por tus mascotas registradas.',
+                      langController.t('withdrawableFundsNotice'),
                       style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11, height: 1.3),
                     ),
                   ],
@@ -631,7 +631,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       Icon(Icons.lock_outline_rounded, color: Colors.grey.shade600, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        '🔒 Sin patrocinios pendientes de retiro',
+                        langController.t('noPendingSponsorshipsBtn'),
                         style: GoogleFonts.fredoka(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -641,7 +641,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    'No tienes patrocinios acumulados. Cuando otros usuarios apoyen a tus mascotas, las transacciones quedarán registradas aquí para tu cobro.',
+                    langController.t('noPendingSponsorshipsDesc'),
                     style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 11, height: 1.3),
                     textAlign: TextAlign.center,
                   ),
@@ -726,13 +726,13 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       const SizedBox(height: 14),
 
                       // Dirección de Destino
-                      Text('Dirección de Destino en Solana:', style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(langController.t('destinationAddressLabel'), style: GoogleFonts.outfit(color: AppTheme.textPrimaryDark, fontSize: 12, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _destinationWalletController,
                         style: GoogleFonts.outfit(fontSize: 12),
                         decoration: InputDecoration(
-                          hintText: 'Dirección Base58 de Solana...',
+                          hintText: langController.t('destinationAddressHint'),
                           hintStyle: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                           filled: true,
                           fillColor: Colors.white,
@@ -787,7 +787,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           onPressed: _isWithdrawing ? null : () => _processWithdrawal(auth, oracle, langController),
                           child: _isWithdrawing
                               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text('Confirmar Retiro de Patrocinios 🚀', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
+                              : Text(langController.t('confirmWithdrawBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
                         ),
                       ),
                     ],
@@ -842,12 +842,12 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Sin transacciones registradas aún',
+                        langController.t('noTransactionsYetTitle'),
                         style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Cada patrocinio que tus mascotas reciban quedará guardado aquí con su hash de Solana y enlace directo a Solscan.',
+                        langController.t('noTransactionsYetDesc'),
                         style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12),
                         textAlign: TextAlign.center,
                       ),
@@ -887,7 +887,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Patrocinio Recibido',
+                                  langController.t('sponsorshipReceivedTitle'),
                                   style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark),
                                 ),
                               ],
@@ -899,7 +899,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                isPending ? '✓ Pendiente de retiro' : 'Retirado',
+                                isPending ? langController.t('pendingWithdrawalBadge') : langController.t('withdrawnBadge'),
                                 style: GoogleFonts.outfit(
                                   color: isPending ? AppTheme.emeraldGreen : Colors.grey.shade600,
                                   fontSize: 10,
@@ -914,7 +914,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '+${s.netAmount} \$SKR (Neto)',
+                              '+${s.netAmount} \$SKR ${langController.t('netAmountSuffix')}',
                               style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen),
                             ),
                             Text(
@@ -978,7 +978,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Retiro Procesado',
+                                  langController.t('withdrawalProcessedTitle'),
                                   style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimaryDark),
                                 ),
                               ],
@@ -986,7 +986,7 @@ class _WalletDashboardModalState extends State<WalletDashboardModal> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(color: AppTheme.pastelPeach, borderRadius: BorderRadius.circular(8)),
-                              child: Text('Completado', style: GoogleFonts.outfit(color: AppTheme.brandCoral, fontSize: 10, fontWeight: FontWeight.bold)),
+                              child: Text(langController.t('statusCompleted'), style: GoogleFonts.outfit(color: AppTheme.brandCoral, fontSize: 10, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),

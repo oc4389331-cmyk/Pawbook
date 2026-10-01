@@ -601,8 +601,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                         : null,
                                     child: Tooltip(
                                       message: isExempted
-                                          ? 'Cuenta Oficial Verificada (Vitalicia / Exonerada) • Toca para gestionar'
-                                          : 'Cuenta Oficial Verificada (Vence en $daysRemaining días) • Toca para gestionar',
+                                          ? langController.t('verifiedTooltipExempted')
+                                          : langController.t('verifiedTooltipRemaining').replaceAll('{days}', '$daysRemaining'),
                                       child: const Icon(
                                         Icons.verified_rounded,
                                         color: Color(0xFF0284C7),
@@ -632,7 +632,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                           border: Border.all(color: Colors.amber.shade700, width: 0.8),
                                         ),
                                         child: Text(
-                                          'Renovar ($daysRemaining d)',
+                                          langController.t('renewVerificationShort').replaceAll('{days}', '$daysRemaining'),
                                           style: GoogleFonts.fredoka(
                                             color: Colors.amber.shade900,
                                             fontSize: 10,
@@ -673,7 +673,9 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                                           ),
                                           const SizedBox(width: 3),
                                           Text(
-                                            isVerificationExpired ? 'Renovar (\$10)' : 'Verificar (\$10)',
+                                            isVerificationExpired
+                                                ? langController.t('renewBadgePrice')
+                                                : langController.t('verifyBadgePrice'),
                                             style: GoogleFonts.fredoka(
                                               color: isVerificationExpired ? Colors.orange.shade800 : const Color(0xFF0284C7),
                                               fontSize: 11,
@@ -755,7 +757,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                               onPressed: () {
                                 Clipboard.setData(ClipboardData(text: 'https://pawbooklife.com/pet/${widget.pet.id}'));
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('¡Enlace del perfil copiado! 🐾')),
+                                  SnackBar(content: Text(langController.t('profileLinkCopied'))),
                                 );
                               },
                             ),
@@ -1244,8 +1246,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                             const SizedBox(width: 6),
                             Text(
                               isExempted
-                                  ? 'Cuenta Oficial Verificada • Vitalicia (Exonerada)'
-                                  : 'Cuenta Oficial Verificada en Solana ($daysRemaining días restantes)',
+                                  ? langController.t('verifiedExemptedBadge')
+                                  : langController.t('verifiedSolanaRemainingBadge').replaceAll('{days}', '$daysRemaining'),
                               style: GoogleFonts.fredoka(color: const Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             if (isOwner) ...[
@@ -1272,8 +1274,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                         icon: Icon(isVerificationExpired ? Icons.replay_rounded : Icons.verified_rounded, size: 18),
                         label: Text(
                           isVerificationExpired
-                              ? 'Renovar Verificación (40 días) • \$10 USD / SOL / \$SKR'
-                              : 'Obtener Insignia Verificada (40 días) • \$10 USD',
+                              ? langController.t('renewVerificationProfileBtn')
+                              : langController.t('getVerificationProfileBtn'),
                           style: GoogleFonts.fredoka(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                         onPressed: () => PetVerificationModal.show(

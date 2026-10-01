@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 } else {
                                   setModalState(() {
                                     isModalLoading = false;
-                                    modalError = authController.errorMessage ?? 'Error al iniciar sesión.';
+                                    modalError = authController.errorMessage ?? langController.t('loginErrorDefault');
                                   });
                                 }
                               },
@@ -230,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     const SizedBox(height: 10),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: Text('Cerrar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+                      child: Text(langController.t('close'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
                     ),
                   ],
                 ),
@@ -355,73 +355,136 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 20),
 
-              // Option 1: Solana Mobile / Seeker Seed Vault (Primary, in first place!)
-              _buildModalWalletOption(
-                title: langController.t('seekerVaultTitle'),
-                subtitle: shortSeeker != null
-                    ? 'Billetera vinculada: $shortSeeker (Toca para entrar)'
-                    : langController.t('seekerVaultSubtitle'),
-                badgeText: shortSeeker != null ? 'Vinculada' : 'Seeker',
-                iconWidget: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.withOpacity(0.12),
-                    shape: BoxShape.circle,
+              // Si es navegador Web: Mostrar Phantom y Solflare primero con firma criptográfica obligatoria
+              if (kIsWeb) ...[
+                // Option 1 en Web: Phantom Wallet (Extensión Web / SIWS)
+                _buildModalWalletOption(
+                  title: 'Phantom Wallet',
+                  subtitle: langController.t('connectPhantomSubtitle'),
+                  badgeText: 'Recomendada',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAB9FF2).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('👻', style: TextStyle(fontSize: 18)),
                   ),
-                  child: const Icon(Icons.phone_android_rounded, color: Colors.deepPurple),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Phantom');
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, langController, walletType: 'Seeker');
-                },
-              ),
-              const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-              // Option 2: Phantom Wallet
-              _buildModalWalletOption(
-                title: 'Phantom Wallet',
-                subtitle: 'Conectar con extensión o app de Phantom en Solana',
-                badgeText: 'Phantom',
-                iconWidget: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFAB9FF2).withOpacity(0.2),
-                    shape: BoxShape.circle,
+                // Option 2 en Web: Solflare Wallet (Extensión Web / SIWS)
+                _buildModalWalletOption(
+                  title: 'Solflare Wallet',
+                  subtitle: langController.t('connectSolflareSubtitle'),
+                  badgeText: 'Solflare',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFC7227).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('🔥', style: TextStyle(fontSize: 18)),
                   ),
-                  child: const Text('👻', style: TextStyle(fontSize: 18)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Solflare');
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, langController, walletType: 'Phantom');
-                },
-              ),
-              const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-              // Option 3: Solflare Wallet
-              _buildModalWalletOption(
-                title: 'Solflare Wallet',
-                subtitle: 'Conectar con Solflare Flame en Solana',
-                badgeText: 'Solflare',
-                iconWidget: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFC7227).withOpacity(0.2),
-                    shape: BoxShape.circle,
+                // Option 3 en Web: Solana Mobile / Seeker Seed Vault
+                _buildModalWalletOption(
+                  title: langController.t('seekerVaultTitle'),
+                  subtitle: 'Para dispositivos Solana Mobile / Seeker con Seed Vault',
+                  badgeText: 'Móvil',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.phone_android_rounded, color: Colors.deepPurple),
                   ),
-                  child: const Text('🔥', style: TextStyle(fontSize: 18)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Seeker');
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _handleWalletSignIn(authController, langController, walletType: 'Solflare');
-                },
-              ),
-              const SizedBox(height: 10),
+                const SizedBox(height: 10),
+              ] else ...[
+                // En dispositivo móvil nativo: Mostrar Seeker Seed Vault primero
+                _buildModalWalletOption(
+                  title: langController.t('seekerVaultTitle'),
+                  subtitle: shortSeeker != null
+                      ? 'Billetera vinculada: $shortSeeker (Toca para entrar)'
+                      : langController.t('seekerVaultSubtitle'),
+                  badgeText: shortSeeker != null ? 'Vinculada' : 'Seeker',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.phone_android_rounded, color: Colors.deepPurple),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Seeker');
+                  },
+                ),
+                const SizedBox(height: 10),
+
+                // Option 2 Móvil: Phantom
+                _buildModalWalletOption(
+                  title: 'Phantom Wallet',
+                  subtitle: langController.t('connectPhantomSubtitle'),
+                  badgeText: 'Phantom',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAB9FF2).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('👻', style: TextStyle(fontSize: 18)),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Phantom');
+                  },
+                ),
+                const SizedBox(height: 10),
+
+                // Option 3 Móvil: Solflare
+                _buildModalWalletOption(
+                  title: 'Solflare Wallet',
+                  subtitle: langController.t('connectSolflareSubtitle'),
+                  badgeText: 'Solflare',
+                  iconWidget: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFC7227).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('🔥', style: TextStyle(fontSize: 18)),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleWalletSignIn(authController, langController, walletType: 'Solflare');
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
 
               // Option 4: Generic Solana In-App / Nueva Wallet
               _buildModalWalletOption(
-                title: 'Nueva Wallet / Billetera Web3',
-                subtitle: 'Crear o conectar una nueva dirección de Solana',
-                badgeText: 'Nueva',
+                title: langController.t('newWeb3WalletTitle'),
+                subtitle: langController.t('newWeb3WalletSubtitle'),
+                badgeText: langController.t('badgeNew'),
                 iconWidget: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(

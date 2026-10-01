@@ -20,8 +20,8 @@ class VideoCachePlatform {
   final CacheManager _cacheManager = CacheManager(
     Config(
       _cacheKey,
-      stalePeriod: const Duration(days: 1),
-      maxNrOfCacheObjects: 12, // Maximum 12 videos (approx. 35 - 50 MB total)
+      stalePeriod: const Duration(days: 2),
+      maxNrOfCacheObjects: 20, // Keep up to 20 videos (approx. 50 - 80 MB total)
       repo: JsonCacheInfoRepository(databaseName: _cacheKey),
       fileService: HttpFileService(),
     ),

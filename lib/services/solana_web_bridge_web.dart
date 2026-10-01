@@ -35,6 +35,9 @@ class SolanaWebBridgeWeb implements SolanaWebBridge {
                 completer.complete({
                   'success': result['success'] == true,
                   'address': result['address']?.toString(),
+                  'signature': result['signature']?.toString(),
+                  'message': result['message']?.toString(),
+                  'signed': result['signed'] == true,
                   'error': result['error']?.toString(),
                   'isNotInstalled': result['isNotInstalled'] == true,
                   'userCancelled': result['userCancelled'] == true,
@@ -46,16 +49,16 @@ class SolanaWebBridgeWeb implements SolanaWebBridge {
             js.allowInterop((error) {
               completer.complete({
                 'success': false,
-                'error': error?.toString() ?? 'Error connecting wallet',
+                'error': error?.toString() ?? 'Error conectando la wallet',
               });
             }),
           ]);
 
           return await completer.future.timeout(
-            const Duration(seconds: 45),
+            const Duration(seconds: 60),
             onTimeout: () => {
               'success': false,
-              'error': 'Tiempo de espera agotado al conectar la wallet.',
+              'error': 'Tiempo de espera agotado al conectar y firmar con la wallet.',
             },
           );
         }

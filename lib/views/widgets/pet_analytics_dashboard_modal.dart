@@ -573,7 +573,7 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
                             const SizedBox(height: 20),
                             SizedBox(
                               height: 180,
-                              child: _buildBarChart(displayHistory),
+                              child: _buildBarChart(displayHistory, langController),
                             ),
                           ],
                         ),
@@ -1148,9 +1148,14 @@ class _PetAnalyticsDashboardModalState extends State<PetAnalyticsDashboardModal>
     }
   }
 
-  Widget _buildBarChart(List<DailyMetricPoint> history) {
+  Widget _buildBarChart(List<DailyMetricPoint> history, LanguageController langController) {
     if (history.isEmpty) {
-      return const Center(child: Text('Sin datos'));
+      return Center(
+        child: Text(
+          langController.t('noDataYet'),
+          style: GoogleFonts.outfit(color: AppTheme.textMutedWarm),
+        ),
+      );
     }
 
     double maxValue = 1.0;

@@ -255,6 +255,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   }
 
   void _showCustomPhotoOptionsModal() {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -281,12 +282,12 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Foto de Perfil de tu Mascota 📸',
+                lang.t('petProfilePhotoModalTitle'),
                 style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
               ),
               const SizedBox(height: 6),
               Text(
-                'Elige cómo deseas establecer la imagen de perfil:',
+                lang.t('petProfilePhotoModalSubtitle'),
                 style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMutedWarm),
               ),
               const SizedBox(height: 16),
@@ -301,8 +302,8 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                   ),
                   child: const Icon(Icons.photo_library_rounded, color: AppTheme.solanaPurple),
                 ),
-                title: Text('Galería / Archivos del Dispositivo', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
-                subtitle: Text('Subir foto desde tu dispositivo a Cloudflare R2', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                title: Text(lang.t('galleryOptionTitle'), style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text(lang.t('galleryOptionSubtitle'), style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndUploadPhotoToR2(ImageSource.gallery);
@@ -320,8 +321,8 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                   ),
                   child: const Icon(Icons.camera_alt_rounded, color: AppTheme.brandCoral),
                 ),
-                title: Text('Tomar Foto con Cámara', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
-                subtitle: Text('Capturar directamente una foto nueva', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                title: Text(lang.t('cameraOptionTitle'), style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text(lang.t('cameraOptionSubtitle'), style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndUploadPhotoToR2(ImageSource.camera);
@@ -339,8 +340,8 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                   ),
                   child: const Icon(Icons.link_rounded, color: AppTheme.emeraldGreen),
                 ),
-                title: Text('Ingresar URL / Enlace de Foto', style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
-                subtitle: Text('Usar un enlace directo de imagen web', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
+                title: Text(lang.t('urlOptionTitle'), style: GoogleFonts.fredoka(color: AppTheme.textPrimaryDark)),
+                subtitle: Text(lang.t('urlOptionSubtitle'), style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMutedWarm)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showUrlInputDialog();
@@ -354,6 +355,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
   }
 
   void _showUrlInputDialog() {
+    final lang = Provider.of<LanguageController>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -361,14 +363,14 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
           backgroundColor: AppTheme.bgWarmCream,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Text(
-            'Ingresar URL de Foto 📸',
-            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold),
+            lang.t('photoUrlLabel').isNotEmpty ? lang.t('photoUrlLabel') : 'URL 📸',
+            style: GoogleFonts.fredoka(color: AppTheme.primaryTerracotta, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Ingresa la URL pública de la imagen de tu mascota:',
+                lang.t('enterPublicImageUrl'),
                 style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 13),
               ),
               const SizedBox(height: 12),
@@ -388,7 +390,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancelar', style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
+              child: Text(lang.t('cancel'), style: GoogleFonts.fredoka(color: AppTheme.textMutedWarm)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -402,7 +404,7 @@ class _CreatePetScreenState extends State<CreatePetScreen> {
                 }
                 Navigator.pop(ctx);
               },
-              child: Text('Usar URL', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(lang.t('useUrlBtn'), style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         );

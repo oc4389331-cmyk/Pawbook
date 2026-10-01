@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../../controllers/language_controller.dart';
 import '../../services/video_cache_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -214,15 +216,16 @@ class _AppVideoPlayerNativeState extends State<AppVideoPlayerWeb>
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
+      final lang = Provider.of<LanguageController>(context, listen: false);
       return Container(
         color: Colors.black,
         alignment: Alignment.center,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.broken_image_rounded, color: Colors.white38, size: 48),
-            SizedBox(height: 8),
-            Text('No se pudo reproducir el video', style: TextStyle(color: Colors.white60, fontSize: 12)),
+          children: [
+            const Icon(Icons.broken_image_rounded, color: Colors.white38, size: 48),
+            const SizedBox(height: 8),
+            Text(lang.t('videoPlaybackError'), style: const TextStyle(color: Colors.white60, fontSize: 12)),
           ],
         ),
       );

@@ -301,7 +301,7 @@ class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      '¡Únete a mi grupo "support pawbooklife" en SolChat Plus! 💬',
+                                      lang.t('solChatGroupNotice'),
                                       style: GoogleFonts.fredoka(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.bold,
@@ -325,7 +325,7 @@ class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
                                 const Icon(Icons.email_outlined, size: 14, color: AppTheme.primaryTerracotta),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Soporte: oc4389331@gmail.com',
+                                  lang.t('supportEmailLabel'),
                                   style: GoogleFonts.outfit(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
@@ -705,8 +705,8 @@ class _TermsAndConditionsModalState extends State<TermsAndConditionsModal> {
       _buildTermSection(
         icon: Icons.support_agent_rounded,
         iconColor: const Color(0xFF9945FF),
-        title: '7. Canal Oficial de Soporte y SolChat Plus',
-        content: 'Para soporte técnico directo, resolución de incidencias o unirte a la comunidad:\n\n• SolChat Plus: ¡Únete a mi grupo "support pawbooklife" en SolChat Plus!\nhttps://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c\n\n• Correo de Soporte: oc4389331@gmail.com\n• Soporte General: support@pawbooklife.com',
+        title: lang.t('privacySection7Title'),
+        content: lang.t('privacySection7Content'),
       ),
     ];
   }

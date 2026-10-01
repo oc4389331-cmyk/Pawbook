@@ -83,10 +83,10 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
             if (mounted) {
               setState(() => _isProcessing = false);
               messenger.showSnackBar(
-                const SnackBar(
+                SnackBar(
                   backgroundColor: AppTheme.primaryTerracotta,
-                  duration: Duration(seconds: 4),
-                  content: Text('Transacción cancelada en la billetera.'),
+                  duration: const Duration(seconds: 4),
+                  content: Text(langController.t('txCancelledWallet')),
                 ),
               );
             }
@@ -129,7 +129,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '🌟 ¡Felicidades! ${widget.pet.name} ahora tiene su estrellita azul de Cuenta Verificada Oficial.',
+                    langController.t('verificationSuccessNotice').replaceAll('{name}', widget.pet.name),
                     style: GoogleFonts.fredoka(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -149,7 +149,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
           SnackBar(
             backgroundColor: Colors.redAccent,
             content: Text(
-              '❌ No se pudo completar la verificación: $e',
+              langController.t('verificationErrorNotice').replaceAll('{error}', e.toString()),
               style: GoogleFonts.fredoka(color: Colors.white),
             ),
           ),
@@ -205,7 +205,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Verificación Oficial',
+                      lang.t('officialVerification'),
                       style: GoogleFonts.fredoka(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -305,7 +305,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Insignia de Cuenta Verificada • 40 días 🌟',
+                          lang.t('verifiedBadgeSubtitle'),
                           style: GoogleFonts.fredoka(
                             fontSize: 14,
                             color: const Color(0xFF0369A1),
@@ -335,7 +335,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'VALOR DE VERIFICACIÓN',
+                              lang.t('verificationValueHeader'),
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -362,7 +362,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
-                                    'Oráculo en vivo',
+                                    lang.t('liveOracleTag'),
                                     style: GoogleFonts.fredoka(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -391,7 +391,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'USD / 40 días',
+                              lang.t('usdPer40Days'),
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -424,7 +424,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                                         const Icon(Icons.flash_on_rounded, size: 14, color: Color(0xFF9945FF)),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Equivalente SOL',
+                                          lang.t('solEquivalent'),
                                           style: GoogleFonts.outfit(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -465,7 +465,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                                         const Icon(Icons.pets_rounded, size: 14, color: AppTheme.brandCoral),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Equivalente \$SKR',
+                                          lang.t('skrEquivalent'),
                                           style: GoogleFonts.outfit(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -519,7 +519,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'BENEFICIOS DE LA VERIFICACIÓN',
+                          lang.t('verificationBenefitsHeader'),
                           style: GoogleFonts.outfit(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -531,36 +531,36 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                         _buildBenefitItem(
                           Icons.verified_rounded,
                           const Color(0xFF0284C7),
-                          'Estrellita azul oficial por 40 días',
-                          'Visible en tu perfil, en el feed global y en comentarios. Renovable periódicamente.',
+                          lang.t('benefit1Title'),
+                          lang.t('benefit1Desc'),
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
                           Icons.history_rounded,
                           Colors.orange.shade700,
-                          'Vigencia de 40 días con renovación',
-                          'Si no se renueva al vencer los 40 días, la estrellita se desactiva de forma automática.',
+                          lang.t('benefit2Title'),
+                          lang.t('benefit2Desc'),
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
                           Icons.rocket_launch_rounded,
                           const Color(0xFF9945FF),
-                          'Mayor prioridad en el Feed y Explorador',
-                          'Tus videos reciben hasta un 300% más de visibilidad en el algoritmo.',
+                          lang.t('benefit3Title'),
+                          lang.t('benefit3Desc'),
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
                           Icons.token_rounded,
                           AppTheme.accentOrange,
-                          'Certificación NFT en la red Solana',
-                          'Acreditación oficial grabada en la blockchain con timestamp de renovación.',
+                          lang.t('benefit4Title'),
+                          lang.t('benefit4Desc'),
                         ),
                         const SizedBox(height: 10),
                         _buildBenefitItem(
                           Icons.security_rounded,
                           AppTheme.emeraldGreen,
-                          'Protección anti-suplantación',
-                          'Garantiza que nadie pueda crear un perfil duplicado de ${widget.pet.name}.',
+                          lang.t('benefit5Title'),
+                          lang.t('benefit5Desc').replaceAll('{name}', widget.pet.name),
                         ),
                       ],
                     ),
@@ -582,7 +582,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ELIGE MÉTODO DE PAGO',
+                          lang.t('choosePaymentMethodHeader'),
                           style: GoogleFonts.outfit(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -595,8 +595,8 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                           id: 'solana',
                           icon: Icons.account_balance_wallet_rounded,
                           iconColor: const Color(0xFF9945FF),
-                          title: 'Solana Wallet (Phantom / Solflare)',
-                          subtitle: 'Pagar ≈ ${solAmount.toStringAsFixed(4)} SOL',
+                          title: lang.t('solanaWalletOption'),
+                          subtitle: lang.t('solanaWalletPaySub').replaceAll('{amount}', solAmount.toStringAsFixed(4)),
                           selected: _selectedMethod == 'solana',
                           onTap: () => setState(() => _selectedMethod = 'solana'),
                         ),
@@ -605,8 +605,8 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                           id: 'skr',
                           icon: Icons.pets_rounded,
                           iconColor: AppTheme.brandCoral,
-                          title: 'Saldo en Tokens \$SKR',
-                          subtitle: 'Pagar ≈ $skrAmount SKR',
+                          title: lang.t('skrBalanceOption'),
+                          subtitle: lang.t('skrBalancePaySub').replaceAll('{amount}', '$skrAmount'),
                           selected: _selectedMethod == 'skr',
                           onTap: () => setState(() => _selectedMethod = 'skr'),
                         ),
@@ -639,7 +639,7 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Activando certificación...',
+                                  lang.t('activatingCertification'),
                                   style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                               ],
@@ -649,12 +649,12 @@ class _PetVerificationModalState extends State<PetVerificationModal> {
                               children: [
                                 const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
                                 const SizedBox(width: 8),
-                                  Text(
-                                    widget.pet.isVerificationExpired
-                                        ? 'Renovar Verificación (40 días) por \$10 USD'
-                                        : 'Verificar a ${widget.pet.name} (40 días) por \$10 USD',
-                                    style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
+                                Text(
+                                  widget.pet.isVerificationExpired
+                                      ? lang.t('renewPetBtn').replaceAll('{name}', widget.pet.name)
+                                      : lang.t('verifyPetBtn').replaceAll('{name}', widget.pet.name),
+                                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
                               ],
                             ),
                     ),
