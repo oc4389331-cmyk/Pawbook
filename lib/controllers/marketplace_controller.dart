@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/bandana_product_model.dart';
+import '../models/marketplace_order_model.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 
@@ -8,12 +10,20 @@ class MarketplaceController extends ChangeNotifier {
   final List<BandanaProductModel> _products = [];
   bool _isLoading = false;
 
+  final List<MarketplaceOrderModel> _pendingOrders = [];
+  final List<MarketplaceOrderModel> _shippedOrders = [];
+  bool _isLoadingOrders = false;
+
   List<BandanaProductModel> get products => List.unmodifiable(_products);
   bool get isLoading => _isLoading;
+  List<MarketplaceOrderModel> get pendingOrders => List.unmodifiable(_pendingOrders);
+  List<MarketplaceOrderModel> get shippedOrders => List.unmodifiable(_shippedOrders);
+  bool get isLoadingOrders => _isLoadingOrders;
 
   MarketplaceController({SupabaseService? supabaseService})
       : _supabaseService = supabaseService ?? SupabaseService() {
     _loadProducts();
+    loadAdminOrders();
   }
 
   Future<void> _loadProducts() async {
@@ -191,5 +201,137 @@ class MarketplaceController extends ChangeNotifier {
     _products.clear();
     _initDefaultProducts();
     notifyListeners();
+  }
+
+  // ==========================================
+  // ORDERS MANAGEMENT (ADMIN & CHECKOUT)
+  // ==========================================
+
+  Future<void> loadAdminOrders() async {
+    _isLoadingOrders = true;
+    notifyListeners();
+
+    try {
+      final allOrders = await _supabaseService.fetchMarketplaceOrders();
+      _pendingOrders.clear();
+      _shippedOrders.clear();
+
+      for (final order in allOrders) {
+        if (order.isShipped) {
+          _shippedOrders.add(order);
+        } else {
+          _pendingOrders.add(order);
+        }
+      }
+    } catch (e) {
+      debugPrint('[MarketplaceController] Error loading admin orders: $e');
+    } finally {
+      _isLoadingOrders = false;
+      notifyListeners();
+    }
+  }
+
+  Future<MarketplaceOrderModel?> placeBandanaOrder({
+    required BandanaProductModel product,
+    required int quantity,
+    required String paymentMethod,
+    required String totalPaidFormatted,
+    required double totalPriceUsd,
+    String? transactionSignature,
+    required String recipientName,
+    required String phoneNumber,
+    required String country,
+    required String address,
+    required String city,
+    required String stateProvince,
+    required String postalCode,
+    String? deliveryNotes,
+    required String userId,
+    String? userEmail,
+  }) async {
+    // 1. Reduce stock
+    final purchased = purchaseProduct(product.id, quantity);
+    if (!purchased) {
+      debugPrint('[MarketplaceController] Warning: Could not deduct stock, continuing order creation');
+    }
+
+    // 2. Create Order
+    final orderId = 'ord_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 6)}';
+    final now = DateTime.now();
+    final newOrder = MarketplaceOrderModel(
+      id: orderId,
+      userId: userId,
+      userEmail: userEmail,
+      productId: product.id,
+      productName: product.name,
+      productImage: product.imageUrl,
+      quantity: quantity,
+      paymentMethod: paymentMethod,
+      totalPriceUsd: totalPriceUsd,
+      totalPaidFormatted: totalPaidFormatted,
+      transactionSignature: transactionSignature,
+      recipientName: recipientName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      country: country.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      stateProvince: stateProvince.trim(),
+      postalCode: postalCode.trim(),
+      deliveryNotes: deliveryNotes?.trim(),
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    // 3. Persist to Supabase
+    await _supabaseService.createMarketplaceOrder(newOrder);
+
+    // 4. Update local list
+    _pendingOrders.insert(0, newOrder);
+    notifyListeners();
+
+    return newOrder;
+  }
+
+  Future<bool> markOrderAsShipped({
+    required String orderId,
+    required DateTime shippedAt,
+    String? trackingNumber,
+    String? shippingCarrier,
+  }) async {
+    final success = await _supabaseService.updateMarketplaceOrderShipping(
+      orderId: orderId,
+      status: 'shipped',
+      shippedAt: shippedAt,
+      trackingNumber: trackingNumber?.trim(),
+      shippingCarrier: shippingCarrier?.trim(),
+    );
+
+    if (success) {
+      final pendingIdx = _pendingOrders.indexWhere((o) => o.id == orderId);
+      if (pendingIdx != -1) {
+        final order = _pendingOrders.removeAt(pendingIdx);
+        final shippedOrder = order.copyWith(
+          status: 'shipped',
+          shippedAt: shippedAt,
+          trackingNumber: trackingNumber?.trim(),
+          shippingCarrier: shippingCarrier?.trim(),
+          updatedAt: DateTime.now(),
+        );
+        _shippedOrders.insert(0, shippedOrder);
+      } else {
+        final shippedIdx = _shippedOrders.indexWhere((o) => o.id == orderId);
+        if (shippedIdx != -1) {
+          _shippedOrders[shippedIdx] = _shippedOrders[shippedIdx].copyWith(
+            shippedAt: shippedAt,
+            trackingNumber: trackingNumber?.trim(),
+            shippingCarrier: shippingCarrier?.trim(),
+            updatedAt: DateTime.now(),
+          );
+        }
+      }
+      notifyListeners();
+    }
+    return success;
   }
 }

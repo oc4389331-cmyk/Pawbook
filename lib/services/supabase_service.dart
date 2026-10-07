@@ -11,6 +11,7 @@ import '../models/withdrawal_model.dart';
 import '../models/reward_order_model.dart';
 import '../models/pet_analytics_model.dart';
 import '../models/bandana_product_model.dart';
+import '../models/marketplace_order_model.dart';
 import 'render_backend_service.dart';
 import 'auth_storage_service.dart';
 
@@ -33,6 +34,7 @@ class SupabaseService {
   final Map<String, Map<String, int>> _userTagAffinity = {}; // userId -> { 'golden': 10, 'summer': 5 }
   final Map<String, PostModel> _cachedPosts = {}; // Global unified cache for fast lookup
   final List<RewardOrderModel> _mockOrders = [];
+  final List<MarketplaceOrderModel> _cachedMarketplaceOrders = [];
 
   SupabaseService({bool useMockFallback = true}) : _useMockFallback = useMockFallback {
     try {
@@ -1814,6 +1816,95 @@ class SupabaseService {
     } catch (e) {
       debugPrint('[Supabase] Error grabando en site_traffic: $e');
     }
+  }
+
+  // ==========================================
+  // MARKETPLACE BANDANA ORDERS CRUD & TRACKING
+  // ==========================================
+
+  Future<bool> createMarketplaceOrder(MarketplaceOrderModel order) async {
+    _cachedMarketplaceOrders.removeWhere((o) => o.id == order.id);
+    _cachedMarketplaceOrders.insert(0, order);
+
+    if (_client != null) {
+      try {
+        await _client!.from('marketplace_orders').insert(order.toJson());
+        debugPrint('[Supabase] ✅ Pedido de bandana guardado en marketplace_orders: ${order.id}');
+        return true;
+      } catch (e) {
+        debugPrint('[Supabase] Note on createMarketplaceOrder (persisted locally): $e');
+      }
+    }
+    return true;
+  }
+
+  Future<List<MarketplaceOrderModel>> fetchMarketplaceOrders({String? status}) async {
+    if (_client != null) {
+      try {
+        var query = _client!.from('marketplace_orders').select();
+        if (status != null && status.isNotEmpty) {
+          query = query.eq('status', status);
+        }
+        final res = await query.order('created_at', ascending: false);
+        if (res is List) {
+          final list = res.map((e) => MarketplaceOrderModel.fromJson(Map<String, dynamic>.from(e))).toList();
+          // Merge with local cache
+          for (final item in list) {
+            final idx = _cachedMarketplaceOrders.indexWhere((o) => o.id == item.id);
+            if (idx != -1) {
+              _cachedMarketplaceOrders[idx] = item;
+            } else {
+              _cachedMarketplaceOrders.add(item);
+            }
+          }
+          return list;
+        }
+      } catch (e) {
+        debugPrint('[Supabase] Note on fetchMarketplaceOrders (using cache): $e');
+      }
+    }
+
+    if (status != null && status.isNotEmpty) {
+      return _cachedMarketplaceOrders.where((o) => o.status.toLowerCase() == status.toLowerCase()).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+    return List.from(_cachedMarketplaceOrders)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  Future<bool> updateMarketplaceOrderShipping({
+    required String orderId,
+    required String status,
+    required DateTime shippedAt,
+    String? trackingNumber,
+    String? shippingCarrier,
+  }) async {
+    final idx = _cachedMarketplaceOrders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      _cachedMarketplaceOrders[idx] = _cachedMarketplaceOrders[idx].copyWith(
+        status: status,
+        shippedAt: shippedAt,
+        trackingNumber: trackingNumber,
+        shippingCarrier: shippingCarrier,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    if (_client != null) {
+      try {
+        await _client!.from('marketplace_orders').update({
+          'status': status,
+          'shipped_at': shippedAt.toIso8601String(),
+          if (trackingNumber != null) 'tracking_number': trackingNumber,
+          if (shippingCarrier != null) 'shipping_carrier': shippingCarrier,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', orderId);
+        debugPrint('[Supabase] ✅ Pedido $orderId actualizado a status=$status, shipped_at=$shippedAt');
+        return true;
+      } catch (e) {
+        debugPrint('[Supabase] Error updating marketplace order: $e');
+      }
+    }
+    return idx != -1;
   }
 }
 

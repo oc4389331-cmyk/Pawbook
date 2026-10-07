@@ -331,4 +331,55 @@ CREATE POLICY "Public Traffic Insert Access" ON public.site_traffic FOR INSERT W
 DROP POLICY IF EXISTS "Admin Traffic Read Access" ON public.site_traffic;
 CREATE POLICY "Admin Traffic Read Access" ON public.site_traffic FOR SELECT USING (true);
 
+-- ====================================================================
+-- 12. Marketplace Bandana Orders & Shipping Tracking Table
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.marketplace_orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_email TEXT,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    product_image TEXT DEFAULT '',
+    quantity INT NOT NULL DEFAULT 1,
+    payment_method TEXT NOT NULL DEFAULT 'SOL', -- 'SOL', 'SKR', 'POINTS'
+    total_price_usd NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    total_paid_formatted TEXT NOT NULL DEFAULT '',
+    transaction_signature TEXT,
+    -- Shipping Details
+    recipient_name TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    country TEXT NOT NULL,
+    address TEXT NOT NULL,
+    city TEXT NOT NULL DEFAULT '',
+    state_province TEXT DEFAULT '',
+    postal_code TEXT NOT NULL,
+    delivery_notes TEXT DEFAULT '',
+    -- Fulfillment & Shipment
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'shipped'
+    shipped_at TIMESTAMPTZ,
+    tracking_number TEXT,
+    shipping_carrier TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_status ON public.marketplace_orders(status);
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_user_id ON public.marketplace_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_created_at ON public.marketplace_orders(created_at DESC);
+
+ALTER TABLE public.marketplace_orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Orders Read Access" ON public.marketplace_orders;
+CREATE POLICY "Public Orders Read Access" ON public.marketplace_orders FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Orders Insert Access" ON public.marketplace_orders;
+CREATE POLICY "Public Orders Insert Access" ON public.marketplace_orders FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Orders Update Access" ON public.marketplace_orders;
+CREATE POLICY "Public Orders Update Access" ON public.marketplace_orders FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public Orders Delete Access" ON public.marketplace_orders;
+CREATE POLICY "Public Orders Delete Access" ON public.marketplace_orders FOR DELETE USING (true);
+
+
 

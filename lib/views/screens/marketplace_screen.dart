@@ -14,6 +14,8 @@ import '../../services/dynamic_auth_service.dart';
 import '../../services/r2_storage_service.dart';
 import '../../services/render_backend_service.dart';
 import '../../theme/app_theme.dart';
+import '../screens/admin_orders_dashboard_screen.dart';
+import '../widgets/shipping_address_form_widget.dart';
 
 class MarketplaceScreen extends StatelessWidget {
   const MarketplaceScreen({super.key});
@@ -49,6 +51,7 @@ class MarketplaceScreen extends StatelessWidget {
     final dynamicAuthService = DynamicAuthService();
     final recipientWallet = AppConfig.marketplaceTreasuryWallet;
     final double solRate = oracleController.solUsdPrice;
+    final shippingControllers = ShippingAddressControllers();
 
     showModalBottomSheet(
       context: context,
@@ -184,14 +187,34 @@ class MarketplaceScreen extends StatelessWidget {
                                   );
 
                                   if (verifyRes.isSuccess) {
-                                    if (ctx.mounted) {
-                                      Navigator.pop(ctx);
-                                      marketplaceController.purchaseProduct(item.id, selectedQuantity);
-                                      authController.addPawtScore(AppConfig.pointsForMarketPurchase);
+                                      if (ctx.mounted) {
+                                        Navigator.pop(ctx);
+                                        marketplaceController.purchaseProduct(item.id, selectedQuantity);
+                                        authController.addPawtScore(AppConfig.pointsForMarketPurchase);
 
-                                      final shortSig = (verifyRes.signature != null && verifyRes.signature!.length > 16)
-                                          ? '${verifyRes.signature!.substring(0, 8)}...${verifyRes.signature!.substring(verifyRes.signature!.length - 8)}'
-                                          : (verifyRes.signature ?? 'Confirmado');
+                                        // Guardar Pedido con Datos de Envío en Supabase
+                                        marketplaceController.placeBandanaOrder(
+                                          product: item,
+                                          quantity: selectedQuantity,
+                                          paymentMethod: selectedToken,
+                                          totalPaidFormatted: tokenPaidStr,
+                                          totalPriceUsd: totalUsd,
+                                          transactionSignature: verifyRes.signature,
+                                          recipientName: shippingControllers.nameController.text,
+                                          phoneNumber: shippingControllers.phoneController.text,
+                                          country: shippingControllers.countryController.text,
+                                          address: shippingControllers.addressController.text,
+                                          city: shippingControllers.cityController.text,
+                                          stateProvince: shippingControllers.stateController.text,
+                                          postalCode: shippingControllers.postalCodeController.text,
+                                          deliveryNotes: shippingControllers.notesController.text,
+                                          userId: authController.currentProfile?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
+                                          userEmail: authController.currentProfile?.email,
+                                        );
+
+                                        final shortSig = (verifyRes.signature != null && verifyRes.signature!.length > 16)
+                                            ? '${verifyRes.signature!.substring(0, 8)}...${verifyRes.signature!.substring(verifyRes.signature!.length - 8)}'
+                                            : (verifyRes.signature ?? 'Confirmado');
 
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
@@ -603,6 +626,10 @@ class MarketplaceScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
+                    // FORMULARIO DE ENVÍO DEL PAQUETE
+                    ShippingAddressFormWidget(controllers: shippingControllers),
+                    const SizedBox(height: 16),
+
                     // Order Summary Pill
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -641,6 +668,25 @@ class MarketplaceScreen extends StatelessWidget {
                         onPressed: isProcessing
                             ? null
                             : () async {
+                                // Validación de campos de envío requeridos
+                                if (shippingControllers.nameController.text.trim().isEmpty ||
+                                    shippingControllers.phoneController.text.trim().isEmpty ||
+                                    shippingControllers.addressController.text.trim().isEmpty ||
+                                    shippingControllers.countryController.text.trim().isEmpty ||
+                                    shippingControllers.postalCodeController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppTheme.primaryTerracotta,
+                                      content: Text(
+                                        '⚠️ Por favor completa los datos de envío (Nombre, Teléfono, Dirección, País y C.P.)',
+                                        style: GoogleFonts.fredoka(color: Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                await shippingControllers.saveToStorage();
                                 setModalState(() => isProcessing = true);
 
                                 final effectiveSol = selectedToken == 'SKR'
@@ -743,9 +789,11 @@ class MarketplaceScreen extends StatelessWidget {
 
     int selectedQuantity = 1;
     final userScore = authController.currentProfile?.pawtScore ?? 100;
+    final shippingControllers = ShippingAddressControllers();
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
@@ -758,105 +806,161 @@ class MarketplaceScreen extends StatelessWidget {
                 color: AppTheme.bgWarmCream,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: AppTheme.borderWarm,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    langController.t('redeemWithPointsTitle'),
-                    style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.network(item.imageUrl, width: 56, height: 56, fit: BoxFit.cover),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.name, style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('${item.pricePoints} ${langController.t("pointsEach")} • ${langController.t("stockAvailable")}: ${item.stock}', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
-                          ],
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: AppTheme.borderWarm,
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  // Quantity picker
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(langController.t('quantity'), style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: selectedQuantity > 1 ? () => setModalState(() => selectedQuantity--) : null,
-                            icon: const Icon(Icons.remove_circle_outline),
-                            color: AppTheme.primaryTerracotta,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      langController.t('redeemWithPointsTitle'),
+                      style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(item.imageUrl, width: 56, height: 56, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.name, style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text('${item.pricePoints} ${langController.t("pointsEach")} • ${langController.t("stockAvailable")}: ${item.stock}', style: GoogleFonts.outfit(color: AppTheme.textMutedWarm, fontSize: 12)),
+                            ],
                           ),
-                          Text('$selectedQuantity', style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold)),
-                          IconButton(
-                            onPressed: selectedQuantity < item.stock ? () => setModalState(() => selectedQuantity++) : null,
-                            icon: const Icon(Icons.add_circle_outline),
-                            color: AppTheme.emeraldGreen,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const Divider(color: AppTheme.borderWarm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(langController.t('totalCost'), style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold)),
-                      Text('$totalPoints pts (${langController.t("youHavePoints")} $userScore pts)', style: GoogleFonts.fredoka(fontSize: 14, color: canAfford ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: canAfford
-                          ? () {
-                              authController.deductPawtScore(totalPoints);
-                              marketplaceController.purchaseProduct(item.id, selectedQuantity);
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: AppTheme.emeraldGreen,
-                                  content: Text('${langController.t("redeemSuccessMsg")} ($selectedQuantity x ${item.name})', style: GoogleFonts.fredoka()),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentOrange,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
-                      child: Text(
-                        canAfford ? '${langController.t("confirmRedeem")} ($totalPoints pts)' : langController.t('insufficientPoints'),
-                        style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    // Quantity picker
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(langController.t('quantity'), style: GoogleFonts.fredoka(fontSize: 14, fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: selectedQuantity > 1 ? () => setModalState(() => selectedQuantity--) : null,
+                              icon: const Icon(Icons.remove_circle_outline),
+                              color: AppTheme.primaryTerracotta,
+                            ),
+                            Text('$selectedQuantity', style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold)),
+                            IconButton(
+                              onPressed: selectedQuantity < item.stock ? () => setModalState(() => selectedQuantity++) : null,
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: AppTheme.emeraldGreen,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(color: AppTheme.borderWarm),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(langController.t('totalCost'), style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold)),
+                        Text('$totalPoints pts (${langController.t("youHavePoints")} $userScore pts)', style: GoogleFonts.fredoka(fontSize: 14, color: canAfford ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // FORMULARIO DE ENVÍO PARA EL CANJE DE BANDANA
+                    ShippingAddressFormWidget(controllers: shippingControllers),
+                    const SizedBox(height: 18),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: canAfford
+                            ? () async {
+                                // Validación de campos de envío
+                                if (shippingControllers.nameController.text.trim().isEmpty ||
+                                    shippingControllers.phoneController.text.trim().isEmpty ||
+                                    shippingControllers.addressController.text.trim().isEmpty ||
+                                    shippingControllers.countryController.text.trim().isEmpty ||
+                                    shippingControllers.postalCodeController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppTheme.primaryTerracotta,
+                                      content: Text(
+                                        '⚠️ Por favor completa los datos de envío (Nombre, Teléfono, Dirección, País y C.P.)',
+                                        style: GoogleFonts.fredoka(color: Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                await shippingControllers.saveToStorage();
+                                authController.deductPawtScore(totalPoints);
+
+                                // Registrar Pedido en Supabase
+                                await marketplaceController.placeBandanaOrder(
+                                  product: item,
+                                  quantity: selectedQuantity,
+                                  paymentMethod: 'POINTS',
+                                  totalPaidFormatted: '$totalPoints pts',
+                                  totalPriceUsd: item.priceUsd * selectedQuantity,
+                                  recipientName: shippingControllers.nameController.text,
+                                  phoneNumber: shippingControllers.phoneController.text,
+                                  country: shippingControllers.countryController.text,
+                                  address: shippingControllers.addressController.text,
+                                  city: shippingControllers.cityController.text,
+                                  stateProvince: shippingControllers.stateController.text,
+                                  postalCode: shippingControllers.postalCodeController.text,
+                                  deliveryNotes: shippingControllers.notesController.text,
+                                  userId: authController.currentProfile?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
+                                  userEmail: authController.currentProfile?.email,
+                                );
+
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppTheme.emeraldGreen,
+                                      duration: const Duration(seconds: 5),
+                                      content: Text(
+                                        '${langController.t("redeemSuccessMsg")} ($selectedQuantity x ${item.name}). ¡Pedido registrado para envío!',
+                                        style: GoogleFonts.fredoka(),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentOrange,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        child: Text(
+                          canAfford ? '${langController.t("confirmRedeem")} ($totalPoints pts)' : langController.t('insufficientPoints'),
+                          style: GoogleFonts.fredoka(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -1546,7 +1650,9 @@ class MarketplaceScreen extends StatelessWidget {
     final userScore = authController.currentProfile?.pawtScore ?? 100;
     final products = marketplaceController.products;
     final currentUserEmail = authController.currentProfile?.email?.toLowerCase().trim() ?? '';
-    final bool isAdmin = currentUserEmail == AppConfig.adminEmail.toLowerCase().trim();
+    final bool isAdmin = currentUserEmail == AppConfig.adminEmail.toLowerCase().trim() ||
+        currentUserEmail == 'wernesto66@gmail.com' ||
+        currentUserEmail == 'wernesto66@gmail.con';
 
     return Scaffold(
       backgroundColor: AppTheme.bgWarmCream,
@@ -1558,8 +1664,37 @@ class MarketplaceScreen extends StatelessWidget {
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: AppTheme.primaryTerracotta, fontSize: 22),
         ),
         actions: [
-          // Admin Panel Button (ONLY VISIBLE TO wernesto66@gmail.com)
-          if (isAdmin)
+          // BOTONES EXCLUSIVOS PARA EL ADMIN (wernesto66@gmail.com / wernesto66@gmail.con)
+          if (isAdmin) ...[
+            // 1. Botón al Dashboard de Pedidos (Pendientes y Enviados)
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdminOrdersDashboardScreen()),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.emeraldGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.6), width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_shipping_rounded, color: AppTheme.emeraldGreen, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '📦 Pedidos (${marketplaceController.pendingOrders.length})',
+                      style: GoogleFonts.fredoka(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 2. Botón Stock
             GestureDetector(
               onTap: () => _promptAdminPasswordDialog(context, marketplaceController, authController, langController),
               child: Container(
@@ -1575,13 +1710,14 @@ class MarketplaceScreen extends StatelessWidget {
                     const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.solanaPurple, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      'Admin Stock',
+                      'Stock',
                       style: GoogleFonts.fredoka(color: AppTheme.solanaPurple, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
               ),
             ),
+          ],
           // Cart Button with badge (Image 5 style)
           Padding(
             padding: const EdgeInsets.only(right: 6),

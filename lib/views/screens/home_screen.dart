@@ -32,6 +32,8 @@ import 'login_screen.dart';
 import 'marketplace_screen.dart';
 import 'pet_profile_screen.dart';
 import 'rewards_store_screen.dart';
+import 'admin_orders_dashboard_screen.dart';
+import '../../config/app_config.dart';
 import '../../config/app_routes.dart';
 import '../../services/video_cache_service.dart';
 
@@ -2694,6 +2696,73 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               ),
               const SizedBox(height: 24),
             ],
+
+            // PANEL ADMINISTRADOR DE ENVÍOS (Solo para wernesto66@gmail.com / wernesto66@gmail.con)
+            if (authController.currentProfile?.email?.toLowerCase().trim() == AppConfig.adminEmail.toLowerCase().trim() ||
+                authController.currentProfile?.email?.toLowerCase().trim() == 'wernesto66@gmail.com' ||
+                authController.currentProfile?.email?.toLowerCase().trim() == 'wernesto66@gmail.con') ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.emeraldGreen, Color(0xFF0F9D58)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.emeraldGreen.withOpacity(0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AdminOrdersDashboardScreen()),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.local_shipping_rounded, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '📦 Dashboard de Pedidos (Admin)',
+                                  style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                Text(
+                                  'Gestionar pedidos pendientes y anexar fecha de envío',
+                                  style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 11.5),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             const LanguageProfileTile(),
             const SizedBox(height: 16),
             Row(
