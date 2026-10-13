@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../models/sound_track_model.dart';
 import '../../services/video_metadata_service.dart';
 import '../../services/app_audio_player.dart';
+import 'package:image_picker/image_picker.dart';
 
 // ── Overlay Item Model (Stickers, Emojis, Text) ──────────────────────────────
 enum OverlayType { sticker, emoji, text }
@@ -134,6 +135,7 @@ class VideoEditorResult {
   final double musicVolume;
   final Uint8List? overlayPngBytes;
   final bool isTrimmed;
+  final bool isDeleted;
 
   const VideoEditorResult({
     required this.videoBytes,
@@ -147,7 +149,20 @@ class VideoEditorResult {
     this.musicVolume = 0.8,
     this.overlayPngBytes,
     this.isTrimmed = false,
+    this.isDeleted = false,
   });
+
+  factory VideoEditorResult.deleted() {
+    return VideoEditorResult(
+      videoBytes: Uint8List(0),
+      filename: '',
+      startSeconds: 0,
+      endSeconds: 0,
+      filterName: '',
+      overlays: const [],
+      isDeleted: true,
+    );
+  }
 
   double get duration => endSeconds - startSeconds;
 
@@ -164,6 +179,7 @@ class VideoEditorResult {
     double? musicVolume,
     Uint8List? overlayPngBytes,
     bool? isTrimmed,
+    bool? isDeleted,
   }) {
     return VideoEditorResult(
       videoBytes: videoBytes ?? this.videoBytes,
@@ -177,6 +193,7 @@ class VideoEditorResult {
       musicVolume: musicVolume ?? this.musicVolume,
       overlayPngBytes: overlayPngBytes ?? this.overlayPngBytes,
       isTrimmed: isTrimmed ?? this.isTrimmed,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }
@@ -198,6 +215,11 @@ class VideoEditorScreen extends StatefulWidget {
 }
 
 class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTickerProviderStateMixin {
+  // Current active video data
+  late Uint8List _currentVideoBytes;
+  late String _currentFilename;
+  late String _viewKey;
+
   // Trimming
   double _totalVideoDuration = 30.0;
   RangeValues _trimRange = const RangeValues(0.0, 15.0);
@@ -207,7 +229,6 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   double _aspectRatio = 9 / 16;
   String _aspectRatioMode = '9:16'; // '9:16', '16:9', '1:1'
   BoxFit _videoFit = BoxFit.contain;
-  late final String _viewKey;
 
   // Filters
   int _selectedFilterIndex = 0;
@@ -232,7 +253,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _viewKey = 'studio_vid_${DateTime.now().millisecondsSinceEpoch}_${widget.filename.hashCode.abs()}';
+    _currentVideoBytes = widget.videoBytes;
+    _currentFilename = widget.filename;
+    _viewKey = 'studio_vid_${DateTime.now().millisecondsSinceEpoch}_${_currentFilename.hashCode.abs()}';
     _selectedSound = widget.initialSound;
 
     _playheadController = AnimationController(
@@ -249,7 +272,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
 
   Future<void> _loadVideoMetadata() async {
     try {
-      final info = await VideoMetadataService.instance.extractMetadata(widget.videoBytes);
+      final info = await VideoMetadataService.instance.extractMetadata(_currentVideoBytes);
       if (mounted) {
         setState(() {
           _videoInfo = info;
@@ -273,6 +296,118 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _changeVideo() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 30),
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final info = await VideoMetadataService.instance.extractMetadataFromPath(file.path);
+
+      if (mounted) {
+        setState(() {
+          _currentVideoBytes = bytes;
+          _currentFilename = file.name;
+          _videoInfo = info;
+          _viewKey = 'studio_vid_${DateTime.now().millisecondsSinceEpoch}_${file.name.hashCode.abs()}';
+          if (info.durationSeconds > 0) {
+            _totalVideoDuration = info.durationSeconds;
+            final maxTrim = info.durationSeconds > AppConfig.maxVideoDurationSeconds
+                ? AppConfig.maxVideoDurationSeconds
+                : info.durationSeconds;
+            _trimRange = RangeValues(0.0, maxTrim.clamp(1.0, AppConfig.maxVideoDurationSeconds));
+          }
+          if (info.isLandscape) {
+            _aspectRatio = 16 / 9;
+            _aspectRatioMode = '16:9';
+          } else if (info.isSquare) {
+            _aspectRatio = 1.0;
+            _aspectRatioMode = '1:1';
+          } else {
+            _aspectRatio = 9 / 16;
+            _aspectRatioMode = '9:16';
+          }
+        });
+
+        final lang = Provider.of<LanguageController>(context, listen: false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang.t('videoChangedSuccess')),
+            backgroundColor: AppTheme.emeraldGreen,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteVideo() async {
+    final lang = Provider.of<LanguageController>(context, listen: false);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                lang.t('deleteVideoConfirmTitle'),
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          lang.t('deleteVideoConfirmMsg'),
+          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              lang.t('cancel'),
+              style: GoogleFonts.fredoka(color: Colors.white60),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              lang.t('deleteVideoBtn'),
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      Navigator.pop(context, VideoEditorResult.deleted());
+    }
   }
 
   Future<void> _initAudio() async {
@@ -441,8 +576,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     final bool actuallyTrimmed = start > 0.2 || (_totalVideoDuration > 0 && (_totalVideoDuration - end) > 0.8);
 
     final result = VideoEditorResult(
-      videoBytes: widget.videoBytes,
-      filename: widget.filename,
+      videoBytes: _currentVideoBytes,
+      filename: _currentFilename,
       startSeconds: start,
       endSeconds: end,
       filterName: videoFilterPresets[_selectedFilterIndex].name,
@@ -560,40 +695,60 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
             // 2. Top Header Action Bar
             Positioned(
               top: 10,
-              left: 16,
-              right: 16,
+              left: 12,
+              right: 12,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     style: IconButton.styleFrom(backgroundColor: Colors.black54),
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    tooltip: lang.t('close'),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.redAccent.withOpacity(0.25),
+                      side: BorderSide(color: Colors.redAccent.withOpacity(0.6)),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.movie_filter_rounded, color: AppTheme.accentOrange, size: 16),
-                        const SizedBox(width: 6),
-                        Text(lang.t('videoStudioHeader'), style: GoogleFonts.fredoka(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                      ],
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                    tooltip: lang.t('deleteVideoBtn'),
+                    onPressed: _confirmDeleteVideo,
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    onTap: _changeVideo,
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppTheme.solanaGreen.withOpacity(0.6)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.swap_horiz_rounded, color: AppTheme.solanaGreen, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            lang.t('changeVideoBtn'),
+                            style: GoogleFonts.fredoka(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryTerracotta,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: _finishEditing,
-                    child: Text(lang.t('studioDoneBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: Text(lang.t('studioDoneBtn'), style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ],
               ),
@@ -605,6 +760,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
               top: 80,
               child: Column(
                 children: [
+                  _buildStudioToolButton(icon: Icons.video_collection_outlined, label: lang.t('changeVideoBtn'), toolId: 'change', onTap: _changeVideo),
+                  const SizedBox(height: 12),
                   _buildStudioToolButton(icon: Icons.aspect_ratio_rounded, label: _aspectRatioMode, toolId: 'ratio'),
                   const SizedBox(height: 12),
                   _buildStudioToolButton(icon: Icons.content_cut_rounded, label: lang.t('studioTrimTool'), toolId: 'trim'),
@@ -648,7 +805,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> with SingleTicker
     return Container(
       color: Colors.black,
       child: VideoMetadataService.instance.buildVideoPlayerView(
-        bytes: widget.videoBytes,
+        bytes: _currentVideoBytes,
         viewKey: _viewKey,
         objectUrl: _videoInfo?.objectUrl,
         autoPlay: true,

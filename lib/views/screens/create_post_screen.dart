@@ -248,8 +248,13 @@ class _CreatePostScreenState extends State<CreatePostScreen>
         // Automatically open Video Studio for the user after picking video
         final editedResult = await _openVideoEditor(forceTrim: info.durationSeconds > AppConfig.maxVideoDurationSeconds);
 
+        if (editedResult?.isDeleted == true) {
+          return;
+        }
+
         // Si el video original superaba 30s y el usuario no completó el recorte, descartar el video
         if (info.durationSeconds > AppConfig.maxVideoDurationSeconds && (editedResult == null || editedResult.duration > AppConfig.maxVideoDurationSeconds)) {
+          if (!mounted) return;
           final lang = Provider.of<LanguageController>(context, listen: false);
           setState(() {
             _pickedMedia.clear();
@@ -310,7 +315,22 @@ class _CreatePostScreenState extends State<CreatePostScreen>
       );
 
       if (result != null && mounted) {
+        if (result.isDeleted) {
+          setState(() {
+            _pickedMedia.clear();
+            _videoEditorResult = null;
+          });
+          final lang = Provider.of<LanguageController>(context, listen: false);
+          _showSnack(lang.t('videoRemovedSuccess'));
+          return result;
+        }
+
         setState(() {
+          _pickedMedia.clear();
+          _pickedMedia.add(_PickedMedia(
+            bytes: result.videoBytes,
+            filename: result.filename,
+          ));
           _videoEditorResult = result;
           _selectedSound = result.selectedSound;
         });
@@ -844,36 +864,62 @@ class _CreatePostScreenState extends State<CreatePostScreen>
               ),
               const SizedBox(height: 12),
 
-              // Pick video from device button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.surfaceWarm,
-                    foregroundColor: AppTheme.primaryTerracotta,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
+              // Pick video from device button or remove
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.surfaceWarm,
+                          foregroundColor: AppTheme.primaryTerracotta,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(color: AppTheme.borderWarm, width: 1.5),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: Icon(
+                          _pickedMedia.isNotEmpty ? Icons.check_circle_rounded : Icons.cloud_upload_rounded,
+                          color: _pickedMedia.isNotEmpty ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
+                        ),
+                        label: Text(
+                          _pickedMedia.isNotEmpty
+                              ? 'Video: ${_pickedMedia.first.filename}'
+                              : 'O seleccionar archivo de video de tu galería',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.fredoka(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: _pickedMedia.isNotEmpty ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
+                          ),
+                        ),
+                        onPressed: _pickVideo,
+                      ),
                     ),
-                    elevation: 0,
                   ),
-                  icon: Icon(
-                    _pickedMedia.isNotEmpty ? Icons.check_circle_rounded : Icons.cloud_upload_rounded,
-                    color: _pickedMedia.isNotEmpty ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
-                  ),
-                  label: Text(
-                    _pickedMedia.isNotEmpty
-                        ? 'Video listo: ${_pickedMedia.first.filename}'
-                        : 'O seleccionar archivo de video de tu galería',
-                    style: GoogleFonts.fredoka(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: _pickedMedia.isNotEmpty ? AppTheme.emeraldGreen : AppTheme.primaryTerracotta,
+                  if (_pickedMedia.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.redAccent.withOpacity(0.12),
+                        side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                        padding: const EdgeInsets.all(12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+                      tooltip: langController.t('deleteVideoBtn'),
+                      onPressed: () {
+                        setState(() {
+                          _pickedMedia.clear();
+                          _videoEditorResult = null;
+                        });
+                        _showSnack(langController.t('videoRemovedSuccess'));
+                      },
                     ),
-                  ),
-                  onPressed: _pickVideo,
-                ),
+                  ],
+                ],
               ),
               if (_pickedMedia.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -945,6 +991,58 @@ class _CreatePostScreenState extends State<CreatePostScreen>
                                       ),
                                     ),
                                   ),
+                                ),
+                              ),
+
+                              // Botones superiores: Cambiar y Eliminar video
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: _pickVideo,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.75),
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: Colors.white24),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.swap_horiz_rounded, color: AppTheme.solanaGreen, size: 16),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              langController.t('changeVideoBtn'),
+                                              style: GoogleFonts.fredoka(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _pickedMedia.clear();
+                                          _videoEditorResult = null;
+                                        });
+                                        _showSnack(langController.t('videoRemovedSuccess'));
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.redAccent.withOpacity(0.85),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                        ),
+                                        child: const Icon(Icons.delete_forever_rounded, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
 

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/bandana_product_model.dart';
 import '../models/marketplace_order_model.dart';
@@ -6,6 +8,9 @@ import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 
 class MarketplaceController extends ChangeNotifier {
+  static const String _kProductsCacheKey = 'pawtbook_cached_products_v2';
+  static const String _kOrdersCacheKey = 'pawtbook_cached_orders_v2';
+
   final SupabaseService _supabaseService;
   final List<BandanaProductModel> _products = [];
   bool _isLoading = false;
@@ -30,7 +35,11 @@ class MarketplaceController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    // 1. Instant recovery from local cache
+    await _loadProductsFromCache();
+
     try {
+      // 2. Fetch fresh from Supabase
       final supaProducts = await _supabaseService.fetchMarketplaceProducts();
       if (supaProducts.isNotEmpty) {
         _products.clear();
@@ -56,20 +65,52 @@ class MarketplaceController extends ChangeNotifier {
             _products.add(p);
           }
         }
-      } else {
+        await _saveProductsToCache();
+      } else if (_products.isEmpty) {
         _initDefaultProducts();
+        await _saveProductsToCache();
         // Save initial default products to Supabase in background
         for (final p in _products) {
           _supabaseService.saveMarketplaceProduct(p);
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[MarketplaceController] Note on fetching Supabase products: $e');
       if (_products.isEmpty) {
         _initDefaultProducts();
+        await _saveProductsToCache();
       }
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadProductsFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(_kProductsCacheKey);
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final List decoded = jsonDecode(cachedJson);
+        final loaded = decoded.map((e) => BandanaProductModel.fromJson(e)).toList();
+        if (loaded.isNotEmpty) {
+          _products.clear();
+          _products.addAll(loaded);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[MarketplaceController] Cache load error: $e');
+    }
+  }
+
+  Future<void> _saveProductsToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = _products.map((p) => p.toJson()).toList();
+      await prefs.setString(_kProductsCacheKey, jsonEncode(list));
+    } catch (e) {
+      debugPrint('[MarketplaceController] Cache save error: $e');
     }
   }
 
@@ -153,12 +194,14 @@ class MarketplaceController extends ChangeNotifier {
     return true;
   }
 
-  void addProduct(BandanaProductModel newProduct) {
+  Future<bool> addProduct(BandanaProductModel newProduct) async {
     _products.insert(0, newProduct);
     notifyListeners();
+    await _saveProductsToCache();
 
     // Persist to Supabase
-    _supabaseService.saveMarketplaceProduct(newProduct);
+    final success = await _supabaseService.saveMarketplaceProduct(newProduct);
+    return success;
   }
 
   void updateProduct(BandanaProductModel updatedProduct) {
@@ -166,6 +209,7 @@ class MarketplaceController extends ChangeNotifier {
     if (idx != -1) {
       _products[idx] = updatedProduct;
       notifyListeners();
+      _saveProductsToCache();
       _supabaseService.saveMarketplaceProduct(updatedProduct);
     }
   }
@@ -176,6 +220,7 @@ class MarketplaceController extends ChangeNotifier {
       final safeStock = newStock < 0 ? 0 : newStock;
       _products[idx] = _products[idx].copyWith(stock: safeStock);
       notifyListeners();
+      _saveProductsToCache();
       _supabaseService.updateMarketplaceProductStock(productId, safeStock);
     }
   }
@@ -187,6 +232,7 @@ class MarketplaceController extends ChangeNotifier {
       final newStock = current + amount;
       _products[idx] = _products[idx].copyWith(stock: newStock);
       notifyListeners();
+      _saveProductsToCache();
       _supabaseService.updateMarketplaceProductStock(productId, newStock);
     }
   }
@@ -194,12 +240,14 @@ class MarketplaceController extends ChangeNotifier {
   void deleteProduct(String productId) {
     _products.removeWhere((p) => p.id == productId);
     notifyListeners();
+    _saveProductsToCache();
     _supabaseService.deleteMarketplaceProduct(productId);
   }
 
   void resetToDefaults() {
     _products.clear();
     _initDefaultProducts();
+    _saveProductsToCache();
     notifyListeners();
   }
 
@@ -207,21 +255,63 @@ class MarketplaceController extends ChangeNotifier {
   // ORDERS MANAGEMENT (ADMIN & CHECKOUT)
   // ==========================================
 
+  Future<void> _loadOrdersFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(_kOrdersCacheKey);
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final List decoded = jsonDecode(cachedJson);
+        final loaded = decoded.map((e) => MarketplaceOrderModel.fromJson(e)).toList();
+        if (loaded.isNotEmpty) {
+          _pendingOrders.clear();
+          _shippedOrders.clear();
+          for (final order in loaded) {
+            if (order.isShipped) {
+              _shippedOrders.add(order);
+            } else {
+              _pendingOrders.add(order);
+            }
+          }
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[MarketplaceController] Orders cache load error: $e');
+    }
+  }
+
+  Future<void> _saveOrdersToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = [..._pendingOrders, ..._shippedOrders];
+      final list = all.map((o) => o.toJson()).toList();
+      await prefs.setString(_kOrdersCacheKey, jsonEncode(list));
+    } catch (e) {
+      debugPrint('[MarketplaceController] Orders cache save error: $e');
+    }
+  }
+
   Future<void> loadAdminOrders() async {
     _isLoadingOrders = true;
     notifyListeners();
 
+    // 1. Instant recovery from local cache
+    await _loadOrdersFromCache();
+
     try {
       final allOrders = await _supabaseService.fetchMarketplaceOrders();
-      _pendingOrders.clear();
-      _shippedOrders.clear();
+      if (allOrders.isNotEmpty) {
+        _pendingOrders.clear();
+        _shippedOrders.clear();
 
-      for (final order in allOrders) {
-        if (order.isShipped) {
-          _shippedOrders.add(order);
-        } else {
-          _pendingOrders.add(order);
+        for (final order in allOrders) {
+          if (order.isShipped) {
+            _shippedOrders.add(order);
+          } else {
+            _pendingOrders.add(order);
+          }
         }
+        await _saveOrdersToCache();
       }
     } catch (e) {
       debugPrint('[MarketplaceController] Error loading admin orders: $e');
@@ -286,8 +376,9 @@ class MarketplaceController extends ChangeNotifier {
     // 3. Persist to Supabase
     await _supabaseService.createMarketplaceOrder(newOrder);
 
-    // 4. Update local list
+    // 4. Update local list and cache
     _pendingOrders.insert(0, newOrder);
+    await _saveOrdersToCache();
     notifyListeners();
 
     return newOrder;
@@ -330,6 +421,7 @@ class MarketplaceController extends ChangeNotifier {
           );
         }
       }
+      await _saveOrdersToCache();
       notifyListeners();
     }
     return success;

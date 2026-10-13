@@ -283,8 +283,8 @@ app.get(['/download/apk', '/apk', '/download', '/app.apk', '/pawbook.apk', '/app
   return res.status(403).json({ error: 'Descarga pública deshabilitada por motivos de seguridad.' });
 });
 
-// Explicit route for Pawbooklife Presentation Landing Page & Community / Group Invitations
-app.get(['/landing', '/presentacion', '/invite', '/join', '/grupo', '/invitacion'], (req, res) => {
+// Explicit route for Pawbooklife Presentation Landing Page
+app.get(['/landing', '/presentacion'], (req, res) => {
   const landingPath = path.join(__dirname, 'public/landing.html');
   if (fs.existsSync(landingPath)) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -317,8 +317,15 @@ app.get(['/support', '/soporte', '/solchat', '/chat-soporte'], (req, res) => {
   res.redirect('https://solchatplus.web.app/join/group/ce0f9388-9520-4d89-b4ae-3301125eeb1c');
 });
 
-// Direct Web App / Dashboard routes (Serves Flutter Web SPA directly on same origin)
-app.get(['/app', '/app/*', '/dashboard', '/dashboard/*'], (req, res) => {
+// Direct Web App, Dashboard, Pet Profile, Post & Invitation Deep Links
+app.get([
+  '/app', '/app/*',
+  '/dashboard', '/dashboard/*',
+  '/pet', '/pet/*',
+  '/post', '/post/*',
+  '/invite', '/invite/*',
+  '/join', '/grupo', '/invitacion'
+], (req, res) => {
   const indexPath = path.join(webBuildPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -331,17 +338,19 @@ app.get(['/app', '/app/*', '/dashboard', '/dashboard/*'], (req, res) => {
 
 app.get('/', (req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
-  // Check if request carries authentication or OAuth callback parameters (e.g. from Google OAuth / Supabase Auth)
-  const hasAuthParams = req.query.isSignUp !== undefined ||
-                        req.query.code !== undefined ||
-                        req.query.error !== undefined ||
-                        req.query.access_token !== undefined ||
-                        req.query.token !== undefined ||
-                        req.query.app === 'true' ||
-                        req.query.session !== undefined;
+  // Check if request carries authentication, deep links (pet, post), or SPA navigation parameters
+  const hasAppParams = req.query.isSignUp !== undefined ||
+                       req.query.code !== undefined ||
+                       req.query.error !== undefined ||
+                       req.query.access_token !== undefined ||
+                       req.query.token !== undefined ||
+                       req.query.app === 'true' ||
+                       req.query.session !== undefined ||
+                       req.query.pet !== undefined ||
+                       req.query.post !== undefined;
 
-  // If request originates from pawbooklife.com AND does not carry OAuth/Auth callback parameters, serve presentation landing
-  if (host.includes('pawbooklife.com') && !host.startsWith('media.') && !hasAuthParams) {
+  // If request originates from pawbooklife.com AND does not carry deep links / app parameters, serve presentation landing
+  if (host.includes('pawbooklife.com') && !host.startsWith('media.') && !hasAppParams) {
     const landingPath = path.join(__dirname, 'public/landing.html');
     if (fs.existsSync(landingPath)) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

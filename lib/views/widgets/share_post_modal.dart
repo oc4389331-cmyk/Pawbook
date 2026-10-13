@@ -27,7 +27,7 @@ class SharePostModal extends StatelessWidget {
   }
 
   String _buildInviteUrl(String petName) {
-    return 'https://pawbooklife.com/invite?pet=${post.petId}&post=${post.id}&name=${Uri.encodeComponent(petName)}';
+    return 'https://pawbooklife.com/pet/${post.petId}?post=${post.id}&name=${Uri.encodeComponent(petName)}';
   }
 
   String _buildShareMessage(String petName, String inviteUrl) {

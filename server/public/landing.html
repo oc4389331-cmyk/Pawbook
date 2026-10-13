@@ -10,6 +10,20 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
+  <!-- Deep Link Guard: Redirect to Web App if landing page receives pet or post parameter -->
+  <script>
+    (function() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('pet') || params.has('post')) {
+          var petId = params.get('pet');
+          var targetUrl = petId ? ('/pet/' + petId + window.location.search) : ('/app' + window.location.search);
+          window.location.replace(targetUrl);
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Google Fonts: Fredoka & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

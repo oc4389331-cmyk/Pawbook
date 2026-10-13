@@ -1122,6 +1122,8 @@ class MarketplaceScreen extends StatelessWidget {
     bool isUploadingToR2 = false;
 
     final List<String> presetImages = [
+      'https://media.pawbooklife.com/posts/bandana_admin_f2726546_1791389648466.jpeg',
+      'https://media.pawbooklife.com/posts/bandana_admin_8a278479_1791389918734.jpeg',
       'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600',
       'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600',
       'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600',
@@ -1495,7 +1497,7 @@ class MarketplaceScreen extends StatelessWidget {
                             child: ElevatedButton.icon(
                               onPressed: isUploadingToR2
                                   ? null
-                                  : () {
+                                  : () async {
                                       final name = nameCtrl.text.trim();
                                       if (name.isEmpty) {
                                         ScaffoldMessenger.of(context).showSnackBar(
@@ -1523,16 +1525,23 @@ class MarketplaceScreen extends StatelessWidget {
                                         colorValue: AppTheme.accentOrange.value,
                                       );
 
-                                      marketplaceController.addProduct(newProduct);
+                                      final savedInSupa = await marketplaceController.addProduct(newProduct);
                                       nameCtrl.clear();
                                       setAdminState(() {});
 
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: AppTheme.emeraldGreen,
-                                          content: Text('✅ ¡Bandana "$name" guardada en Supabase y publicada!', style: GoogleFonts.fredoka(color: Colors.white)),
-                                        ),
-                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: savedInSupa ? AppTheme.emeraldGreen : AppTheme.accentOrange,
+                                            content: Text(
+                                              savedInSupa
+                                                  ? '✅ ¡Bandana "$name" guardada en Supabase y publicada!'
+                                                  : '💾 ¡Bandana "$name" guardada localmente!',
+                                              style: GoogleFonts.fredoka(color: Colors.white),
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.emeraldGreen,

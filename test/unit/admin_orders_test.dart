@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawtbook/controllers/auth_controller.dart';
 import 'package:pawtbook/controllers/language_controller.dart';
 import 'package:pawtbook/controllers/marketplace_controller.dart';
@@ -13,6 +14,10 @@ import 'package:pawtbook/views/screens/admin_orders_dashboard_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   group('MarketplaceOrderModel Tests', () {
     test('Serializes and deserializes correctly with shipping details', () {

@@ -53,6 +53,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   bool _isRouteActive = true;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+  String? _pendingDeepLinkPostId;
+  String? _pendingDeepLinkPetId;
+  bool _deepLinkPetHandled = false;
 
   @override
   void didChangeDependencies() {
@@ -94,6 +97,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       feedController.fetchActivePosts(currentUserId: authController.currentProfile?.id).then((_) {
         if (mounted) {
           _precacheUpcomingVideos(feedController.posts, -1);
+          if (_pendingDeepLinkPostId != null) {
+            _triggerDeepLinkPostScroll(_pendingDeepLinkPostId!);
+          }
         }
       });
       if (authController.currentProfile != null) {
@@ -109,10 +115,23 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   void _initDeepLinks() {
+    // 1. Direct Web Browser URL check (Uri.base)
+    try {
+      final baseUri = Uri.base;
+      if (_hasDeepLinkParams(baseUri)) {
+        _handleIncomingUri(baseUri);
+      }
+    } catch (e) {
+      debugPrint('Uri.base check note: $e');
+    }
+
+    // 2. Native Mobile / AppLinks stream
     try {
       _appLinks = AppLinks();
       _appLinks.getInitialLink().then((uri) {
-        if (uri != null) _handleIncomingUri(uri);
+        if (uri != null && _hasDeepLinkParams(uri)) {
+          _handleIncomingUri(uri);
+        }
       }).catchError((err) {
         debugPrint('Deep link initial link fallback: $err');
       });
@@ -127,12 +146,24 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     }
   }
 
-  void _handleIncomingUri(Uri uri) {
-    final queryPost = uri.queryParameters['post'];
-    final queryPet = uri.queryParameters['pet'];
-    debugPrint('🐾 Deep Link received in Pawbook: $uri (post: $queryPost, pet: $queryPet)');
-    String? resolvedPostId = queryPost;
+  bool _hasDeepLinkParams(Uri uri) {
+    return uri.queryParameters.containsKey('pet') ||
+           uri.queryParameters.containsKey('post') ||
+           uri.pathSegments.contains('pet') ||
+           uri.pathSegments.contains('post') ||
+           uri.pathSegments.contains('invite');
+  }
 
+  void _handleIncomingUri(Uri uri) {
+    String? resolvedPetId = uri.queryParameters['pet'];
+    if (resolvedPetId == null && uri.pathSegments.contains('pet')) {
+      final idx = uri.pathSegments.indexOf('pet');
+      if (idx + 1 < uri.pathSegments.length) {
+        resolvedPetId = uri.pathSegments[idx + 1];
+      }
+    }
+
+    String? resolvedPostId = uri.queryParameters['post'];
     if (resolvedPostId == null && uri.pathSegments.contains('post')) {
       final idx = uri.pathSegments.indexOf('post');
       if (idx + 1 < uri.pathSegments.length) {
@@ -140,11 +171,45 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       }
     }
 
-    if (resolvedPostId != null && mounted) {
-      final feedController = Provider.of<FeedController>(context, listen: false);
-      final postIndex = feedController.posts.indexWhere((p) => p.id == resolvedPostId);
+    debugPrint('🐾 Deep Link received in Pawbook: $uri (pet: $resolvedPetId, post: $resolvedPostId)');
+
+    if (resolvedPetId != null && resolvedPetId.isNotEmpty) {
+      _pendingDeepLinkPetId = resolvedPetId;
+      _triggerDeepLinkPetNavigation(resolvedPetId);
+    }
+
+    if (resolvedPostId != null && resolvedPostId.isNotEmpty) {
+      _pendingDeepLinkPostId = resolvedPostId;
+      _triggerDeepLinkPostScroll(resolvedPostId);
+    }
+  }
+
+  void _triggerDeepLinkPetNavigation(String petId) {
+    if (_deepLinkPetHandled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _deepLinkPetHandled) return;
+      _deepLinkPetHandled = true;
+      try {
+        final pet = await _supabaseService.getPetById(petId);
+        if (pet != null && mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => PetProfileScreen(pet: pet)),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error navigating to pet profile from deep link: $e');
+      }
+    });
+  }
+
+  void _triggerDeepLinkPostScroll(String postId) {
+    if (!mounted) return;
+    final feedController = Provider.of<FeedController>(context, listen: false);
+    if (feedController.posts.isNotEmpty) {
+      final postIndex = feedController.posts.indexWhere((p) => p.id == postId);
       if (postIndex != -1 && _pageController.hasClients) {
         _pageController.jumpToPage(postIndex);
+        _pendingDeepLinkPostId = null;
       }
     }
   }
