@@ -9,12 +9,34 @@ import 'package:pawtbook/services/dynamic_auth_service.dart';
 import 'package:solana_mobile_client/solana_mobile_client.dart';
 import 'package:solana/base58.dart';
 
+class _MockDynamicAuthService extends DynamicAuthService {
+  final String mockWalletAddress;
+  _MockDynamicAuthService(this.mockWalletAddress);
+
+  @override
+  Future<DynamicAuthResult> authenticateWithSolanaWallet({
+    String walletType = 'Phantom',
+    String? providedAddress,
+    bool forceNew = false,
+  }) async {
+    return DynamicAuthResult(
+      isSuccess: true,
+      walletAddress: mockWalletAddress,
+      jwtToken: 'siws_mock_$mockWalletAddress',
+    );
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await AuthStorageService.instance.init();
+    AuthStorageService.instance.removeItem('pawtbook_logged_user_id');
+    AuthStorageService.instance.removeItem('pawtbook_logged_wallet');
+    AuthStorageService.instance.removeItem('pawtbook_logged_email');
+    AuthStorageService.instance.setItem('pawtbook_logged_out', 'true');
   });
 
   group('Universal Auth Persistence & Auto-Login Tests', () {
@@ -169,6 +191,50 @@ void main() {
       expect(reloadedController.isAuthenticated, isTrue);
       expect(reloadedController.currentProfile?.walletAddress, equals(assignedWallet));
       expect(reloadedController.errorMessage, isNull);
+    });
+
+
+    test('Solflare / Solana wallet sign up prevents duplicate registration and prompts to log in', () async {
+      final supabaseService = SupabaseService(useMockFallback: true);
+      const testWallet = 'Solflare_Mock_Existing_Address';
+      final dynamicAuthService = _MockDynamicAuthService(testWallet);
+
+      final existingProfile = ProfileModel(
+        id: 'usr_solflare_existing',
+        walletAddress: testWallet,
+        username: 'solflare_user',
+        fullName: 'Solflare Master',
+        createdAt: DateTime.now(),
+      );
+      await supabaseService.createProfile(existingProfile);
+
+      final authController = AuthController(
+        supabaseService: supabaseService,
+        dynamicAuthService: dynamicAuthService,
+      );
+
+      // Attempt Sign Up (isSignUp: true) with existing registered account
+      final signUpSuccess = await authController.loginWithSolanaWallet(
+        walletType: 'Solflare',
+        fullName: 'New Solflare User',
+        isSignUp: true,
+      );
+
+      // Must fail registration because profile already exists
+      expect(signUpSuccess, isFalse);
+      expect(authController.isAuthenticated, isFalse);
+      expect(authController.errorMessage, isNotNull);
+      expect(authController.errorMessage, contains('ya está registrada con Solflare'));
+      expect(authController.errorMessage, contains('Por favor, selecciona "Iniciar Sesión" para entrar.'));
+
+      // Iniciar Sesión (isSignUp: false) must succeed
+      final loginSuccess = await authController.loginWithSolanaWallet(
+        walletType: 'Solflare',
+        isSignUp: false,
+      );
+      expect(loginSuccess, isTrue);
+      expect(authController.isAuthenticated, isTrue);
+      expect(authController.currentProfile?.id, equals('usr_solflare_existing'));
     });
   });
 }

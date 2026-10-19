@@ -157,6 +157,14 @@ class AuthController extends ChangeNotifier {
       // Validar existencia de perfil en Supabase
       final existingProfile = await _supabaseService.getProfileByWallet(walletAddr);
 
+      // Si el usuario está en modo "Crear Cuenta" (Sign Up) y la billetera ya existe en la base de datos
+      if (isSignUp && existingProfile != null) {
+        _errorMessage = '⚠️ Esta cuenta ya está registrada con $walletType. Por favor, selecciona "Iniciar Sesión" para entrar.';
+        _setLoading(false);
+        notifyListeners();
+        return false;
+      }
+
       // Web3 UX: Autenticación transparente e inmediata
       // Si el perfil ya existe, ingresa directo a su cuenta existente
       // Si no existe, crea automáticamente su perfil sin bloqueos ni errores de pestaña

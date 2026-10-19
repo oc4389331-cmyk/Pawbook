@@ -279,6 +279,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (success && mounted) {
       _onLoginSuccess();
     } else if (mounted && authController.errorMessage != null) {
+      // Si la cuenta ya existe, cambiar automáticamente al modo Iniciar Sesión para facilitar el acceso
+      if (_isSignUp && authController.errorMessage!.contains('ya está registrada')) {
+        setState(() => _isSignUp = false);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -296,7 +300,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           backgroundColor: AppTheme.accentOrange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: langController.t('loginTab'),
+            textColor: Colors.white,
+            onPressed: () {
+              setState(() => _isSignUp = false);
+            },
+          ),
         ),
       );
     }
