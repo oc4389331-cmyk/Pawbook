@@ -103,7 +103,7 @@ class SupabaseService {
       PostModel(
         id: 'post_demo_1',
         petId: 'pet_demo_1',
-        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-playful-puppy-in-the-grass-42240-large.mp4',
+        mediaUrl: 'https://media.pawbooklife.com/posts/pet_d1148fad_1789750414942.mp4',
         mediaType: 'video',
         caption: 'First day at the park! 🐾 #Pawtbook #SolanaPets',
         likesCount: 142,
@@ -121,7 +121,7 @@ class SupabaseService {
       PostModel(
         id: 'post_demo_2',
         petId: 'pet_demo_2',
-        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-cat-looking-at-the-camera-42526-large.mp4',
+        mediaUrl: 'https://media.pawbooklife.com/posts/pet_d1148fad_1790797702057.mp4',
         mediaType: 'video',
         caption: 'Chilling on a Sunday afternoon 🐱☕ #Pawtbook',
         likesCount: 98,
