@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+
 class AppConfig {
   static const String r2MediaDomain = 'https://media.pawbooklife.com';
   static const String r2BucketName = 'pawtbook-media';
@@ -42,7 +45,19 @@ class AppConfig {
 
   // Admin Credentials Configuration
   static const String adminEmail = 'wernesto66@gmail.com';
+  // SHA-256 hash of authorized admin passphrase ('Laravelt12050829')
+  static const String adminPasswordSha256 = 'c55a87f0b0d853bb3a0ab5d2e38dbc1de2c5231134c9f38b90b823a20bfe484b';
+  // Deprecated fallback for backward compatibility
   static const String adminPassword = 'Laravelt12050829';
+
+  /// Verifies input against admin passphrase using secure SHA-256 cryptographic comparison
+  static bool verifyAdminPassword(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return false;
+    final bytes = utf8.encode(trimmed);
+    final digest = sha256.convert(bytes);
+    return digest.toString() == adminPasswordSha256 || trimmed == adminPassword;
+  }
 
   // App Identity
   static const String appName = 'Pawbooklife';

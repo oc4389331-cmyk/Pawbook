@@ -1063,7 +1063,7 @@ class MarketplaceScreen extends StatelessWidget {
                       ),
                     ),
                     onSubmitted: (val) {
-                      if (val.trim() == AppConfig.adminPassword) {
+                      if (AppConfig.verifyAdminPassword(val)) {
                         Navigator.pop(context);
                         _showAdminDialog(context, marketplaceController);
                       } else {
@@ -1089,7 +1089,7 @@ class MarketplaceScreen extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (passwordCtrl.text.trim() == AppConfig.adminPassword) {
+                    if (AppConfig.verifyAdminPassword(passwordCtrl.text)) {
                       Navigator.pop(context);
                       _showAdminDialog(context, marketplaceController);
                     } else {

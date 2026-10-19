@@ -321,6 +321,17 @@ class MarketplaceController extends ChangeNotifier {
     }
   }
 
+  /// Scoped order fetch for user privacy: only retrieves the authenticated user's own orders
+  Future<List<MarketplaceOrderModel>> loadUserOrders(String userId) async {
+    if (userId.trim().isEmpty) return [];
+    try {
+      return await _supabaseService.fetchMarketplaceOrders(userId: userId.trim());
+    } catch (e) {
+      debugPrint('[MarketplaceController] Error loading user orders: $e');
+      return [];
+    }
+  }
+
   Future<MarketplaceOrderModel?> placeBandanaOrder({
     required BandanaProductModel product,
     required int quantity,

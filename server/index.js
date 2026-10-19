@@ -185,9 +185,14 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
   try {
     if (stripe && STRIPE_WEBHOOK_SECRET) {
+      if (!sig) {
+        return res.status(400).send('Webhook Error: Missing stripe-signature header');
+      }
       event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+    } else if (process.env.NODE_ENV === 'production') {
+      return res.status(500).send('Webhook Error: Stripe Webhook Secret not configured');
     } else {
-      // Dev/fallback mode if raw signature check is bypassed
+      // Dev/fallback mode if raw signature check is bypassed in local development
       const rawPayload = typeof req.body === 'string' || Buffer.isBuffer(req.body)
         ? req.body.toString('utf8')
         : JSON.stringify(req.body);
@@ -989,13 +994,38 @@ app.post('/api/posts/create', async (req, res) => {
 // 3F. DELETE POST ENDPOINT (BYPASS RLS VIA SUPABASE ADMIN & CLEAN UP RELATIONS)
 // --------------------------------------------------------------------------
 app.post('/api/posts/delete', async (req, res) => {
-  const { postId } = req.body;
+  const { postId, userId } = req.body;
   if (!postId) {
     return res.status(400).json({ success: false, error: 'Missing postId' });
   }
 
   if (supabaseAdmin) {
     try {
+      // Verify post ownership if userId provided
+      if (userId) {
+        const { data: postInfo } = await supabaseAdmin
+          .from('posts')
+          .select('pet_id')
+          .eq('id', postId)
+          .maybeSingle();
+
+        if (postInfo?.pet_id) {
+          const { data: petInfo } = await supabaseAdmin
+            .from('pets')
+            .select('owner_id')
+            .eq('id', postInfo.pet_id)
+            .maybeSingle();
+
+          if (petInfo && petInfo.owner_id && petInfo.owner_id !== userId) {
+            const authHeader = req.headers.authorization || '';
+            const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+            if (!verifyDevToken(token)) {
+              return res.status(403).json({ success: false, error: 'Acceso denegado: No tienes autorización para eliminar esta publicación.' });
+            }
+          }
+        }
+      }
+
       // 1. Delete associated comments first (foreign key protection)
       try {
         await supabaseAdmin.from('comments').delete().eq('post_id', postId);
@@ -1896,6 +1926,21 @@ app.post('/api/sponsorship/claim-payout', async (req, res) => {
 
   if (supabaseAdmin) {
     try {
+      // 0. Ownership Validation: Ensure the claiming user is the legitimate owner of the pet
+      const { data: petData, error: petErr } = await supabaseAdmin
+        .from('pets')
+        .select('owner_id')
+        .eq('id', petId)
+        .maybeSingle();
+
+      if (petData && petData.owner_id && petData.owner_id !== userId) {
+        console.warn(`⚠️ [Security Alert] User ${userId} attempted to claim payouts for pet ${petId} owned by ${petData.owner_id}`);
+        return res.status(403).json({
+          success: false,
+          error: 'Acceso denegado: Solo el tutor registrado de la mascota puede retirar los patrocinios.'
+        });
+      }
+
       // 1. Query all unclaimed sponsorships for this pet
       const { data: unclaimedSpn, error: queryErr } = await supabaseAdmin
         .from('sponsorships')
@@ -2049,9 +2094,21 @@ app.get('/api/sponsorship/pet-ledger/:petId', async (req, res) => {
 });
 
 // --------------------------------------------------------------------------
-// 7C. RESET PET LEDGER & SPONSORSHIPS (Start from scratch / clean test data)
+// 7C. RESET PET LEDGER & SPONSORSHIPS (Admin Only / Secure Operation)
 // --------------------------------------------------------------------------
 app.post('/api/sponsorship/reset-pet-ledger', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const session = verifyDevToken(token);
+  const adminKey = req.headers['x-admin-key'] || req.body?.adminKey;
+
+  if (!session && !verifyDevPassword(adminKey)) {
+    return res.status(401).json({
+      success: false,
+      error: 'Acceso no autorizado: Operación administrativa restringida a administradores autenticados.'
+    });
+  }
+
   const { petId, petName } = req.body;
   if (!petId && !petName) {
     return res.status(400).json({ success: false, error: 'Missing petId or petName' });

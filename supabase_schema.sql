@@ -246,18 +246,37 @@ CREATE POLICY "Users can view own orders" ON public.orders FOR SELECT USING (tru
 DROP POLICY IF EXISTS "Users can insert orders" ON public.orders;
 CREATE POLICY "Users can insert orders" ON public.orders FOR INSERT WITH CHECK (true);
 
+-- Withdrawals / Payouts Policies (Double-spend & PII Protection)
+ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own withdrawals" ON public.withdrawals;
+CREATE POLICY "Users can view own withdrawals" ON public.withdrawals 
+FOR SELECT USING (
+    auth.role() = 'service_role' OR 
+    (auth.jwt() ->> 'email') = 'wernesto66@gmail.com' OR 
+    user_id = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Service role or owner can insert withdrawals" ON public.withdrawals;
+CREATE POLICY "Service role or owner can insert withdrawals" ON public.withdrawals 
+FOR INSERT WITH CHECK (
+    auth.role() = 'service_role' OR 
+    (auth.jwt() ->> 'email') = 'wernesto66@gmail.com' OR 
+    user_id = auth.uid()::text
+);
+
 -- 10. Admin Configuration & Settings Table
 CREATE TABLE IF NOT EXISTS public.admin_settings (
     id TEXT PRIMARY KEY DEFAULT 'default',
     admin_email TEXT NOT NULL DEFAULT 'wernesto66@gmail.com',
-    admin_password_hash TEXT NOT NULL DEFAULT 'Laravelt12050829',
+    admin_password_hash TEXT NOT NULL DEFAULT 'c55a87f0b0d853bb3a0ab5d2e38dbc1de2c5231134c9f38b90b823a20bfe484b',
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Insert or update default admin credentials safely
+-- Insert or update default admin credentials safely with SHA-256 hash
 INSERT INTO public.admin_settings (id, admin_email, admin_password_hash)
-VALUES ('default', 'wernesto66@gmail.com', 'Laravelt12050829')
+VALUES ('default', 'wernesto66@gmail.com', 'c55a87f0b0d853bb3a0ab5d2e38dbc1de2c5231134c9f38b90b823a20bfe484b')
 ON CONFLICT (id) DO UPDATE 
 SET admin_email = EXCLUDED.admin_email,
     admin_password_hash = EXCLUDED.admin_password_hash,
@@ -265,7 +284,8 @@ SET admin_email = EXCLUDED.admin_email,
 
 ALTER TABLE public.admin_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admin Settings Read Access" ON public.admin_settings;
-CREATE POLICY "Admin Settings Read Access" ON public.admin_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin Settings Service Role Only" ON public.admin_settings;
+CREATE POLICY "Admin Settings Service Role Only" ON public.admin_settings FOR ALL USING (auth.role() = 'service_role');
 
 -- 11. Marketplace Bandanas & Merch Products Table
 CREATE TABLE IF NOT EXISTS public.marketplace_products (
@@ -296,13 +316,16 @@ DROP POLICY IF EXISTS "Public Products Read Access" ON public.marketplace_produc
 CREATE POLICY "Public Products Read Access" ON public.marketplace_products FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public Products Insert Access" ON public.marketplace_products;
-CREATE POLICY "Public Products Insert Access" ON public.marketplace_products FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admin Products Insert Access" ON public.marketplace_products;
+CREATE POLICY "Admin Products Insert Access" ON public.marketplace_products FOR INSERT WITH CHECK (auth.role() = 'service_role' OR (auth.jwt() ->> 'email') = 'wernesto66@gmail.com');
 
 DROP POLICY IF EXISTS "Public Products Update Access" ON public.marketplace_products;
-CREATE POLICY "Public Products Update Access" ON public.marketplace_products FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Admin Products Update Access" ON public.marketplace_products;
+CREATE POLICY "Admin Products Update Access" ON public.marketplace_products FOR UPDATE USING (auth.role() = 'service_role' OR (auth.jwt() ->> 'email') = 'wernesto66@gmail.com');
 
 DROP POLICY IF EXISTS "Public Products Delete Access" ON public.marketplace_products;
-CREATE POLICY "Public Products Delete Access" ON public.marketplace_products FOR DELETE USING (true);
+DROP POLICY IF EXISTS "Admin Products Delete Access" ON public.marketplace_products;
+CREATE POLICY "Admin Products Delete Access" ON public.marketplace_products FOR DELETE USING (auth.role() = 'service_role' OR (auth.jwt() ->> 'email') = 'wernesto66@gmail.com');
 
 -- ====================================================================
 -- 8. Developer Analytics & Traffic Tracking Table
@@ -369,17 +392,41 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_orders_user_id ON public.marketplace_
 CREATE INDEX IF NOT EXISTS idx_marketplace_orders_created_at ON public.marketplace_orders(created_at DESC);
 
 ALTER TABLE public.marketplace_orders ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public Orders Read Access" ON public.marketplace_orders;
-CREATE POLICY "Public Orders Read Access" ON public.marketplace_orders FOR SELECT USING (true);
 
+-- 1. Insert: Authenticated and guest clients can place orders
 DROP POLICY IF EXISTS "Public Orders Insert Access" ON public.marketplace_orders;
-CREATE POLICY "Public Orders Insert Access" ON public.marketplace_orders FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Clients Can Insert Marketplace Orders" ON public.marketplace_orders;
+CREATE POLICY "Clients Can Insert Marketplace Orders" ON public.marketplace_orders 
+FOR INSERT WITH CHECK (true);
 
+-- 2. Select: Only the owner of the order OR authorized admin / service role can view order details & PII
+DROP POLICY IF EXISTS "Public Orders Read Access" ON public.marketplace_orders;
+DROP POLICY IF EXISTS "Users Can Read Own Marketplace Orders" ON public.marketplace_orders;
+CREATE POLICY "Users Can Read Own Marketplace Orders" ON public.marketplace_orders 
+FOR SELECT USING (
+    auth.role() = 'service_role' OR
+    (auth.jwt() ->> 'email') = 'wernesto66@gmail.com' OR
+    user_id = auth.uid()::text OR
+    (user_email IS NOT NULL AND user_email = (auth.jwt() ->> 'email'))
+);
+
+-- 3. Update: Only admin or backend service role can update order statuses / shipping tracking
 DROP POLICY IF EXISTS "Public Orders Update Access" ON public.marketplace_orders;
-CREATE POLICY "Public Orders Update Access" ON public.marketplace_orders FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Admin Can Update Marketplace Orders" ON public.marketplace_orders;
+CREATE POLICY "Admin Can Update Marketplace Orders" ON public.marketplace_orders 
+FOR UPDATE USING (
+    auth.role() = 'service_role' OR
+    (auth.jwt() ->> 'email') = 'wernesto66@gmail.com'
+);
 
+-- 4. Delete: Strictly restricted to service role or admin
 DROP POLICY IF EXISTS "Public Orders Delete Access" ON public.marketplace_orders;
-CREATE POLICY "Public Orders Delete Access" ON public.marketplace_orders FOR DELETE USING (true);
+DROP POLICY IF EXISTS "Admin Can Delete Marketplace Orders" ON public.marketplace_orders;
+CREATE POLICY "Admin Can Delete Marketplace Orders" ON public.marketplace_orders 
+FOR DELETE USING (
+    auth.role() = 'service_role' OR
+    (auth.jwt() ->> 'email') = 'wernesto66@gmail.com'
+);
 
 
 

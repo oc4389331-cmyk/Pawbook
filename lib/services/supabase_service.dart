@@ -1838,12 +1838,15 @@ class SupabaseService {
     return true;
   }
 
-  Future<List<MarketplaceOrderModel>> fetchMarketplaceOrders({String? status}) async {
+  Future<List<MarketplaceOrderModel>> fetchMarketplaceOrders({String? status, String? userId}) async {
     if (_client != null) {
       try {
         var query = _client!.from('marketplace_orders').select();
         if (status != null && status.isNotEmpty) {
           query = query.eq('status', status);
+        }
+        if (userId != null && userId.isNotEmpty) {
+          query = query.eq('user_id', userId);
         }
         final res = await query.order('created_at', ascending: false);
         if (res is List) {
@@ -1864,11 +1867,14 @@ class SupabaseService {
       }
     }
 
-    if (status != null && status.isNotEmpty) {
-      return _cachedMarketplaceOrders.where((o) => o.status.toLowerCase() == status.toLowerCase()).toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    var filtered = List<MarketplaceOrderModel>.from(_cachedMarketplaceOrders);
+    if (userId != null && userId.isNotEmpty) {
+      filtered = filtered.where((o) => o.userId == userId).toList();
     }
-    return List.from(_cachedMarketplaceOrders)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (status != null && status.isNotEmpty) {
+      filtered = filtered.where((o) => o.status.toLowerCase() == status.toLowerCase()).toList();
+    }
+    return filtered..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   Future<bool> updateMarketplaceOrderShipping({
