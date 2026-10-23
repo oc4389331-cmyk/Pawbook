@@ -56,6 +56,39 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         authController.resetLogoutState();
         if (authController.isAuthenticated) {
           _onLoginSuccess();
+        } else if (authController.errorMessage != null) {
+          final err = authController.errorMessage!;
+          if (_isSignUp && (err.contains('ya está registrada') || err.contains('ya tiene una cuenta'))) {
+            setState(() => _isSignUp = false);
+          }
+          final langController = Provider.of<LanguageController>(context, listen: false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      err,
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppTheme.accentOrange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: langController.t('loginTab'),
+                textColor: Colors.white,
+                onPressed: () {
+                  setState(() => _isSignUp = false);
+                },
+              ),
+            ),
+          );
         }
       }
     });
@@ -219,6 +252,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   if (mounted) _onLoginSuccess();
                                 } else {
+                                  if (_isSignUp && (authController.errorMessage?.contains('ya está registrada') == true ||
+                                      authController.errorMessage?.contains('ya tiene una cuenta') == true)) {
+                                    setState(() => _isSignUp = false);
+                                  }
                                   setModalState(() {
                                     isModalLoading = false;
                                     modalError = authController.errorMessage ?? langController.t('loginErrorDefault');
@@ -257,7 +294,48 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } else if (mounted && authController.isAuthenticated) {
       _onLoginSuccess();
     } else if (mounted && authController.errorMessage != null) {
-      _showQuickGoogleFallbackModal(authController, langController);
+      final err = authController.errorMessage!;
+      // Si la cuenta ya está registrada o no existe según el modo, mostrar aviso claro e impedir el paso
+      if (_isSignUp && (err.contains('ya está registrada') || err.contains('ya tiene una cuenta'))) {
+        setState(() => _isSignUp = false);
+      } else if (!_isSignUp && (err.contains('No existe una cuenta registrada') || err.contains('No existe ninguna cuenta'))) {
+        setState(() => _isSignUp = true);
+      }
+
+      if (err.contains('ya está registrada') ||
+          err.contains('ya tiene una cuenta') ||
+          err.contains('No existe una cuenta registrada') ||
+          err.contains('No existe ninguna cuenta')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    err,
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.accentOrange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: _isSignUp ? langController.t('signUpTab') : langController.t('loginTab'),
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() => _isSignUp = !_isSignUp);
+              },
+            ),
+          ),
+        );
+      } else {
+        _showQuickGoogleFallbackModal(authController, langController);
+      }
     }
   }
 

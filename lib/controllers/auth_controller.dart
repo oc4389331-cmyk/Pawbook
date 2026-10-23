@@ -25,6 +25,7 @@ class AuthController extends ChangeNotifier {
   bool _userLoggedOutExplicitly = false; // Previene restauración de sesión tras logout manual
   bool _pendingIsSignUp = false; // Guarda el modo (signup/login) durante el redirect OAuth de Google
   bool _isPetModeActive = true;
+  bool _isRestoringSession = false;
 
   ProfileModel? get currentProfile => _currentProfile;
   List<PetModel> get userPets => List.unmodifiable(_userPets);
@@ -99,29 +100,61 @@ class AuthController extends ChangeNotifier {
                 meta['name']?.toString();
             final avatarUrl = meta['avatar_url']?.toString() ??
                 meta['picture']?.toString();
-            final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
 
             debugPrint('[Auth] Google OAuth signedIn: email=$email, name=$fullName');
 
-            // Limpiar la intención de OAuth tras completar el flujo
-            AuthStorageService.instance.removeItem('pawtbook_oauth_action');
-            _pendingIsSignUp = false;
-
-            // Buscar perfil existente por email o wallet
-            ProfileModel? existing;
-            if (email != null && email.isNotEmpty) {
-              existing = await _supabaseService.getProfileByEmail(email);
+            final oauthAction = AuthStorageService.instance.getItem('pawtbook_oauth_action');
+            bool? isSignUpOverride;
+            if (oauthAction == 'signup' || _pendingIsSignUp) {
+              isSignUpOverride = true;
+            } else if (oauthAction == 'login') {
+              isSignUpOverride = false;
             }
-            existing ??= await _supabaseService.getProfileByWallet(wallet);
+            if (kIsWeb) {
+              try {
+                final uriStr = Uri.base.toString();
+                if (uriStr.contains('isSignUp=true') ||
+                    Uri.base.queryParameters['isSignUp'] == 'true' ||
+                    Uri.base.fragment.contains('isSignUp=true')) {
+                  isSignUpOverride = true;
+                } else if (uriStr.contains('isSignUp=false') ||
+                    Uri.base.queryParameters['isSignUp'] == 'false') {
+                  isSignUpOverride = false;
+                }
+              } catch (_) {}
+            }
 
-            await _processAuthenticatedUser(
-              walletAddress: existing?.walletAddress ?? wallet,
-              email: email,
-              fullName: fullName,
-              avatarUrl: avatarUrl,
-              jwtToken: session.accessToken,
-              existingProfile: existing,
-            );
+            // Si hay una acción explícita de OAuth en curso o evento signedIn
+            if (isSignUpOverride != null || event == AuthChangeEvent.signedIn) {
+              await handleGoogleAuthResult(
+                email: email ?? '',
+                fullName: fullName,
+                avatarUrl: avatarUrl,
+                userId: user.id,
+                accessToken: session.accessToken,
+                isSignUp: isSignUpOverride,
+              );
+            } else {
+              // Restauración pasiva (tokenRefreshed / initialSession sin acción OAuth explícita)
+              final cleanId = user.id.replaceAll('-', '');
+              final wallet = 'sol_' + cleanId.substring(0, min(16, cleanId.length));
+              ProfileModel? existing;
+              if (email != null && email.isNotEmpty) {
+                existing = await _supabaseService.getProfileByEmail(email);
+              }
+              existing ??= await _supabaseService.getProfileByWallet(wallet);
+
+              if (existing != null) {
+                await _processAuthenticatedUser(
+                  walletAddress: existing.walletAddress,
+                  email: email,
+                  fullName: fullName,
+                  avatarUrl: avatarUrl,
+                  jwtToken: session.accessToken,
+                  existingProfile: existing,
+                );
+              }
+            }
           }
         });
       }
@@ -294,6 +327,109 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  /// Procesa y valida el resultado de autenticación de Google (OAuth Web, 1-Tap Nativo o Directo).
+  /// Garantiza que si el usuario está en modo registro (Crear Cuenta) y ya tiene cuenta,
+  /// sea rechazado de forma segura y se le invite a Iniciar Sesión sin crear perfiles duplicados.
+  Future<bool> handleGoogleAuthResult({
+    required String email,
+    String? fullName,
+    String? avatarUrl,
+    required String userId,
+    String? accessToken,
+    bool? isSignUp,
+  }) async {
+    _userLoggedOutExplicitly = false;
+    final cleanEmail = email.trim().toLowerCase();
+    final oauthAction = AuthStorageService.instance.getItem('pawtbook_oauth_action');
+    bool isSignUpAttempt = (isSignUp == true) ||
+        _pendingIsSignUp ||
+        (oauthAction == 'signup');
+
+    if (kIsWeb) {
+      try {
+        final uriStr = Uri.base.toString();
+        if (uriStr.contains('isSignUp=true') ||
+            Uri.base.queryParameters['isSignUp'] == 'true' ||
+            Uri.base.fragment.contains('isSignUp=true')) {
+          isSignUpAttempt = true;
+        } else if (uriStr.contains('isSignUp=false') ||
+            Uri.base.queryParameters['isSignUp'] == 'false') {
+          isSignUpAttempt = false;
+        }
+      } catch (_) {}
+    }
+
+    final cleanId = userId.replaceAll('-', '');
+    final subLen = min(16, cleanId.length);
+    final wallet = 'sol_${cleanId.substring(0, subLen)}';
+
+    // Buscar perfil existente por email o wallet
+    ProfileModel? existing;
+    if (cleanEmail.isNotEmpty) {
+      existing = await _supabaseService.getProfileByEmail(cleanEmail);
+    }
+    if (existing == null && wallet.isNotEmpty) {
+      existing = await _supabaseService.getProfileByWallet(wallet);
+    }
+
+    // 1. Si el usuario intentó registrarse ("Crear Cuenta") pero ya existe cuenta asociada
+    if (isSignUpAttempt) {
+      if (existing != null) {
+        debugPrint('[Auth] Registro bloqueado: La cuenta de Google ($cleanEmail) ya está registrada.');
+        _userLoggedOutExplicitly = true; // Previene que onAuthStateChange intente restaurar la sesión
+        _errorMessage = '⚠️ Esta cuenta ya está registrada con Google ($cleanEmail). Por favor, selecciona "Iniciar Sesión" para entrar.';
+        AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+        _pendingIsSignUp = false;
+        _setLoading(false);
+        try {
+          if (Supabase.instance.client != null) {
+            await Supabase.instance.client.auth.signOut();
+          }
+        } catch (_) {}
+        _currentProfile = null;
+        _userPets = [];
+        _activePet = null;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      // 2. Si el usuario intentó iniciar sesión ("Iniciar Sesión") pero no tiene cuenta creada
+      if (existing == null) {
+        debugPrint('[Auth] Inicio de sesión bloqueado: No existe cuenta con Google ($cleanEmail).');
+        _errorMessage = '⚠️ No existe una cuenta registrada con este correo de Google ($cleanEmail). Por favor, ve a "Crear Cuenta".';
+        AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+        _pendingIsSignUp = false;
+        _setLoading(false);
+        try {
+          if (Supabase.instance.client != null) {
+            await Supabase.instance.client.auth.signOut();
+          }
+        } catch (_) {}
+        _currentProfile = null;
+        notifyListeners();
+        return false;
+      }
+    }
+
+    // Limpiar intención de OAuth tras validar con éxito
+    AuthStorageService.instance.removeItem('pawtbook_oauth_action');
+    _pendingIsSignUp = false;
+
+    final assignedWallet = existing?.walletAddress ?? wallet;
+    await _processAuthenticatedUser(
+      walletAddress: assignedWallet,
+      email: cleanEmail.isNotEmpty ? cleanEmail : null,
+      fullName: fullName,
+      avatarUrl: avatarUrl,
+      jwtToken: accessToken ?? 'jwt_g_$cleanEmail',
+      existingProfile: existing,
+    );
+
+    _setLoading(false);
+    notifyListeners();
+    return _currentProfile != null;
+  }
+
   Future<bool> loginWithGoogle({String? googleEmail, bool isSignUp = false, String? fullName}) async {
     _userLoggedOutExplicitly = false; // El usuario quiere iniciar sesión de nuevo
     _pendingIsSignUp = isSignUp; // Guardar modo para validación post-OAuth
@@ -306,38 +442,14 @@ class AuthController extends ChangeNotifier {
       // 1. In-App Direct Authentication when email is provided (Zero external browser redirect)
       if (googleEmail != null && googleEmail.trim().isNotEmpty) {
         final cleanEmail = googleEmail.trim().toLowerCase();
-        final existing = await _supabaseService.getProfileByEmail(cleanEmail);
-
-        if (isSignUp) {
-          if (existing != null) {
-            AuthStorageService.instance.removeItem('pawtbook_oauth_action');
-            _errorMessage = '⚠️ Este correo ($cleanEmail) ya tiene una cuenta registrada. Por favor, selecciona "Iniciar Sesión".';
-            _setLoading(false);
-            notifyListeners();
-            return false;
-          }
-        } else {
-          if (existing == null) {
-            AuthStorageService.instance.removeItem('pawtbook_oauth_action');
-            _errorMessage = '⚠️ No existe una cuenta registrada con el correo ($cleanEmail). Por favor, ve a "Crear Cuenta".';
-            _setLoading(false);
-            notifyListeners();
-            return false;
-          }
-        }
-
         final res = await _dynamicAuthService.authenticateWithGoogle(email: cleanEmail);
-        final walletAddress = existing?.walletAddress ?? res.walletAddress ?? 'sol_${cleanEmail.hashCode.abs()}';
-
-        await _processAuthenticatedUser(
-          walletAddress: walletAddress,
+        return await handleGoogleAuthResult(
           email: cleanEmail,
-          fullName: existing?.fullName ?? fullName ?? (cleanEmail.split('@').first),
-          jwtToken: res.jwtToken ?? '',
-          existingProfile: existing,
+          fullName: fullName ?? cleanEmail.split('@').first,
+          userId: cleanEmail.hashCode.abs().toRadixString(16),
+          accessToken: res.jwtToken,
+          isSignUp: isSignUp,
         );
-        _setLoading(false);
-        return true;
       }
 
       // 2. Native Mobile 1-Tap Google Sign-In with Device Account Picker (Zero Browser Redirect)
@@ -381,49 +493,14 @@ class AuthController extends ChangeNotifier {
               debugPrint('Auth token extraction note: $e');
             }
 
-            // Strictly verify account in Supabase
-            final existing = await _supabaseService.getProfileByEmail(userEmail);
-
-            if (isSignUp) {
-              if (existing != null) {
-                _errorMessage = '⚠️ Este correo ($userEmail) ya tiene una cuenta registrada. Por favor, selecciona "Iniciar Sesión".';
-                _setLoading(false);
-                notifyListeners();
-                return false;
-              }
-            } else {
-              if (existing == null) {
-                _errorMessage = '⚠️ No existe una cuenta registrada con el correo ($userEmail). Por favor, ve a "Crear Cuenta".';
-                _setLoading(false);
-                notifyListeners();
-                return false;
-              }
-            }
-
-            String walletAddress;
-            String jwtToken;
-
-            if (existing != null) {
-              walletAddress = existing.walletAddress;
-              jwtToken = idToken ?? 'dyn_jwt_g_${userEmail.hashCode.abs().toRadixString(16)}';
-            } else {
-              final res = await _dynamicAuthService.authenticateWithGoogle(email: userEmail);
-              walletAddress = res.walletAddress ?? 'sol_${userEmail.hashCode.abs()}';
-              jwtToken = idToken ?? res.jwtToken ?? 'dyn_jwt_g_${userEmail.hashCode.abs().toRadixString(16)}';
-            }
-
-            await _processAuthenticatedUser(
-              walletAddress: walletAddress,
+            return await handleGoogleAuthResult(
               email: userEmail,
               fullName: userName,
               avatarUrl: userPhoto,
-              jwtToken: jwtToken,
-              existingProfile: existing,
+              userId: userEmail.hashCode.abs().toRadixString(16),
+              accessToken: idToken,
+              isSignUp: isSignUp,
             );
-
-            _setLoading(false);
-            notifyListeners();
-            return true;
           } else {
             // User cancelled Google Account selection dialog
             _setLoading(false);
@@ -618,6 +695,9 @@ class AuthController extends ChangeNotifier {
 
   /// Restaura la sesión guardada del usuario al abrir la app (Auto-Login instantáneo)
   Future<bool> restoreSession() async {
+    if (_isRestoringSession) return false;
+    _isRestoringSession = true;
+
     try {
       final storage = AuthStorageService.instance;
       final isLoggedOut = storage.getItem('pawtbook_logged_out') == 'true';
@@ -636,26 +716,61 @@ class AuthController extends ChangeNotifier {
             final email = user.email ?? meta['email']?.toString();
             final fullName = meta['full_name']?.toString() ?? meta['name']?.toString();
             final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString();
-            final wallet = 'sol_' + user.id.replaceAll('-', '').substring(0, 16);
 
-            ProfileModel? existing;
-            if (email != null && email.isNotEmpty) {
-              existing = await _supabaseService.getProfileByEmail(email);
+            final oauthAction = storage.getItem('pawtbook_oauth_action');
+            bool? isSignUpOverride;
+            if (oauthAction == 'signup' || _pendingIsSignUp) {
+              isSignUpOverride = true;
+            } else if (oauthAction == 'login') {
+              isSignUpOverride = false;
             }
-            existing ??= await _supabaseService.getProfileByWallet(wallet);
+            try {
+              final uriStr = Uri.base.toString();
+              if (uriStr.contains('isSignUp=true') ||
+                  Uri.base.queryParameters['isSignUp'] == 'true' ||
+                  Uri.base.fragment.contains('isSignUp=true')) {
+                isSignUpOverride = true;
+              } else if (uriStr.contains('isSignUp=false') ||
+                  Uri.base.queryParameters['isSignUp'] == 'false') {
+                isSignUpOverride = false;
+              }
+            } catch (_) {}
 
-            await _processAuthenticatedUser(
-              walletAddress: existing?.walletAddress ?? wallet,
-              email: email,
-              fullName: fullName,
-              avatarUrl: avatarUrl,
-              jwtToken: supaSession.accessToken,
-              existingProfile: existing,
-            );
+            if (oauthAction != null || _pendingIsSignUp || isSignUpOverride != null) {
+              final ok = await handleGoogleAuthResult(
+                email: email ?? '',
+                fullName: fullName,
+                avatarUrl: avatarUrl,
+                userId: user.id,
+                accessToken: supaSession.accessToken,
+                isSignUp: isSignUpOverride,
+              );
+              if (ok) return true;
+              return false;
+            } else {
+              final cleanId = user.id.replaceAll('-', '');
+              final wallet = 'sol_' + cleanId.substring(0, min(16, cleanId.length));
+              ProfileModel? existing;
+              if (email != null && email.isNotEmpty) {
+                existing = await _supabaseService.getProfileByEmail(email);
+              }
+              existing ??= await _supabaseService.getProfileByWallet(wallet);
 
-            if (_currentProfile != null) {
-              notifyListeners();
-              return true;
+              if (existing != null) {
+                await _processAuthenticatedUser(
+                  walletAddress: existing.walletAddress,
+                  email: email,
+                  fullName: fullName,
+                  avatarUrl: avatarUrl,
+                  jwtToken: supaSession.accessToken,
+                  existingProfile: existing,
+                );
+
+                if (_currentProfile != null) {
+                  notifyListeners();
+                  return true;
+                }
+              }
             }
           }
         } catch (e) {
@@ -736,6 +851,8 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       debugPrint('[Auth] Error al restaurar sesión: $e');
       return false;
+    } finally {
+      _isRestoringSession = false;
     }
   }
 
